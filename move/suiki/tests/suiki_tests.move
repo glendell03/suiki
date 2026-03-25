@@ -889,4 +889,34 @@ module suiki::suiki_tests {
         clock::destroy_for_testing(test_clock);
         scenario.end();
     }
+
+    #[test]
+    #[expected_failure(abort_code = suiki::suiki::EInvalidUrl)]
+    /// update_program aborts when logo_url is empty.
+    fun test_update_program_empty_url_fails() {
+        let mut scenario = test_scenario::begin(MERCHANT);
+
+        suiki::create_program(
+            string::utf8(b"Kape ni Juan"),
+            string::utf8(b"https://example.com/logo.png"),
+            5,
+            string::utf8(b"Free coffee"),
+            scenario.ctx(),
+        );
+
+        scenario.next_tx(MERCHANT);
+        {
+            let mut program = test_scenario::take_shared<StampProgram>(&scenario);
+            suiki::update_program(
+                &mut program,
+                string::utf8(b"Kape ni Juan"),
+                string::utf8(b""), // empty URL — must abort with EInvalidUrl
+                string::utf8(b"Free coffee"),
+                scenario.ctx(),
+            );
+            test_scenario::return_shared(program);
+        };
+
+        scenario.end();
+    }
 }

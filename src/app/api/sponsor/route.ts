@@ -204,10 +204,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     req.headers.get('x-real-ip') ??
     'unknown';
 
-  const senderAllowed = checkRateLimit(sender);
-  const ipAllowed = checkRateLimit(`ip:${ip}`);
-
-  if (!senderAllowed || !ipAllowed) {
+  // Check sender first — if blocked return immediately (no side effect on IP counter)
+  if (!checkRateLimit(sender)) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Maximum 50 sponsored transactions per day.' },
+      { status: 429 },
+    );
+  }
+  // Check IP — if blocked, roll back the sender increment to avoid draining quota
+  if (!checkRateLimit(`ip:${ip}`)) {
+    const entry = rateLimitStore.get(sender);
+    if (entry && entry.count > 0) entry.count -= 1;
     return NextResponse.json(
       { error: 'Rate limit exceeded. Maximum 50 sponsored transactions per day.' },
       { status: 429 },
