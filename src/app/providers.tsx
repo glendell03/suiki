@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createDAppKit, DAppKitProvider } from "@mysten/dapp-kit-react";
+import { createDAppKit } from "@mysten/dapp-kit-core";
+import { DAppKitProvider } from "@mysten/dapp-kit-react";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 
 // gRPC endpoints per network (preferred over JSON-RPC per Mysten recommendation)
@@ -18,6 +19,14 @@ const dAppKit = createDAppKit({
   createClient: (network) =>
     new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
 });
+
+// TypeScript module augmentation so useDAppKit() is fully typed
+// without requiring consumers to pass a generic type argument.
+declare module "@mysten/dapp-kit-react" {
+  interface Register {
+    dAppKit: typeof dAppKit;
+  }
+}
 
 /** Root provider tree. Order matters: QueryClientProvider wraps DAppKitProvider
  * so blockchain hooks can use React Query's cache for server data independently. */

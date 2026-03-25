@@ -25,9 +25,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 
-import { PACKAGE_ID, MODULE_NAME, SUI_NETWORK } from '@/lib/constants';
+import { suiClient } from '@/lib/sui-client';
+import { PACKAGE_ID, MODULE_NAME } from '@/lib/constants';
+import { env } from '@/env';
 import type { SponsoredTxRequest, SponsoredTxResponse } from '@/types/sui';
 
 // ---------------------------------------------------------------------------
@@ -224,7 +225,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // --- Deserialize transaction (FIND-01) ------------------------------------
   let tx: Transaction;
   try {
-    tx = Transaction.from(txKindBytes);
+    tx = Transaction.from(Buffer.from(txKindBytes, 'base64'));
   } catch {
     return NextResponse.json({ error: 'Invalid transaction bytes' }, { status: 400 });
   }
@@ -239,25 +240,49 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // --- Load sponsor keypair -------------------------------------------------
-  const sponsorKey = process.env.SPONSOR_PRIVATE_KEY;
-  if (!sponsorKey) {
-    return NextResponse.json({ error: 'Sponsor keypair not configured' }, { status: 503 });
-  }
-
   let sponsorKeypair: Ed25519Keypair;
   try {
-    sponsorKeypair = Ed25519Keypair.fromSecretKey(Buffer.from(sponsorKey, 'base64'));
+    sponsorKeypair = Ed25519Keypair.fromSecretKey(Buffer.from(env.SPONSOR_PRIVATE_KEY, 'base64'));
   } catch {
     return NextResponse.json({ error: 'Invalid sponsor keypair configuration' }, { status: 503 });
   }
 
-  // --- Sign as gas sponsor --------------------------------------------------
-  try {
-    const client = new SuiClient({ url: getFullnodeUrl(SUI_NETWORK) });
-    tx.setSenderIfNotSet(sender);
+  const sponsorAddress = sponsorKeypair.toSuiAddress();
 
+  // --- Set gas owner and sign as sponsor ------------------------------------
+  // In a sponsored transaction:
+  //   1. setSender → the user who is executing the tx
+  //   2. setGasOwner → the sponsor who pays gas
+  // The sponsor signs; the client-side user also signs (with their own signature)
+  // and both signatures are submitted together via core.executeTransaction().
+  try {
+    tx.setSenderIfNotSet(sender);
+    tx.setGasOwner(sponsorAddress);
+
+    // Fetch sponsor's SUI coins to use as gas payment.
+    // listCoins defaults to 0x2::sui::SUI and returns Coin objects with their
+    // objectId, version, and digest — exactly what setGasPayment requires.
+    const gasCoins = await suiClient.listCoins({
+      owner: sponsorAddress,
+      limit: 1,
+    });
+
+    const gasPayment = gasCoins.objects.map((coin) => ({
+      objectId: coin.objectId,
+      version: coin.version,
+      digest: coin.digest,
+    }));
+
+    if (gasPayment.length === 0) {
+      return NextResponse.json({ error: 'Sponsor has no SUI coins for gas' }, { status: 503 });
+    }
+
+    tx.setGasPayment(gasPayment);
+    tx.setGasBudget(10_000_000); // 0.01 SUI — sufficient for suiki Move calls
+
+    // Pass suiClient so the Transaction can resolve object versions during build.
     const { bytes, signature: sponsorSignature } = await tx.sign({
-      client,
+      client: suiClient,
       signer: sponsorKeypair,
     });
 

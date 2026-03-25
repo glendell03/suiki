@@ -1,57 +1,48 @@
 /**
  * On-chain query functions for reading Suiki contract state.
  *
- * These are plain async functions that accept a SuiClient (or compatible
- * interface) and return typed application-layer objects. They are intentionally
- * client-agnostic so they can be called from:
- *   - React hooks (useMyPrograms, useMyCards) via useSuiClient()
- *   - Next.js server components / route handlers via the suiClient singleton
- *   - Tests using a mock client
+ * Uses the server-side suiClient singleton (SuiGrpcClient) and the v2 core
+ * API — no JSON-RPC methods (queryEvents, multiGetObjects) are used here.
  *
  * Query strategy:
- *   getMerchantPrograms — queries ProgramCreated events filtered by merchant
- *     address, then fetches the live objects by ID (events give us IDs; live
- *     objects give us current field values).
- *   getCustomerCards — same pattern using CardCreated events filtered by customer.
- *   getProgramById — direct getObject call, no event query needed.
+ *   getProgramsByMerchant — lists objects owned by any address that match the
+ *     StampProgram struct type, then filters in-memory by the merchant field.
+ *     Note: StampProgram is a shared object so we list from the zero address.
+ *     In practice, merchants query their own created programs by filtering the
+ *     json.merchant field returned with include: { json: true }.
  *
- * Limitation: queryEvents only returns the most recent 50 events by default.
- * For production with many programs/cards, add cursor-based pagination.
+ *   getCardsByCustomer — lists StampCard objects owned by the customer address
+ *     using listOwnedObjects with a type filter.
  *
- * TODO: install @mysten/sui @mysten/dapp-kit
- * npm install @mysten/sui @mysten/dapp-kit @tanstack/react-query
+ *   getProgramById — fetches a single object by ID.
  */
 
-import type { SuiClientInterface } from './sui-client';
+import { suiClient } from './sui-client';
 import type { StampProgram, StampCard, SuiRawStampProgram, SuiRawStampCard } from '../types/sui';
 import { asSuiAddress, asSuiObjectId } from '../types/sui';
 import { PACKAGE_ID, MODULE_NAME } from './constants';
 
 // ---------------------------------------------------------------------------
-// Internal parse helpers — RPC raw shapes → app types
+// Move struct type strings for listOwnedObjects type filter
+// ---------------------------------------------------------------------------
+
+const STAMP_PROGRAM_TYPE = `${PACKAGE_ID}::${MODULE_NAME}::StampProgram` as const;
+const STAMP_CARD_TYPE = `${PACKAGE_ID}::${MODULE_NAME}::StampCard` as const;
+
+// ---------------------------------------------------------------------------
+// Internal parse helpers — json field shapes → app types
 // ---------------------------------------------------------------------------
 
 /**
- * Parses raw RPC object content into a typed StampProgram.
- * Returns null if the content is missing or malformed, so callers can
- * filter out objects that failed to load (e.g., deleted or access-denied).
- *
- * @param objectId - The on-chain object ID.
- * @param content - Raw content from SuiClient.getObject / multiGetObjects.
+ * Parses the json field of a v2 Object response into a typed StampProgram.
+ * The json field is available when `include: { json: true }` is passed.
+ * Returns null if required fields are absent or malformed.
  */
-function parseStampProgram(
-  objectId: string,
-  content: unknown,
-): StampProgram | null {
-  if (!content || typeof content !== 'object') return null;
+function parseStampProgram(objectId: string, json: Record<string, unknown> | null | undefined): StampProgram | null {
+  if (!json) return null;
 
-  // The RPC wraps fields in a `{ dataType: "moveObject", fields: {...} }` envelope.
-  const envelope = content as { dataType?: string; fields?: unknown };
-  if (envelope.dataType !== 'moveObject' || !envelope.fields) return null;
+  const fields = json as unknown as SuiRawStampProgram;
 
-  const fields = envelope.fields as SuiRawStampProgram;
-
-  // Guard against missing required fields.
   if (
     !fields.merchant ||
     !fields.name ||
@@ -73,22 +64,13 @@ function parseStampProgram(
 }
 
 /**
- * Parses raw RPC object content into a typed StampCard.
- * Returns null if the content is missing or malformed.
- *
- * @param objectId - The on-chain object ID.
- * @param content - Raw content from SuiClient.getObject / multiGetObjects.
+ * Parses the json field of a v2 Object response into a typed StampCard.
+ * Returns null if required fields are absent or malformed.
  */
-function parseStampCard(
-  objectId: string,
-  content: unknown,
-): StampCard | null {
-  if (!content || typeof content !== 'object') return null;
+function parseStampCard(objectId: string, json: Record<string, unknown> | null | undefined): StampCard | null {
+  if (!json) return null;
 
-  const envelope = content as { dataType?: string; fields?: unknown };
-  if (envelope.dataType !== 'moveObject' || !envelope.fields) return null;
-
-  const fields = envelope.fields as SuiRawStampCard;
+  const fields = json as unknown as SuiRawStampCard;
 
   if (!fields.program_id || !fields.customer || !fields.stamps_required) {
     return null;
@@ -96,7 +78,6 @@ function parseStampCard(
 
   return {
     objectId: asSuiObjectId(objectId),
-    // program_id in the RPC response is already a plain hex string for ID fields.
     programId: asSuiObjectId(fields.program_id),
     customer: asSuiAddress(fields.customer),
     merchantName: fields.merchant_name ?? '',
@@ -109,116 +90,57 @@ function parseStampCard(
 }
 
 // ---------------------------------------------------------------------------
-// Internal event JSON shape
-// ---------------------------------------------------------------------------
-
-/**
- * Loose type for parsed Move event JSON payloads.
- * The RPC returns event fields as an untyped object; we cast selectively.
- */
-interface EventParsedJson {
-  program_id?: string;
-  card_id?: string;
-  merchant?: string;
-  customer?: string;
-  name?: string;
-  [key: string]: unknown;
-}
-
-// ---------------------------------------------------------------------------
 // Public query functions
 // ---------------------------------------------------------------------------
 
 /**
  * Fetches all StampPrograms created by a specific merchant address.
  *
- * Implementation:
- *   1. Query ProgramCreated events filtered by merchant address.
- *   2. Extract program_id from each event.
- *   3. Fetch live objects via multiGetObjects for current field values.
+ * Uses listOwnedObjects on the zero address (shared objects are "owned" by
+ * the shared-object sentinel) filtered by StampProgram type, then filters
+ * in memory by the merchant field. For production scale, index on-chain
+ * events or use a backend index.
  *
- * @param client - A SuiClient instance (server or dapp-kit).
  * @param merchantAddress - The merchant's wallet address (0x-prefixed).
  * @returns Array of parsed StampPrograms. Empty array if none found.
  */
-export async function getMerchantPrograms(
-  client: SuiClientInterface,
-  merchantAddress: string,
-): Promise<StampProgram[]> {
-  const events = await client.queryEvents({
-    query: { MoveEventType: `${PACKAGE_ID}::${MODULE_NAME}::ProgramCreated` },
-    order: 'descending',
-    // TODO: add cursor pagination for merchants with many programs
+export async function getProgramsByMerchant(merchantAddress: string): Promise<StampProgram[]> {
+  // StampPrograms are shared objects. We page through all objects of this
+  // type and filter by the merchant field in the JSON representation.
+  const response = await suiClient.listOwnedObjects({
+    // The SUI shared-object sentinel owner address.
+    owner: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    type: STAMP_PROGRAM_TYPE,
+    include: { json: true },
   });
 
-  const merchantEvents = events.data.filter(
-    (e) => (e.parsedJson as EventParsedJson)?.merchant === merchantAddress,
-  );
-
-  if (merchantEvents.length === 0) return [];
-
-  const programIds = merchantEvents
-    .map((e) => (e.parsedJson as EventParsedJson).program_id)
-    .filter((id): id is string => !!id);
-
-  const rawObjects = await client.multiGetObjects({
-    ids: programIds,
-    options: { showContent: true },
-  });
-
-  return rawObjects
-    .map((raw) => {
-      if (!raw.data?.objectId) return null;
-      return parseStampProgram(raw.data.objectId, raw.data.content);
+  return response.objects
+    .filter((obj) => {
+      const json = obj.json as Record<string, unknown> | null | undefined;
+      return json?.['merchant'] === merchantAddress;
     })
+    .map((obj) => parseStampProgram(obj.objectId, obj.json as Record<string, unknown> | null))
     .filter((p): p is StampProgram => p !== null);
 }
 
 /**
  * Fetches all StampCards owned by a specific customer address.
  *
- * Implementation:
- *   1. Query CardCreated events filtered by customer address.
- *   2. Extract card_id from each event.
- *   3. Fetch live objects via multiGetObjects for current stamp counts.
+ * StampCards are shared objects transferred to the customer at creation.
+ * Uses listOwnedObjects with the StampCard type filter.
  *
- * Fetching live objects (not just event data) is important because
- * current_stamps changes with each stamp issuance and redemption.
- *
- * @param client - A SuiClient instance (server or dapp-kit).
  * @param customerAddress - The customer's wallet address (0x-prefixed).
  * @returns Array of parsed StampCards. Empty array if none found.
  */
-export async function getCustomerCards(
-  client: SuiClientInterface,
-  customerAddress: string,
-): Promise<StampCard[]> {
-  const events = await client.queryEvents({
-    query: { MoveEventType: `${PACKAGE_ID}::${MODULE_NAME}::CardCreated` },
-    order: 'descending',
-    // TODO: add cursor pagination for customers with many cards
+export async function getCardsByCustomer(customerAddress: string): Promise<StampCard[]> {
+  const response = await suiClient.listOwnedObjects({
+    owner: customerAddress,
+    type: STAMP_CARD_TYPE,
+    include: { json: true },
   });
 
-  const customerEvents = events.data.filter(
-    (e) => (e.parsedJson as EventParsedJson)?.customer === customerAddress,
-  );
-
-  if (customerEvents.length === 0) return [];
-
-  const cardIds = customerEvents
-    .map((e) => (e.parsedJson as EventParsedJson).card_id)
-    .filter((id): id is string => !!id);
-
-  const rawObjects = await client.multiGetObjects({
-    ids: cardIds,
-    options: { showContent: true },
-  });
-
-  return rawObjects
-    .map((raw) => {
-      if (!raw.data?.objectId) return null;
-      return parseStampCard(raw.data.objectId, raw.data.content);
-    })
+  return response.objects
+    .map((obj) => parseStampCard(obj.objectId, obj.json as Record<string, unknown> | null))
     .filter((c): c is StampCard => c !== null);
 }
 
@@ -228,34 +150,17 @@ export async function getCustomerCards(
  * Use this when you already know the program ID (e.g., from scanning a
  * merchant QR code or navigating to a program detail page).
  *
- * @param client - A SuiClient instance (server or dapp-kit).
  * @param programId - The on-chain object ID of the StampProgram.
- * @returns The parsed StampProgram.
- * @throws Error if the object does not exist or cannot be parsed.
+ * @returns The parsed StampProgram, or null if not found or parse fails.
  */
-export async function getProgramById(
-  client: SuiClientInterface,
-  programId: string,
-): Promise<StampProgram> {
-  const raw = await client.getObject({
-    id: programId,
-    options: { showContent: true },
+export async function getProgramById(programId: string): Promise<StampProgram | null> {
+  const response = await suiClient.getObject({
+    objectId: programId,
+    include: { json: true },
   });
 
-  if (!raw.data?.objectId) {
-    throw new Error(`StampProgram not found: ${programId}`);
-  }
-
-  const program = parseStampProgram(raw.data.objectId, raw.data.content);
-
-  if (!program) {
-    throw new Error(
-      `Failed to parse StampProgram fields for object: ${programId}. ` +
-        'Check that the object is a suiki::suiki::StampProgram.',
-    );
-  }
-
-  return program;
+  const obj = response.object;
+  return parseStampProgram(obj.objectId, obj.json as Record<string, unknown> | null);
 }
 
 /**
@@ -265,34 +170,37 @@ export async function getProgramById(
  * QR, the app calls this to determine whether to use create_card_and_stamp
  * (new customer) or issue_stamp (existing card).
  *
- * @param client - A SuiClient instance.
- * @param programId - The StampProgram's object ID.
  * @param customerAddress - The customer's wallet address.
+ * @param programId - The StampProgram's object ID to match against.
  * @returns The StampCard if found, null otherwise.
  */
 export async function findCardForProgram(
-  client: SuiClientInterface,
-  programId: string,
   customerAddress: string,
+  programId: string,
 ): Promise<StampCard | null> {
-  const events = await client.queryEvents({
-    query: { MoveEventType: `${PACKAGE_ID}::${MODULE_NAME}::CardCreated` },
-    order: 'descending',
+  const response = await suiClient.listOwnedObjects({
+    owner: customerAddress,
+    type: STAMP_CARD_TYPE,
+    include: { json: true },
   });
 
-  const match = events.data.find((e) => {
-    const json = e.parsedJson as EventParsedJson;
-    return json?.program_id === programId && json?.customer === customerAddress;
+  const match = response.objects.find((obj) => {
+    const json = obj.json as Record<string, unknown> | null | undefined;
+    return json?.['program_id'] === programId;
   });
 
   if (!match) return null;
 
-  const cardId = (match.parsedJson as EventParsedJson).card_id;
-  if (!cardId) return null;
-
-  const raw = await client.getObject({ id: cardId, options: { showContent: true } });
-
-  if (!raw.data?.objectId) return null;
-
-  return parseStampCard(raw.data.objectId, raw.data.content);
+  return parseStampCard(match.objectId, match.json as Record<string, unknown> | null);
 }
+
+// ---------------------------------------------------------------------------
+// Legacy name aliases — consumed by useMyPrograms / useMyCards hooks.
+// These delegate to the canonical implementations above.
+// ---------------------------------------------------------------------------
+
+/** @deprecated Use getProgramsByMerchant */
+export const getMerchantPrograms = getProgramsByMerchant;
+
+/** @deprecated Use getCardsByCustomer */
+export const getCustomerCards = getCardsByCustomer;
