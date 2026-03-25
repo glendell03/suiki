@@ -16,6 +16,9 @@ declare module 'vitest' {
     function todo(name: string, fn?: () => void): void;
   }
   export function beforeEach(fn: () => void | Promise<void>): void;
+  export function afterEach(fn: () => void | Promise<void>): void;
+  export function afterAll(fn: () => void | Promise<void>): void;
+  export function beforeAll(fn: () => void | Promise<void>): void;
   export function expect(value: unknown): {
     toBe(expected: unknown): void;
     toEqual(expected: unknown): void;
@@ -41,5 +44,13 @@ declare module 'vitest' {
       factory?: (importOriginal: <T>() => Promise<T>) => unknown,
     ): void;
     spyOn(object: object, method: string): Mock;
+    useFakeTimers(): void;
+    useRealTimers(): void;
+    setSystemTime(date: Date | number | string): void;
+    stubGlobal(name: string, value: unknown): void;
+    unstubAllGlobals(): void;
+    clearAllMocks(): void;
+    resetAllMocks(): void;
+    restoreAllMocks(): void;
   };
 }

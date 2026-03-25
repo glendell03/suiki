@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
+import { SiteHeader } from "./site-header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -55,7 +56,17 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers>
+          {/* Sticky site header — SiteHeader is a Client Component because
+              ConnectWallet uses hooks. Extracting it keeps RootLayout as a
+              Server Component so metadata and viewport exports work. */}
+          <SiteHeader />
+
+          {/* pt-16 offsets the fixed header height (h-16 = 4rem) */}
+          <div className="flex-1 pt-16">
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );
