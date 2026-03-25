@@ -1,0 +1,13 @@
+[package]
+name = "suiki"
+edition = "2024.beta"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
+
+[addresses]
+suiki = "0x0"
+
+[environments]
+devnet = "e9eed8f1"
+testnet = "4c78adac"

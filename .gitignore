@@ -54,3 +54,15 @@ public/sw.js
 public/workbox-*.js
 public/sw.js.map
 public/workbox-*.js.map
+
+# Move build artifacts
+move/suiki/build/
+move/suiki/Pub.devnet.toml
+move/suiki/Pub.testnet.toml
+move/suiki/Pub.mainnet.toml
+
+# Editor / tool state
+.claude/
+.obsidian/
+.specs/
+*.swp
