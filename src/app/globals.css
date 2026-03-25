@@ -1,26 +1,168 @@
 @import "tailwindcss";
 
+/**
+ * Suiki Design System — CSS Custom Properties
+ *
+ * Color strategy: dark-first. The app targets Filipino MSME customers who are
+ * predominantly mobile-only. A dark background (#0f172a) reduces battery drain
+ * on OLED screens (common in mid-range Android phones) and matches the PWA
+ * manifest background_color for a seamless install-to-launch experience.
+ *
+ * All tokens are defined unconditionally — Suiki does not use a light/dark
+ * toggle. The product is always dark. This simplifies component logic and
+ * avoids theme-flicker on first paint.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* --- Brand palette --- */
+
+  /** Primary action color. Used for CTAs, active states, and the PWA theme bar. */
+  --color-primary: #3b82f6;
+
+  /** Lighter primary for hover/focus rings on dark backgrounds. */
+  --color-primary-light: #60a5fa;
+
+  /** Deeper primary for pressed/active states. */
+  --color-primary-dark: #2563eb;
+
+  /**
+   * Loyalty gold — the brand accent for stamp cards, progress indicators,
+   * and reward unlocked states. Warm amber stands out against the slate
+   * background and communicates value without the crypto-green cliché.
+   */
+  --color-accent-loyalty: #f59e0b;
+
+  /** Muted accent for empty stamp slots and disabled progress segments. */
+  --color-accent-loyalty-muted: #78350f;
+
+  /* --- Surface / background scale --- */
+
+  /** Page background. Matches manifest background_color for install UX. */
+  --color-bg-base: #0f172a;
+
+  /** Card surfaces — slightly elevated above base. */
+  --color-bg-surface: #1e293b;
+
+  /** Elevated modals, sheets, dropdowns. */
+  --color-bg-elevated: #334155;
+
+  /** Borders and dividers on dark surfaces. */
+  --color-border: #475569;
+
+  /** Subtle, low-contrast borders (e.g., inactive stamp slots). */
+  --color-border-subtle: #1e293b;
+
+  /* --- Text scale --- */
+
+  /** Primary body text — near-white for readability on dark backgrounds. */
+  --color-text-primary: #f1f5f9;
+
+  /** Secondary/caption text. */
+  --color-text-secondary: #94a3b8;
+
+  /** Placeholder and disabled text. */
+  --color-text-muted: #475569;
+
+  /* --- Semantic states --- */
+
+  /** Success — stamp earned, redemption confirmed. */
+  --color-success: #22c55e;
+
+  /** Error — transaction failed, QR scan error. */
+  --color-error: #ef4444;
+
+  /** Warning — gas wallet low, nearing daily limit. */
+  --color-warning: #f59e0b;
+
+  /* --- Typography --- */
+
+  /** Body font stack — Geist Sans set via next/font, falls back to system. */
+  --font-body: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /** Monospace — used for wallet addresses and transaction IDs. */
+  --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Code", monospace;
+
+  /* --- Spacing & radius --- */
+
+  /** Base border-radius for cards and buttons. */
+  --radius-base: 0.75rem;
+
+  /** Pill radius for badges and stamp dots. */
+  --radius-pill: 9999px;
 }
 
+/**
+ * Expose tokens to Tailwind v4's @theme layer so they are available as
+ * utility classes (e.g. bg-[--color-primary], text-[--color-text-secondary]).
+ * Tailwind v4 resolves CSS variables defined here automatically when using
+ * CSS-first config — no tailwind.config.js needed.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-bg-base);
+  --color-foreground: var(--color-text-primary);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/**
+ * Base reset — mobile-first PWA hardening.
+ *
+ * Key decisions:
+ * - -webkit-tap-highlight-color: transparent — removes the grey flash on tap
+ *   that degrades perceived performance on Android Chrome.
+ * - scroll-behavior: smooth — enables anchor scrolling without JS.
+ * - -webkit-font-smoothing: antialiased — consistent subpixel rendering across
+ *   iOS Safari and Android Chrome.
+ * - touch-action: manipulation on interactive elements — eliminates the 300ms
+ *   tap delay without breaking pinch-zoom on content areas.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Prevent font size inflation on iOS when rotating to landscape. */
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  line-height: 1.6;
+
+  /* Smooth subpixel antialiasing — improves text clarity on Retina/AMOLED. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Remove grey tap flash on all tappable elements in Android Chrome. */
+  -webkit-tap-highlight-color: transparent;
+
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+/**
+ * Buttons and links — eliminate tap delay on mobile.
+ * touch-action: manipulation allows tap + double-tap zoom on the page
+ * while removing the 300ms delay on interactive elements specifically.
+ */
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/**
+ * Wallet address and transaction ID display.
+ * Monospace ensures character-level alignment and prevents ambiguous glyphs.
+ */
+.font-address {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
 }
