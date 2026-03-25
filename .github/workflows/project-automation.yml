@@ -1,0 +1,162 @@
+name: Project Automation
+
+on:
+  pull_request:
+    types: [opened, reopened, closed]
+  issues:
+    types: [closed, reopened]
+
+jobs:
+  update-project-status:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+      pull-requests: read
+    env:
+      PROJECT_ID: "PVT_kwHOA4HnfM4BSwO4"
+      STATUS_FIELD_ID: "PVTSSF_lAHOA4HnfM4BSwO4zhAMgsM"
+      STATUS_TODO: "f75ad846"
+      STATUS_IN_PROGRESS: "47fc9ee4"
+      STATUS_DONE: "98236657"
+
+    steps:
+      - name: Get linked project item IDs
+        id: get-item
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const eventName = context.eventName;
+            const number = context.payload.pull_request?.number ?? context.payload.issue?.number;
+
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  issueOrPullRequest(number: $number) {
+                    ... on Issue {
+                      projectItems(first: 5) {
+                        nodes { id project { id } }
+                      }
+                    }
+                    ... on PullRequest {
+                      closingIssuesReferences(first: 10) {
+                        nodes {
+                          projectItems(first: 5) {
+                            nodes { id project { id } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const result = await github.graphql(query, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number
+            });
+
+            const obj = result.repository.issueOrPullRequest;
+            const projectId = process.env.PROJECT_ID;
+            let itemIds = [];
+
+            if (obj.projectItems) {
+              itemIds = obj.projectItems.nodes
+                .filter(n => n.project.id === projectId)
+                .map(n => n.id);
+            } else if (obj.closingIssuesReferences) {
+              for (const issue of obj.closingIssuesReferences.nodes) {
+                const ids = issue.projectItems.nodes
+                  .filter(n => n.project.id === projectId)
+                  .map(n => n.id);
+                itemIds.push(...ids);
+              }
+            }
+
+            core.setOutput('item-ids', JSON.stringify(itemIds));
+
+      - name: Set status — In Progress (PR opened or reopened)
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened')
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const itemIds = JSON.parse('${{ steps.get-item.outputs.item-ids }}');
+            const projectId = process.env.PROJECT_ID;
+            const fieldId = process.env.STATUS_FIELD_ID;
+            const optionId = process.env.STATUS_IN_PROGRESS;
+            for (const itemId of itemIds) {
+              await github.graphql(`
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $projectId itemId: $itemId fieldId: $fieldId
+                    value: { singleSelectOptionId: $optionId }
+                  }) { projectV2Item { id } }
+                }
+              `, { projectId, itemId, fieldId, optionId });
+            }
+
+      - name: Set status — Done (PR merged)
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const itemIds = JSON.parse('${{ steps.get-item.outputs.item-ids }}');
+            const projectId = process.env.PROJECT_ID;
+            const fieldId = process.env.STATUS_FIELD_ID;
+            const optionId = process.env.STATUS_DONE;
+            for (const itemId of itemIds) {
+              await github.graphql(`
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $projectId itemId: $itemId fieldId: $fieldId
+                    value: { singleSelectOptionId: $optionId }
+                  }) { projectV2Item { id } }
+                }
+              `, { projectId, itemId, fieldId, optionId });
+            }
+
+      - name: Set status — Done (Issue closed)
+        if: github.event_name == 'issues' && github.event.action == 'closed'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const itemIds = JSON.parse('${{ steps.get-item.outputs.item-ids }}');
+            const projectId = process.env.PROJECT_ID;
+            const fieldId = process.env.STATUS_FIELD_ID;
+            const optionId = process.env.STATUS_DONE;
+            for (const itemId of itemIds) {
+              await github.graphql(`
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $projectId itemId: $itemId fieldId: $fieldId
+                    value: { singleSelectOptionId: $optionId }
+                  }) { projectV2Item { id } }
+                }
+              `, { projectId, itemId, fieldId, optionId });
+            }
+
+      - name: Set status — Todo (Issue reopened)
+        if: github.event_name == 'issues' && github.event.action == 'reopened'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const itemIds = JSON.parse('${{ steps.get-item.outputs.item-ids }}');
+            const projectId = process.env.PROJECT_ID;
+            const fieldId = process.env.STATUS_FIELD_ID;
+            const optionId = process.env.STATUS_TODO;
+            for (const itemId of itemIds) {
+              await github.graphql(`
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $projectId itemId: $itemId fieldId: $fieldId
+                    value: { singleSelectOptionId: $optionId }
+                  }) { projectV2Item { id } }
+                }
+              `, { projectId, itemId, fieldId, optionId });
+            }
