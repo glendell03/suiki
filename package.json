@@ -9,9 +9,8 @@
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
-    "@mysten/dapp-kit": "^1.0.4",
+    "@mysten/dapp-kit-react": "^2.0.1",
     "@mysten/sui": "^2.11.0",
-    "@tanstack/react-query": "^5.95.2",
     "html5-qrcode": "^2.3.8",
     "next": "16.2.1",
     "qrcode.react": "^4.2.0",

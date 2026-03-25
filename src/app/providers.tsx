@@ -1,25 +1,22 @@
 "use client";
 
-import { createNetworkConfig, SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@mysten/dapp-kit/dist/index.css";
+import { createDAppKit, DAppKitProvider } from "@mysten/dapp-kit-react";
+import { SuiGrpcClient } from "@mysten/sui/grpc";
 
-const { networkConfig } = createNetworkConfig({
-  testnet: { url: "https://fullnode.testnet.sui.io:443", network: "testnet" as const },
-  mainnet: { url: "https://fullnode.mainnet.sui.io:443", network: "mainnet" as const },
-  devnet: { url: "https://fullnode.devnet.sui.io:443", network: "devnet" as const },
+// gRPC endpoints per network (preferred over JSON-RPC per Mysten recommendation)
+const GRPC_URLS: Record<string, string> = {
+  testnet: "https://fullnode.testnet.sui.io:443",
+  mainnet: "https://fullnode.mainnet.sui.io:443",
+  devnet: "https://fullnode.devnet.sui.io:443",
+};
+
+const dAppKit = createDAppKit({
+  networks: ["testnet", "mainnet", "devnet"] as const,
+  defaultNetwork: "testnet",
+  createClient: (network) =>
+    new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
 });
 
-const queryClient = new QueryClient();
-
 export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-        <WalletProvider autoConnect>
-          {children}
-        </WalletProvider>
-      </SuiClientProvider>
-    </QueryClientProvider>
-  );
+  return <DAppKitProvider dAppKit={dAppKit}>{children}</DAppKitProvider>;
 }
