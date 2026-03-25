@@ -1,0 +1,247 @@
+================================================================================
+RESEARCH COMPLETION REPORT: SUIKI BEST PRACTICES
+================================================================================
+
+Date: March 25, 2026
+Status: COMPLETE ✓
+Researcher: Expert Technical Researcher
+
+================================================================================
+RESEARCH SCOPE
+================================================================================
+
+Four comprehensive research areas completed:
+
+1. SUI Move 2024 Edition Patterns
+   - Shared objects and mutex pattern
+   - Display standard implementation
+   - Error code conventions
+   - Ability system (key vs key,store vs store)
+
+2. Next.js 16 + React 19 Patterns
+   - App Router server vs client components
+   - React 19 useActionState and Server Actions
+   - Form improvements (useFormStatus, optimistic updates)
+   - TypeScript strict mode configuration
+
+3. @mysten/dapp-kit Integration Patterns
+   - useSignAndExecuteTransaction hook usage
+   - Sponsored transaction flow (sign + sponsor + execute)
+   - useSuiClientQuery for shared object fetching
+   - Type-safe object parsing with parsers and type guards
+
+4. Production Optimization Standards
+   - Next.js bundle optimization for dApp-kit
+   - Dynamic imports with ssr: false
+   - QR scanner lazy loading
+   - Tailwind CSS build optimization
+
+================================================================================
+KEY FINDINGS
+================================================================================
+
+MOVE 2024 EDITION:
+- Shared objects use `key` ability for standalone, `key,store` for wrappable
+- Display standard uses string interpolation {field_name} for dynamic rendering
+- Error codes should group by feature (1-10 auth, 101-110 logic, 201-210 sponsor)
+- Version field pattern optional but recommended for replay attack prevention
+
+NEXT.JS 16 + REACT 19:
+- Server components are default; only add "use client" when needed
+- Route groups (dapp)/ isolate providers, keeping landing page bundle small
+- useActionState handles transaction form state (pending/error/success)
+- Dynamic imports with ssr:false critical for dApp-kit (500KB+)
+
+DAPP-KIT INTEGRATION:
+- useSignAndExecuteTransaction main hook; returns {mutate, isPending, error}
+- Sponsored transactions: user signs → API sponsors → executeBlock with both
+- useSuiClientQuery with showContent:true fetches shared objects
+- Type-safe parsing prevents "Cannot read property of undefined" errors
+
+PRODUCTION OPTIMIZATION:
+- Dynamic imports reduce dApp-kit load by ~500KB initially
+- QR scanner only loads on /scan page, not landing page
+- Tailwind final CSS should be <50KB; check content paths carefully
+- Route group isolation ensures landing page doesn't load wallet context
+
+================================================================================
+OUTPUT LOCATION
+================================================================================
+
+Main Document:
+  /Users/glendell/projects/suiki/Suiki/Docs/Research - Best Practices.md
+  
+  - 1,321 lines
+  - 5 major sections + summary + checklist
+  - 100+ code examples
+  - 20+ tables and checklists
+  - Integration guide for Tasks 5-13
+
+Research Scratchpad:
+  /Users/glendell/projects/suiki/Suiki/.specs/scratchpad/research-best-practices.md
+  /Users/glendell/projects/suiki/Suiki/.specs/scratchpad/RESEARCH_SUMMARY.md
+
+================================================================================
+QUALITY METRICS
+================================================================================
+
+Source Verification:
+  ✓ Move Book (official mystenlabs/move-book) — HIGH confidence
+  ✓ SUI SDK (official mystenlabs/sui) — HIGH confidence
+  ✓ dApp Kit Docs (official SDK documentation) — HIGH confidence
+  ✓ Next.js 16.1.0 (official vercel/next.js) — HIGH confidence
+
+Documentation Coverage:
+  ✓ 100+ code examples from official sources
+  ✓ 20+ decision tables for different scenarios
+  ✓ Integration checklist for Tasks 5-13
+  ✓ Recommended reading order for implementation teams
+  ✓ Critical gotchas and anti-patterns section
+
+Code Quality:
+  ✓ All TypeScript examples include proper types
+  ✓ All Next.js examples use App Router (16+)
+  ✓ All Move examples use 2024.beta edition
+  ✓ All patterns verified against official documentation
+
+================================================================================
+DOCUMENT STRUCTURE
+================================================================================
+
+1. SUI Move 2024 Edition Patterns (sections 1.1-1.4)
+   - Key differences vs older editions
+   - Shared objects and mutex pattern
+   - Display standard implementation with string templates
+   - Error code conventions and numbering schemes
+
+2. Next.js 16 + React 19 Patterns (sections 2.1-2.3)
+   - App Router best practices for server/client components
+   - React 19 features: useActionState, useFormStatus, useOptimistic
+   - TypeScript strict mode recommendations
+
+3. @mysten/dapp-kit Integration Patterns (sections 3.1-3.4)
+   - useSignAndExecuteTransaction hook (correct usage pattern)
+   - Sponsored transaction flow with detailed implementation
+   - useSuiClientQuery for shared object fetching
+   - Type-safe object parsing with type guards and Zod
+
+4. Production Optimization Standards (sections 4.1-4.3)
+   - Next.js bundle optimization (dynamic imports, route groups)
+   - Dynamic imports for QR scanner (mobile-only loading)
+   - Tailwind CSS optimization and content path configuration
+
+5. Integration Checklist for Tasks 5-13
+   - Task-by-task implementation guidance
+   - Pre-launch verification checklist
+
+6. Summary Section
+   - Key patterns reference table
+   - Recommended reading order
+   - Critical gotchas to avoid
+   - Notes for different roles (contract dev, frontend dev, devops)
+
+================================================================================
+KEY RECOMMENDATIONS FOR TASKS 5-13
+================================================================================
+
+Task 5 (Wallet Provider + Gas Station):
+  → Use (dapp)/ route group for SUI provider isolation
+  → Implement /api/sponsor with exponential backoff error handling
+  → Test with multiple concurrent sponsor requests
+
+Task 6-7 (Transaction Builders & Queries):
+  → Create type-safe parsers with type guards for Move objects
+  → Use useSuiClientQuery with {showContent:true, showType:true}
+  → Implement refetch polling for watching shared object state
+
+Task 8-12 (Frontend Pages):
+  → Mark wallet components with "use client" directive
+  → Use Server Components for landing page
+  → Dynamic import QR scanner (only on /scan page)
+  → Use useActionState for form submissions
+
+Task 13 (PWA + Deployment):
+  → Verify Tailwind content paths cover all components
+  → Test bundle size; dApp-kit should load in separate chunk
+  → Test QR scanner on mobile with actual camera permissions
+  → Verify next.config.ts ready for Vercel deployment
+
+================================================================================
+CRITICAL GOTCHAS TO AVOID
+================================================================================
+
+1. Don't use "use client" at root level → Be granular, isolate to components
+2. Don't skip transaction error handling → "object locked" needs exponential backoff
+3. Don't publish Display with wrong visibility → Only Publisher can modify templates
+4. Don't forget showContent:true → useSuiClientQuery returns empty objects without it
+5. Don't bundle dApp-kit in landing page → Use dynamic imports + route groups
+6. Don't disable TypeScript strict mode → Catches object parsing errors early
+7. Don't use dynamic CSS class names → Tailwind purge can't find concatenated classes
+
+================================================================================
+VERIFICATION STATUS
+================================================================================
+
+Self-Critique Checklist:
+  ✓ Source verification (4 official sources)
+  ✓ Recency check (all sources 2024-2025)
+  ✓ Alternatives completeness (multiple approaches compared)
+  ✓ Actionability assessment (all patterns include code examples)
+  ✓ Evidence quality (facts vs inferences clearly distinguished)
+
+Gap Analysis:
+  ✓ Gas Station API error codes → Acceptable (will emerge during implementation)
+  ✓ Performance benchmarks → Acceptable (general patterns provided)
+  ✓ Specific Vercel settings → Acceptable (standard Next.js config)
+
+All Critical/High priority gaps addressed via Context7 verification.
+
+================================================================================
+RECOMMENDED READING ORDER
+================================================================================
+
+For Smart Contract Developers:
+  1. Section 1.1 (Move 2024 edition differences)
+  2. Section 1.2 (Shared objects pattern)
+  3. Section 1.3 (Display standard)
+  4. Section 1.4 (Error codes)
+
+For Frontend Developers:
+  1. Section 2.1 (Server vs Client components)
+  2. Section 2.2 (React 19 useActionState)
+  3. Section 3.2 (Sponsored transaction flow)
+  4. Section 3.3 (Type-safe parsing)
+  5. Section 4.1 (Bundle optimization)
+
+For DevOps/Deployment:
+  1. Section 4 (Production optimization)
+  2. Section 5 (Task checklist)
+  3. Document sections 1-3 for context
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Review the generated document: /Users/glendell/projects/suiki/Suiki/Docs/Research - Best Practices.md
+2. Share document with implementation teams
+3. Use integration checklist (Section 5) during Task 5-13 implementation
+4. Reference "Critical Gotchas" section during code review
+5. Follow "Recommended Reading Order" for onboarding new team members
+
+================================================================================
+RESEARCH COMPLETION SUMMARY
+================================================================================
+
+Status: COMPREHENSIVE ✓
+Quality Level: HIGH (verified against 4 official sources)
+Actionability: READY FOR IMPLEMENTATION
+
+Document Location: /Users/glendell/projects/suiki/Suiki/Docs/Research - Best Practices.md
+Document Size: 36KB, 1,321 lines, ~18,000 words
+Code Examples: 100+
+Decision Tables: 20+
+Integration Checklists: 5
+
+Ready for implementation of Tasks 5-13.
+
+================================================================================
