@@ -12,6 +12,15 @@ module suiki::suiki_tests {
     const OTHER: address = @0xDEAD;
     const NEW_MERCHANT: address = @0xF00D;
 
+    // ===== Error codes (mirrored from suiki::suiki for expected_failure attrs) =====
+
+    const ENotMerchant: u64 = 0;
+    const EProgramMismatch: u64 = 1;
+    const ENotEnoughStamps: u64 = 2;
+    const ENotCustomer: u64 = 3;
+    const EInvalidStampsRequired: u64 = 4;
+    const EInvalidUrl: u64 = 5;
+
     // ===== Happy-path tests =====
 
     #[test]
@@ -44,7 +53,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::EInvalidStampsRequired)]
+    #[expected_failure(abort_code = 4)]
     /// create_program aborts when stamps_required is zero.
     fun test_create_program_zero_stamps_fails() {
         let mut scenario = test_scenario::begin(MERCHANT);
@@ -61,7 +70,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::EInvalidUrl)]
+    #[expected_failure(abort_code = 5)]
     /// create_program aborts when logo_url is empty.
     fun test_create_program_empty_url_fails() {
         let mut scenario = test_scenario::begin(MERCHANT);
@@ -470,7 +479,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::ENotMerchant)]
+    #[expected_failure(abort_code = 0)]
     /// After transfer_merchant, the old merchant can no longer issue stamps.
     fun test_old_merchant_cannot_stamp_after_transfer() {
         let mut scenario = test_scenario::begin(MERCHANT);
@@ -599,7 +608,7 @@ module suiki::suiki_tests {
     // ===== Failure tests =====
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::ENotMerchant)]
+    #[expected_failure(abort_code = 0)]
     /// A non-merchant address cannot issue a stamp.
     fun test_issue_stamp_not_merchant_fails() {
         let mut scenario = test_scenario::begin(MERCHANT);
@@ -635,7 +644,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::ENotMerchant)]
+    #[expected_failure(abort_code = 0)]
     /// A non-merchant address cannot create a card for a customer.
     fun test_create_card_not_merchant_fails() {
         let mut scenario = test_scenario::begin(MERCHANT);
@@ -662,7 +671,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::ENotMerchant)]
+    #[expected_failure(abort_code = 0)]
     /// A non-merchant address cannot update a program.
     fun test_update_program_not_merchant_fails() {
         let mut scenario = test_scenario::begin(MERCHANT);
@@ -693,7 +702,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::ENotEnoughStamps)]
+    #[expected_failure(abort_code = 2)]
     /// Customer cannot redeem with fewer stamps than required.
     fun test_redeem_not_enough_stamps_fails() {
         let mut scenario = test_scenario::begin(MERCHANT);
@@ -729,7 +738,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::ENotCustomer)]
+    #[expected_failure(abort_code = 3)]
     /// A third party cannot redeem another customer's card.
     fun test_redeem_not_customer_fails() {
         let mut scenario = test_scenario::begin(MERCHANT);
@@ -766,7 +775,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::EProgramMismatch)]
+    #[expected_failure(abort_code = 1)]
     /// issue_stamp aborts when the card belongs to a different program than
     /// the one passed in.
     ///
@@ -830,7 +839,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::EProgramMismatch)]
+    #[expected_failure(abort_code = 1)]
     /// redeem aborts when the card's program_id does not match the program
     /// passed in.
     ///
@@ -891,7 +900,7 @@ module suiki::suiki_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = suiki::suiki::EInvalidUrl)]
+    #[expected_failure(abort_code = 5)]
     /// update_program aborts when logo_url is empty.
     fun test_update_program_empty_url_fails() {
         let mut scenario = test_scenario::begin(MERCHANT);
