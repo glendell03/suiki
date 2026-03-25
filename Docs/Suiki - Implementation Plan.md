@@ -17,9 +17,9 @@ updated: 2026-03-25
 
 **Goal:** Build an MVP web-first PWA where Filipino merchants create on-chain stamp loyalty programs and customers collect upgradeable NFT stamp cards — all on SUI blockchain with zero gas fees for end users.
 
-**Architecture:** Next.js 16 PWA connects to SUI via `@mysten/dapp-kit` + Slush wallet adapter. Move smart contracts define `StampProgram` (shared, merchant-owned) and `StampCard` (shared, customer-facing NFT with Display standard). A Next.js API route sponsors gas for all transactions. Merchants issue stamps by scanning customer QR codes; customers view and redeem stamps through the PWA.
+**Architecture:** Next.js 16 PWA connects to SUI via `@mysten/dapp-kit-react` v2 + Slush wallet adapter. Move smart contracts define `StampProgram` (shared, merchant-owned) and `StampCard` (shared, customer-facing NFT with Display standard). A Next.js API route sponsors gas for all transactions. Merchants issue stamps by scanning customer QR codes; customers view and redeem stamps through the PWA.
 
-**Tech Stack:** Next.js 16 (App Router), TypeScript, Tailwind CSS, `@mysten/dapp-kit`, `@mysten/sui`, SUI Move, SUI Gas Station, `qrcode.react`, `html5-qrcode`, Vercel
+**Tech Stack:** Next.js 16 (App Router), TypeScript, Tailwind CSS, `@mysten/dapp-kit-react` v2, `@mysten/sui`, SUI Move, SUI Gas Station, `qrcode.react`, `html5-qrcode`, Vercel
 
 **Spec:** [[Suiki - Design Spec]]
 
@@ -116,32 +116,33 @@ Expected: Project scaffolded with App Router, TypeScript, Tailwind.
 - [ ] **Step 2: Install SUI + wallet dependencies**
 
 ```bash
-npm install @mysten/sui @mysten/dapp-kit @tanstack/react-query
+npm install @mysten/sui @mysten/dapp-kit-react @tanstack/react-query
 ```
 
 - [ ] **Step 3: Install QR + PWA dependencies**
 
 ```bash
-npm install qrcode.react html5-qrcode next-pwa
-npm install -D @types/qrcode.react
+npm install qrcode.react html5-qrcode @ducanh2912/next-pwa
 ```
 
 - [ ] **Step 4: Configure PWA in next.config.ts**
 
 ```typescript
 // next.config.ts
-import withPWA from 'next-pwa';
+import './src/env.ts'; // validate env at build time
+import withPWAInit from '@ducanh2912/next-pwa';
 
-const nextConfig = withPWA({
+const withPWA = withPWAInit({
   dest: 'public',
-  register: true,
-  skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-})({
-  reactStrictMode: true,
+  register: true,
 });
 
-export default nextConfig;
+export default withPWA({
+  reactStrictMode: true,
+  // Turbopack is the default dev server in Next.js 16
+  turbopack: {},
+});
 ```
 
 - [ ] **Step 5: Create .env.local template**
@@ -846,8 +847,10 @@ git commit -m "chore: deploy contract to SUI testnet, record package ID"
 
 ```typescript
 // src/lib/constants.ts
-export const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID!;
-export const SUI_NETWORK = (process.env.NEXT_PUBLIC_SUI_NETWORK ?? 'testnet') as 'testnet' | 'mainnet' | 'devnet';
+import { env } from '@/env';
+
+export const SUI_NETWORK = env.NEXT_PUBLIC_SUI_NETWORK;
+export const PACKAGE_ID = env.NEXT_PUBLIC_PACKAGE_ID;
 export const MODULE_NAME = 'suiki';
 
 // Move function targets
@@ -867,11 +870,18 @@ export const CLOCK_ID = '0x6';
 
 ```typescript
 // src/lib/sui-client.ts
-import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { SUI_NETWORK } from './constants';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
+import { env } from '@/env';
 
-export const suiClient = new SuiClient({
-  url: getFullnodeUrl(SUI_NETWORK),
+const GRPC_URLS: Record<'testnet' | 'mainnet' | 'devnet', string> = {
+  testnet: 'https://fullnode.testnet.sui.io:443',
+  mainnet: 'https://fullnode.mainnet.sui.io:443',
+  devnet: 'https://fullnode.devnet.sui.io:443',
+};
+
+export const suiClient = new SuiGrpcClient({
+  network: env.NEXT_PUBLIC_SUI_NETWORK,
+  baseUrl: GRPC_URLS[env.NEXT_PUBLIC_SUI_NETWORK],
 });
 ```
 
@@ -881,27 +891,35 @@ export const suiClient = new SuiClient({
 // src/app/providers.tsx
 'use client';
 
-import { createNetworkConfig, SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
-import { getFullnodeUrl } from '@mysten/sui/client';
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SUI_NETWORK } from '@/lib/constants';
+import { createDAppKit, DAppKitProvider } from '@mysten/dapp-kit-react';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 
-const { networkConfig } = createNetworkConfig({
-  testnet: { url: getFullnodeUrl('testnet') },
-  mainnet: { url: getFullnodeUrl('mainnet') },
-  devnet: { url: getFullnodeUrl('devnet') },
+// gRPC endpoints per network (preferred over JSON-RPC per Mysten recommendation)
+const GRPC_URLS: Record<'testnet' | 'mainnet' | 'devnet', string> = {
+  testnet: 'https://fullnode.testnet.sui.io:443',
+  mainnet: 'https://fullnode.mainnet.sui.io:443',
+  devnet: 'https://fullnode.devnet.sui.io:443',
+};
+
+const dAppKit = createDAppKit({
+  networks: ['testnet', 'mainnet', 'devnet'] as const,
+  defaultNetwork: 'testnet',
+  createClient: (network) =>
+    new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
 });
 
-const queryClient = new QueryClient();
-
+/** Root provider tree. QueryClientProvider wraps DAppKitProvider so blockchain
+ * hooks can use React Query's cache for server data independently. */
 export function Providers({ children }: { children: React.ReactNode }) {
+  // useState factory prevents QueryClient from being shared across SSR requests
+  const [queryClient] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { staleTime: 60 * 1000 } } }),
+  );
   return (
     <QueryClientProvider client={queryClient}>
-      <SuiClientProvider networks={networkConfig} defaultNetwork={SUI_NETWORK}>
-        <WalletProvider autoConnect>
-          {children}
-        </WalletProvider>
-      </SuiClientProvider>
+      <DAppKitProvider dAppKit={dAppKit}>{children}</DAppKitProvider>
     </QueryClientProvider>
   );
 }
@@ -913,7 +931,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 // src/components/connect-wallet.tsx
 'use client';
 
-import { ConnectButton } from '@mysten/dapp-kit';
+import { ConnectButton } from '@mysten/dapp-kit-react';
 
 export function ConnectWallet() {
   return <ConnectButton />;
@@ -926,7 +944,6 @@ export function ConnectWallet() {
 // src/app/layout.tsx
 import type { Metadata } from 'next';
 import { Providers } from './providers';
-import '@mysten/dapp-kit/dist/index.css';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -994,11 +1011,8 @@ sui client faucet --address YOUR_SPONSOR_ADDRESS
 // src/app/api/sponsor/route.ts
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
-import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { SUI_NETWORK } from '@/lib/constants';
 import { fromBase64, toBase64 } from '@mysten/sui/utils';
-
-const client = new SuiClient({ url: getFullnodeUrl(SUI_NETWORK) });
+import { suiClient as client } from '@/lib/sui-client';
 
 function getSponsorKeypair(): Ed25519Keypair {
   const key = process.env.SPONSOR_PRIVATE_KEY;
@@ -1285,7 +1299,7 @@ export async function findCardForProgram(
 // src/hooks/use-sponsored-tx.ts
 'use client';
 
-import { useSignTransaction, useSuiClient } from '@mysten/dapp-kit';
+import { useSignTransaction, useSuiClient } from '@mysten/dapp-kit-react';
 import { Transaction } from '@mysten/sui/transactions';
 import { toBase64 } from '@mysten/sui/utils';
 import { useCallback, useState } from 'react';
@@ -1354,7 +1368,7 @@ export function useSponsoredTransaction() {
 // src/hooks/use-my-programs.ts
 'use client';
 
-import { useSuiClient, useCurrentAccount } from '@mysten/dapp-kit';
+import { useSuiClient, useCurrentAccount } from '@mysten/dapp-kit-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchMerchantPrograms } from '@/lib/queries';
 
@@ -1374,7 +1388,7 @@ export function useMyPrograms() {
 // src/hooks/use-my-cards.ts
 'use client';
 
-import { useSuiClient, useCurrentAccount } from '@mysten/dapp-kit';
+import { useSuiClient, useCurrentAccount } from '@mysten/dapp-kit-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchCustomerCards } from '@/lib/queries';
 
@@ -1412,7 +1426,7 @@ git commit -m "feat: add transaction builders, on-chain queries, and sponsored t
 'use client';
 
 import { useState } from 'react';
-import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import { useRouter } from 'next/navigation';
 import { ConnectWallet } from '@/components/connect-wallet';
 import { buildCreateProgram } from '@/lib/transactions';
@@ -1535,7 +1549,7 @@ export default function CreateProgramPage() {
 // src/app/merchant/page.tsx
 'use client';
 
-import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import Link from 'next/link';
 import { ConnectWallet } from '@/components/connect-wallet';
 import { useMyPrograms } from '@/hooks/use-my-programs';
@@ -1773,7 +1787,7 @@ git commit -m "feat: add QR code display and camera scanner components"
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConnectWallet } from '@/components/connect-wallet';
 import { QRCodeDisplay } from '@/components/qr-code';
@@ -2068,7 +2082,7 @@ export function StampCardDisplay({ card, onRedeem, redeemLoading }: StampCardDis
 'use client';
 
 import { useState } from 'react';
-import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import Link from 'next/link';
 import { ConnectWallet } from '@/components/connect-wallet';
 import { QRCodeDisplay } from '@/components/qr-code';
@@ -2161,7 +2175,7 @@ export default function CustomerPage() {
 'use client';
 
 import { useState } from 'react';
-import { useSuiClient, useCurrentAccount } from '@mysten/dapp-kit';
+import { useSuiClient, useCurrentAccount } from '@mysten/dapp-kit-react';
 import { useRouter } from 'next/navigation';
 import { ConnectWallet } from '@/components/connect-wallet';
 import { QRScanner } from '@/components/qr-scanner';
@@ -2319,7 +2333,6 @@ export default function HomePage() {
 // src/app/layout.tsx
 import type { Metadata } from 'next';
 import { Providers } from './providers';
-import '@mysten/dapp-kit/dist/index.css';
 import './globals.css';
 import Link from 'next/link';
 

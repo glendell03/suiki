@@ -1,16 +1,59 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Next.js
-.next/
-out/
-build/
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Env files — never commit real secrets
-.env.local
-.env*.local
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+
+# Private key and certificate files — NEVER commit these
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+
+# env files — .env.local.example is the only env file allowed in source control
+.env
+.env.*
+!.env.local.example
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# PWA generated files
+public/sw.js
+public/workbox-*.js
+public/sw.js.map
+public/workbox-*.js.map
 
 # Move build artifacts
 move/suiki/build/
@@ -23,8 +66,3 @@ move/suiki/Pub.mainnet.toml
 .obsidian/
 .specs/
 *.swp
-.DS_Store
-
-# PWA
-public/sw.js
-public/workbox-*.js
