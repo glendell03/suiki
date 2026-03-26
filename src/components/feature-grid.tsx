@@ -56,7 +56,7 @@ const FEATURES: FeatureTile[] = [
   },
   {
     id: "rewards",
-    href: "/customer/cards",
+    href: "/customer/cards", // TODO: replace with /customer/rewards when route exists
     icon: Gift,
     title: "Rewards",
     subtitle: "Redeem your stamps",
@@ -67,7 +67,7 @@ const FEATURES: FeatureTile[] = [
   },
   {
     id: "lucky",
-    href: "/customer/scan",
+    href: "/customer/scan", // TODO: replace with /customer/lucky-draw when route exists
     icon: Sparkles,
     title: "Lucky Draw",
     subtitle: "Stamp holders only",
@@ -110,6 +110,7 @@ export function FeatureGrid() {
                 size={14}
                 className="absolute right-3 top-3 opacity-50"
                 style={{ color: f.accentColor }}
+                aria-hidden={true}
               />
 
               {/* Icon */}
@@ -117,6 +118,7 @@ export function FeatureGrid() {
                 size={22}
                 strokeWidth={1.8}
                 style={{ color: f.accentColor }}
+                aria-hidden={true}
               />
 
               {/* Text */}
