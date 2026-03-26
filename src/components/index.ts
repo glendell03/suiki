@@ -38,6 +38,9 @@ export { default as EmptyStateDefault } from "./empty-state";
 export { WalletDropdown } from "./wallet-dropdown";
 export { default as WalletDropdownDefault } from "./wallet-dropdown";
 
+export { FeatureGrid } from "./feature-grid";
+export { default as FeatureGridDefault } from "./feature-grid";
+
 // Re-export updated button with new variants
 export { Button } from "./ui/button";
 export type { ButtonVariant } from "./ui/button";
