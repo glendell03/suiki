@@ -31,7 +31,8 @@ function ScanContent() {
     <div
       className="flex min-h-dvh flex-col"
       style={{
-        // Deep forest gradient -- page-level design intent, not a reusable token
+        // Intentionally darker than --color-gradient-start/end — scan page has
+        // a distinct "cave entrance" feel to signal focus mode. Not a reusable token.
         background: "linear-gradient(160deg, #0a3d20 0%, #0a2a18 50%, #061a10 100%)",
       }}
     >
