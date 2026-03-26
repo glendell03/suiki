@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GlassCard } from "./glass-card";
@@ -53,6 +54,7 @@ export function MerchantCard({
   onShowQR,
   className = "",
 }: MerchantCardProps) {
+  const [imgError, setImgError] = useState(false);
   const expandId = `merchant-detail-${merchantName.replace(/\s+/g, "-").toLowerCase()}`;
 
   return (
@@ -71,16 +73,14 @@ export function MerchantCard({
           aria-hidden="true"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[--color-bg-elevated] overflow-hidden"
         >
-          {logoUrl ? (
+          {logoUrl && !imgError ? (
             <img
               src={logoUrl}
               alt={merchantName}
               width={40}
               height={40}
               className="h-10 w-10 object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+              onError={() => setImgError(true)}
             />
           ) : (
             <span className="text-lg" aria-hidden="true">
