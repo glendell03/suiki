@@ -8,8 +8,9 @@ import QrScanner from '@/components/qr-scanner';
 import QrCode from '@/components/qr-code';
 import { StampProgress } from '@/components/stamp-progress';
 import { getProgramById, findCardForProgram } from '@/lib/queries';
-import type { MerchantQRPayload, StampProgram, StampCard, CustomerQRPayload } from '@/types/sui';
+import type { StampProgram, StampCard } from '@/types/sui';
 import { asSuiObjectId, asSuiAddress } from '@/types/sui';
+import { parseQRPayload } from '@/lib/qr-utils';
 
 /**
  * Customer QR scan page.
@@ -46,31 +47,20 @@ function ScanView() {
   const handleScan = async (raw: string) => {
     if (!account) return;
 
-    // Only handle one scan — ignore subsequent frames while loading.
+    // Only handle one scan — the ScanPhase discriminated union prevents
+    // re-entry: subsequent frames from the scanner are ignored while loading.
     if (phase.kind !== 'scanning') return;
 
-    // Safely parse the JSON payload.
-    let payload: unknown;
-    try {
-      payload = JSON.parse(raw);
-    } catch {
+    // Use canonical parser with String() coercion to guard against object injection.
+    const parsed = parseQRPayload(raw);
+
+    if (!parsed) {
       setPhase({ kind: 'error', message: 'Invalid QR code. Please scan a Suiki merchant QR.' });
       return;
     }
 
-    if (
-      typeof payload !== 'object' ||
-      payload === null ||
-      (payload as Record<string, unknown>)['type'] !== 'merchant'
-    ) {
+    if (parsed.type !== 'merchant') {
       setPhase({ kind: 'error', message: 'This QR code is not a Suiki merchant code.' });
-      return;
-    }
-
-    const merchantPayload = payload as MerchantQRPayload;
-
-    if (!merchantPayload.programId || !merchantPayload.merchantAddress) {
-      setPhase({ kind: 'error', message: 'Merchant QR code is missing required data.' });
       return;
     }
 
@@ -78,8 +68,8 @@ function ScanView() {
 
     try {
       const [program, existingCard] = await Promise.all([
-        getProgramById(merchantPayload.programId),
-        findCardForProgram(account.address, merchantPayload.programId),
+        getProgramById(parsed.programId),
+        findCardForProgram(account.address, parsed.programId),
       ]);
 
       if (!program) {

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { WalletGuard } from '@/components/wallet-guard';
@@ -42,10 +42,14 @@ function CustomerDashboard() {
 
   /** objectId of the card currently being redeemed, null when idle. */
   const [redeemingCardId, setRedeemingCardId] = useState<string | null>(null);
+  // Synchronous guard — prevents a second tap from firing before the first
+  // React render cycle sets redeemingCardId (state update is async).
+  const isRedeemingRef = useRef(false);
 
   /** Handle the redeem flow for a specific card. */
   const handleRedeem = async (card: StampCard) => {
-    if (!account) return;
+    if (!account || isRedeemingRef.current) return;
+    isRedeemingRef.current = true;
 
     setRedeemingCardId(card.objectId);
     try {
@@ -55,6 +59,7 @@ function CustomerDashboard() {
       // Invalidate the cards cache so the updated stamp count is fetched.
       await queryClient.invalidateQueries({ queryKey: ['cards', account.address] });
     } finally {
+      isRedeemingRef.current = false;
       setRedeemingCardId(null);
     }
   };

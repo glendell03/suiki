@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
 
@@ -13,9 +13,6 @@ interface QrScannerProps {
 
 /** Internal states for the scanner lifecycle. */
 type ScannerState = 'loading' | 'scanning' | 'permission-denied' | 'error';
-
-/** Unique DOM element id for the html5-qrcode mount point. */
-const CONTAINER_ID = 'qr-scanner-container';
 
 /**
  * QrScanner — camera-based QR code scanner component.
@@ -32,12 +29,22 @@ const CONTAINER_ID = 'qr-scanner-container';
 export default function QrScanner({ onScan, onError }: QrScannerProps) {
   const [state, setState] = useState<ScannerState>('loading');
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  // Track current state in a ref so the setTimeout closure reads the live value,
+  // not the stale captured value from when the effect ran.
+  const stateRef = useRef<ScannerState>('loading');
+
+  // useId produces a stable per-instance id, ensuring two simultaneous QrScanner
+  // mounts never target the same DOM element (html5-qrcode requires a unique id).
+  const rawId = useId();
+  // Replace colons from React's internal id format with hyphens for a valid DOM id.
+  const containerId = `qr-scanner-${rawId.replace(/:/g, '')}`;
 
   useEffect(() => {
     let mounted = true;
+    stateRef.current = 'loading';
 
     const scanner = new Html5QrcodeScanner(
-      CONTAINER_ID,
+      containerId,
       { fps: 10, qrbox: { width: 250, height: 250 } },
       /* verbose */ false,
     );
@@ -57,6 +64,7 @@ export default function QrScanner({ onScan, onError }: QrScannerProps) {
           typeof errorMessage === 'string' &&
           errorMessage.toLowerCase().includes('permission')
         ) {
+          stateRef.current = 'permission-denied';
           setState('permission-denied');
           return;
         }
@@ -66,10 +74,11 @@ export default function QrScanner({ onScan, onError }: QrScannerProps) {
       },
     );
 
-    // After render, the library starts the camera. If the container gets the
-    // scan region added without error we can transition to scanning.
+    // After render, the library starts the camera. Transition to scanning only if
+    // state is still 'loading' — checked via ref to avoid stale closure.
     const transitionTimer = setTimeout(() => {
-      if (mounted && state === 'loading') {
+      if (mounted && stateRef.current === 'loading') {
+        stateRef.current = 'scanning';
         setState('scanning');
       }
     }, 800);
@@ -154,7 +163,7 @@ export default function QrScanner({ onScan, onError }: QrScannerProps) {
           .join(' ')}
       >
         {/* html5-qrcode mounts its own DOM into this container. */}
-        <div id={CONTAINER_ID} />
+        <div id={containerId} />
       </div>
     </div>
   );

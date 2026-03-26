@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentAccount } from '@mysten/dapp-kit-react';
@@ -12,7 +12,7 @@ import {
   buildCreateCardAndStamp,
   buildIssueStamp,
 } from '@/lib/transactions';
-import type { StampCard, CustomerQRPayload } from '@/types/sui';
+import type { StampCard } from '@/types/sui';
 import { asSuiAddress } from '@/types/sui';
 import {
   getDailyTxCount,
@@ -24,6 +24,7 @@ import {
 } from '@/lib/rate-limit';
 import QrCode from '@/components/qr-code';
 import QrScanner from '@/components/qr-scanner';
+import { parseQRPayload } from '@/lib/qr-utils';
 
 // SUI address: 0x followed by exactly 64 hex characters
 const SUI_ADDRESS_RE = /^0x[0-9a-fA-F]{64}$/;
@@ -290,6 +291,9 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
   const account = useCurrentAccount();
   const { executeSponsoredTx, isPending, error: txError, digest } = useSponsoredTx();
 
+  // Prevents concurrent handleScan executions when the scanner fires multiple frames.
+  const isHandlingScanRef = useRef(false);
+
   // UI state
   const [scanMode, setScanMode] = useState(false);
   const [confirmData, setConfirmData] = useState<ConfirmData | null>(null);
@@ -349,42 +353,38 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
 
   /** Called by QrScanner when a QR code is successfully decoded. */
   const handleScan = async (raw: string) => {
+    // Prevent concurrent executions — the scanner emits one event per decoded
+    // frame, so multiple fires can arrive before the first await resolves.
+    if (isHandlingScanRef.current) return;
+    isHandlingScanRef.current = true;
+
     setScanMode(false);
     setScanError(null);
 
-    // Safely parse — reject malformed or non-customer payloads.
-    let payload: CustomerQRPayload;
     try {
-      const parsed: unknown = JSON.parse(raw);
-      if (
-        typeof parsed !== 'object' ||
-        parsed === null ||
-        (parsed as Record<string, unknown>)['type'] !== 'customer' ||
-        typeof (parsed as Record<string, unknown>)['customerAddress'] !== 'string'
-      ) {
+      // Use the canonical parser (String() coercion guards against object injection).
+      const parsed = parseQRPayload(raw);
+      if (!parsed || parsed.type !== 'customer') {
         setScanError('Not a valid customer QR code. Ask the customer to show their Suiki QR.');
         return;
       }
-      payload = parsed as CustomerQRPayload;
-    } catch {
-      setScanError('Could not read QR code. Please try again.');
-      return;
+
+      const customerAddress = parsed.customerAddress;
+
+      // Validate the address format before sending it on-chain.
+      if (!SUI_ADDRESS_RE.test(customerAddress)) {
+        setScanError('Invalid wallet address in QR code.');
+        return;
+      }
+
+      // Show confirm panel immediately while card lookup runs in background.
+      setConfirmData({ customerAddress, card: null, cardLoading: true });
+
+      const card = await findCardForProgram(customerAddress, programId);
+      setConfirmData({ customerAddress, card, cardLoading: false });
+    } finally {
+      isHandlingScanRef.current = false;
     }
-
-    const customerAddress = payload.customerAddress;
-
-    // Validate the address format before sending it on-chain.
-    if (!SUI_ADDRESS_RE.test(customerAddress)) {
-      setScanError('Invalid wallet address in QR code.');
-      return;
-    }
-
-    // Show confirm panel immediately while card lookup runs in background.
-    setConfirmData({ customerAddress, card: null, cardLoading: true });
-
-    const card = await findCardForProgram(customerAddress, programId);
-    // Update confirm data with the resolved card (may be null for new customers).
-    setConfirmData({ customerAddress, card, cardLoading: false });
   };
 
   // ---------------------------------------------------------------------------
