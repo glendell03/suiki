@@ -3,10 +3,13 @@
 /**
  * Suiki Design System — CSS Custom Properties
  *
- * Color strategy: dark-first. The app targets Filipino MSME customers who are
- * predominantly mobile-only. A dark background (#0f172a) reduces battery drain
- * on OLED screens (common in mid-range Android phones) and matches the PWA
- * manifest background_color for a seamless install-to-launch experience.
+ * Color strategy: dark-first, deep green glassmorphic theme.
+ *
+ * The app targets Filipino MSME customers who are predominantly mobile-only.
+ * A deep forest green background (#0a1a14) reduces battery drain on OLED
+ * screens (common in mid-range Android phones), matches the PWA manifest
+ * background_color for a seamless install-to-launch experience, and signals
+ * the growth/trust psychology aligned with a loyalty rewards product.
  *
  * All tokens are defined unconditionally — Suiki does not use a light/dark
  * toggle. The product is always dark. This simplifies component logic and
@@ -16,67 +19,116 @@
 :root {
   /* --- Brand palette --- */
 
-  /** Primary action color. Used for CTAs, active states, and the PWA theme bar. */
-  --color-primary: #3b82f6;
+  /** Primary CTA color. Used for CTAs, active tab indicator, and the PWA theme bar. */
+  --color-primary: #4ade80;
 
   /** Lighter primary for hover/focus rings on dark backgrounds. */
-  --color-primary-light: #60a5fa;
+  --color-primary-light: #86efac;
 
   /** Deeper primary for pressed/active states. */
-  --color-primary-dark: #2563eb;
+  --color-primary-dark: #22c55e;
 
   /**
    * Loyalty gold — the brand accent for stamp cards, progress indicators,
-   * and reward unlocked states. Warm amber stands out against the slate
-   * background and communicates value without the crypto-green cliché.
+   * and reward unlocked states. Warm amber stands out against the forest-green
+   * background and communicates value without being redundant with the primary green.
    */
   --color-accent-loyalty: #f59e0b;
 
-  /** Muted accent for empty stamp slots and disabled progress segments. */
-  --color-accent-loyalty-muted: #78350f;
+  /**
+   * Muted loyalty gold for empty stamp slots and disabled progress segments.
+   * Uses rgba so it blends correctly over the glassmorphic card backgrounds.
+   */
+  --color-accent-loyalty-muted: rgba(245, 158, 11, 0.2);
 
   /* --- Surface / background scale --- */
 
-  /** Page background. Matches manifest background_color for install UX. */
-  --color-bg-base: #0f172a;
+  /**
+   * Page background — deep forest green. Matches manifest background_color
+   * for a seamless PWA install-to-launch experience with no color flash.
+   */
+  --color-bg-base: #0a1a14;
 
-  /** Card surfaces — slightly elevated above base. */
-  --color-bg-surface: #1e293b;
+  /** Card surfaces — slightly elevated above the page base. */
+  --color-bg-surface: #132a1f;
 
-  /** Elevated modals, sheets, dropdowns. */
-  --color-bg-elevated: #334155;
+  /** Elevated modals, sheets, and dropdowns — the next level above surfaces. */
+  --color-bg-elevated: #1a3d2a;
 
-  /** Borders and dividers on dark surfaces. */
-  --color-border: #475569;
+  /**
+   * Gradient top color — slightly more emerald than the base, creating a
+   * subtle depth that makes the page feel dimensional rather than flat.
+   */
+  --color-gradient-start: #0a2e1a;
 
-  /** Subtle, low-contrast borders (e.g., inactive stamp slots). */
-  --color-border-subtle: #1e293b;
+  /** Gradient bottom — same as bg-base, anchoring the gradient to the page floor. */
+  --color-gradient-end: #0a1a14;
+
+  /* --- Glassmorphism tokens --- */
+
+  /**
+   * Frosted glass card background. Low opacity lets the gradient beneath show
+   * through, creating the layered depth central to the design language.
+   */
+  --glass-bg: rgba(20, 60, 40, 0.4);
+
+  /**
+   * Green-tinted glass border. Subtler than the primary green — enough to
+   * define the card edge without creating a neon-border look.
+   */
+  --glass-border: rgba(74, 222, 128, 0.12);
+
+  /** Standard blur radius for all glass surfaces. 20px balances depth and readability. */
+  --glass-blur: 20px;
+
+  /**
+   * Deep shadow for glass cards. Dark and directional — not the diffused gray
+   * of Material Design. Reinforces the premium, app-like aesthetic.
+   */
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  /**
+   * Hover state for glass cards — slightly more opaque to signal interactivity
+   * without a jarring jump to a fully solid background.
+   */
+  --glass-bg-hover: rgba(20, 60, 40, 0.6);
+
+  /* --- Borders and dividers --- */
+
+  /** Standard green-tinted border — used for interactive card edges. */
+  --color-border: rgba(74, 222, 128, 0.15);
+
+  /** Subtle separator lines — low contrast, used for inactive stamp slots and dividers. */
+  --color-border-subtle: rgba(74, 222, 128, 0.08);
+
+  /** Strong border for focus rings, active states, and selected elements. */
+  --color-border-strong: rgba(74, 222, 128, 0.3);
 
   /* --- Text scale --- */
 
-  /** Primary body text — near-white for readability on dark backgrounds. */
+  /** Primary body text — near-white for readability on dark green backgrounds. */
   --color-text-primary: #f1f5f9;
 
-  /** Secondary/caption text. */
-  --color-text-secondary: #94a3b8;
+  /** Secondary/caption text — muted sage green for hierarchy on dark backgrounds. */
+  --color-text-secondary: #7fb891;
 
-  /** Placeholder and disabled text. */
+  /** Placeholder and disabled text — lowest priority in the text hierarchy. */
   --color-text-muted: #475569;
 
   /* --- Semantic states --- */
 
-  /** Success — stamp earned, redemption confirmed. */
+  /** Success — stamp earned, redemption confirmed. Shares hue with primary green. */
   --color-success: #22c55e;
 
-  /** Error — transaction failed, QR scan error. */
+  /** Error — transaction failed, QR scan error, form validation failure. */
   --color-error: #ef4444;
 
-  /** Warning — gas wallet low, nearing daily limit. */
+  /** Warning — gas wallet low, nearing daily limit, expiring reward. */
   --color-warning: #f59e0b;
 
   /* --- Typography --- */
 
-  /** Body font stack — Geist Sans set via next/font, falls back to system. */
+  /** Body font stack — Geist Sans set via next/font, falls back to system sans. */
   --font-body: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
   /** Monospace — used for wallet addresses and transaction IDs. */
@@ -84,11 +136,109 @@
 
   /* --- Spacing & radius --- */
 
-  /** Base border-radius for cards and buttons. */
+  /**
+   * Base border-radius — kept for backwards compatibility with components
+   * that reference --radius-base before the per-role tokens were introduced.
+   */
   --radius-base: 0.75rem;
 
-  /** Pill radius for badges and stamp dots. */
+  /** Card and modal radius — 16px matches the reference design's rounded-card aesthetic. */
+  --radius-card: 1rem;
+
+  /** Button radius — 12px, slightly tighter than cards to feel distinct. */
+  --radius-button: 0.75rem;
+
+  /** Input and search bar radius — 12px, consistent with buttons. */
+  --radius-input: 0.75rem;
+
+  /** Pill radius — badges, stamp dots, active nav indicators. */
   --radius-pill: 9999px;
+
+  /**
+   * Horizontal page padding — 20px keeps content away from the phone edge
+   * and aligns with the reference design's comfortable breathing room.
+   */
+  --spacing-page-x: 1.25rem;
+
+  /**
+   * Vertical gap between page sections — 24px creates clear visual grouping
+   * without excessive whitespace on compact mobile screens.
+   */
+  --spacing-section-gap: 1.5rem;
+
+  /**
+   * Internal card padding — 16px. Tighter than section gap to keep card
+   * content compact, matching the dense-but-readable reference cards.
+   */
+  --spacing-card-padding: 1rem;
+
+  /* --- Animation tokens --- */
+
+  /**
+   * Snappy ease-out curve — used for entrances and response to user input.
+   * Fast start, slow finish: feels immediately reactive and then settles naturally.
+   */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /**
+   * Ease-in curve — used for exits. Slow start, fast finish: element
+   * lingers briefly then departs quickly, keeping the UI feeling lively.
+   */
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+
+  /** Micro-interactions — 150ms for press feedback, hover transitions, border pulses. */
+  --duration-micro: 150ms;
+
+  /** Normal transitions — 250ms for card expand/collapse, color changes, opacity. */
+  --duration-normal: 250ms;
+
+  /**
+   * Bottom sheet and modal transitions — 350ms spring feel.
+   * Longer than normal to make the sheet feel weighty and physical.
+   */
+  --duration-sheet: 350ms;
+
+  /**
+   * Press scale — 0.97 gives a tactile "physical push" feeling on tap
+   * without being distracting. Applied via .tap-target utility.
+   */
+  --scale-press: 0.97;
+
+  /* --- Bottom navigation --- */
+
+  /**
+   * Bottom nav height — 64px. Accommodates icon + label, comfortably
+   * reachable by thumb, and matches the reference design's nav proportions.
+   */
+  --nav-height: 4rem;
+
+  /**
+   * Bottom nav background — translucent dark green with high opacity.
+   * Sits above the page gradient, blurs content beneath when scrolling.
+   */
+  --nav-bg: rgba(10, 26, 20, 0.9);
+
+  /* --- Display font --- */
+  /** Plus Jakarta Sans — used for hero headings and display text. */
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+
+  /* --- iOS 26 Liquid Glass tokens --- */
+
+  /** Floating nav and dropdown background — more saturated than glass-card. */
+  --liquid-bg: rgba(16, 52, 33, 0.55);
+
+  /** Luminous border — thin white edge simulates glass refraction. */
+  --liquid-border: rgba(255, 255, 255, 0.1);
+
+  /** Inset highlight — top-edge glow that makes surfaces feel convex. */
+  --liquid-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  /** Liquid blur — stronger than glass-card, with saturation boost. */
+  --liquid-blur: 32px;
+  --liquid-saturate: 1.8;
+
+  /** Liquid shadow — deep directional shadow + inset highlight combined. */
+  --liquid-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
 }
 
 /**
@@ -96,12 +246,16 @@
  * utility classes (e.g. bg-[--color-primary], text-[--color-text-secondary]).
  * Tailwind v4 resolves CSS variables defined here automatically when using
  * CSS-first config — no tailwind.config.js needed.
+ *
+ * --radius maps to Tailwind's rounded-* utilities via the design system card radius.
  */
 @theme inline {
   --color-background: var(--color-bg-base);
   --color-foreground: var(--color-text-primary);
   --font-sans: var(--font-body);
   --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --radius: var(--radius-card);
 }
 
 /**
@@ -165,4 +319,118 @@ a,
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   letter-spacing: 0.02em;
+}
+
+/**
+ * Glass card utility — the core visual primitive of the Suiki design system.
+ *
+ * Applied to any container that should appear as a frosted panel floating
+ * above the page gradient. The backdrop-filter blur creates the glassmorphic
+ * depth effect; the semi-transparent green border ties cards to the brand palette.
+ *
+ * Usage: <div className="glass-card"> ... </div>
+ * Works best over the .page-gradient background.
+ */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-card);
+}
+
+.glass-card:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--color-border);
+  transition: background var(--duration-micro) var(--ease-out),
+              border-color var(--duration-micro) var(--ease-out);
+}
+
+/**
+ * Liquid Glass surface — iOS 26 style floating material.
+ * Used for: floating bottom nav, wallet dropdown.
+ * More vibrancy than .glass-card. Requires a dark background beneath.
+ */
+.liquid-surface {
+  background: var(--liquid-bg);
+  backdrop-filter: blur(var(--liquid-blur)) saturate(var(--liquid-saturate));
+  -webkit-backdrop-filter: blur(var(--liquid-blur)) saturate(var(--liquid-saturate));
+  border: 1px solid var(--liquid-border);
+  box-shadow: var(--liquid-shadow);
+}
+
+/**
+ * tap-target — DEPRECATED in Sprint 4 UI refactor.
+ * Press scale is now handled by Framer Motion whileTap={{ scale: 0.96 }}.
+ * Only touch-action: manipulation remains for the 300ms tap-delay elimination.
+ */
+.tap-target {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/**
+ * Page gradient background — wraps the entire page content area.
+ *
+ * The subtle top-to-bottom gradient (deeper emerald to base forest green)
+ * adds dimension without drawing attention away from card content.
+ * min-height: 100dvh ensures the gradient covers the full viewport,
+ * including on devices where the dynamic viewport height changes during scroll.
+ *
+ * Usage: apply to the outermost page wrapper, inside PageShell.
+ */
+.page-gradient {
+  background: linear-gradient(
+    180deg,
+    var(--color-gradient-start) 0%,
+    var(--color-gradient-end) 100%
+  );
+  min-height: 100dvh;
+}
+
+/**
+ * Bottom nav safe-area padding — ensures scrollable content is never obscured
+ * by the fixed bottom navigation bar or the device's home indicator.
+ *
+ * Combines the fixed nav height with the iOS/Android safe-area-inset-bottom
+ * so this works correctly on devices with home indicators (iPhone X+, modern Android).
+ *
+ * Usage: apply to the main scrollable content container on every customer page.
+ */
+.pb-nav {
+  padding-bottom: calc(var(--nav-height) + max(env(safe-area-inset-bottom), 12px));
+}
+
+/**
+ * Safe area top padding — accounts for the device status bar on iOS/Android
+ * when the PWA runs in standalone display mode (no browser chrome).
+ *
+ * Usage: apply to fixed headers that must sit below the status bar.
+ */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/**
+ * Safe area bottom padding — raw device inset without the nav offset.
+ * Use .pb-nav on content; use .pb-safe on the bottom nav container itself.
+ */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/**
+ * Reduced motion support — respects user accessibility preferences.
+ *
+ * Collapses all animations to near-zero without removing them entirely,
+ * preserving state transitions (e.g. expanded/collapsed) while
+ * eliminating the motion that triggers vestibular disorders.
+ */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
