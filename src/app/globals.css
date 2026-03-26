@@ -210,7 +210,7 @@
    * Bottom nav height — 64px. Accommodates icon + label, comfortably
    * reachable by thumb, and matches the reference design's nav proportions.
    */
-  --nav-height: 4rem;
+  --nav-height: 5rem; /* 80px — floating nav + gap above content */
 
   /**
    * Bottom nav background — translucent dark green with high opacity.
@@ -399,7 +399,7 @@ a,
  * Usage: apply to the main scrollable content container on every customer page.
  */
 .pb-nav {
-  padding-bottom: calc(var(--nav-height) + max(env(safe-area-inset-bottom), 12px));
+  padding-bottom: calc(var(--nav-height) + max(env(safe-area-inset-bottom), 16px));
 }
 
 /**
