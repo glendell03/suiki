@@ -63,14 +63,14 @@ export function BottomNav() {
                   whileTap={{ scale: 0.93 }}
                   className="flex items-center justify-center"
                   style={{
-                    background: "#4ade80",
+                    background: "var(--color-primary)",
                     borderRadius: "14px",
                     width: "46px",
                     height: "36px",
-                    boxShadow: "0 2px 12px rgba(74,222,128,0.4), 0 1px 0 rgba(255,255,255,0.3) inset",
+                    boxShadow: "0 2px 12px var(--glow-primary-soft), 0 1px 0 rgba(255,255,255,0.3) inset",
                   }}
                 >
-                  <Icon size={18} strokeWidth={2.2} style={{ color: "#052e16" }} />
+                  <Icon size={18} strokeWidth={2.2} style={{ color: "var(--color-scan-icon)" }} />
                 </motion.div>
               </Link>
             );
@@ -92,9 +92,9 @@ export function BottomNav() {
                   size={20}
                   strokeWidth={isActive ? 2.2 : 1.8}
                   style={{
-                    color: isActive ? "#4ade80" : "rgba(255,255,255,0.35)",
+                    color: isActive ? "var(--color-primary)" : "var(--color-icon-inactive)",
                     filter: isActive
-                      ? "drop-shadow(0 0 6px rgba(74,222,128,0.6))"
+                      ? "drop-shadow(0 0 6px var(--glow-primary-strong))"
                       : "none",
                     transition: "color 200ms ease, filter 200ms ease",
                   }}
