@@ -77,7 +77,7 @@ export function BeautifulQR({
     qr.append(container)
       .then(() => setIsReady(true))
       .catch(() => setError("QR code could not be generated."));
-  }, [value, size]);
+  }, [value, size, fgColor, bgColor]);
 
   return (
     <div
