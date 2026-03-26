@@ -220,7 +220,7 @@
 
   /* --- Display font --- */
   /** Plus Jakarta Sans — used for hero headings and display text. */
-  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
 
   /* --- iOS 26 Liquid Glass tokens --- */
 
@@ -229,9 +229,6 @@
 
   /** Luminous border — thin white edge simulates glass refraction. */
   --liquid-border: rgba(255, 255, 255, 0.1);
-
-  /** Inset highlight — top-edge glow that makes surfaces feel convex. */
-  --liquid-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
   /** Liquid blur — stronger than glass-card, with saturation boost. */
   --liquid-blur: 32px;
@@ -361,9 +358,11 @@ a,
 }
 
 /**
- * tap-target — DEPRECATED in Sprint 4 UI refactor.
- * Press scale is now handled by Framer Motion whileTap={{ scale: 0.96 }}.
- * Only touch-action: manipulation remains for the 300ms tap-delay elimination.
+ * tap-target — BEING DEPRECATED in Sprint 4 UI refactor.
+ * Press scale is being migrated to Framer Motion whileTap={{ scale: 0.96 }}.
+ * Only touch-action: manipulation remains; scale will be removed from callers
+ * as each component is refactored in subsequent tasks.
+ * TODO: Remove this class entirely once all callers are migrated.
  */
 .tap-target {
   touch-action: manipulation;

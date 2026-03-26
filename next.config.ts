@@ -48,6 +48,9 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       // img-src: data: covers QR canvas toDataURL(); blob: covers
       // beautiful-qr-code SVG-to-blob download links and camera preview frames.
+      // SEC-07: img-src * allows any merchant image domain (loyalty card artwork,
+      // merchant logos stored on IPFS or arbitrary CDNs). This is intentional for
+      // the MVP but should be tightened to a known CDN allowlist before mainnet.
       "img-src * data: blob:",
       "font-src 'self'",
       // media-src: blob: is required for html5-qrcode to attach camera
