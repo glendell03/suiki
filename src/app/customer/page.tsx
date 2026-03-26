@@ -51,13 +51,8 @@ function CustomerDashboard() {
   const account = useCurrentAccount();
   const queryClient = useQueryClient();
   const { data: cards, isLoading, error } = useMyCards();
-  const {
-    executeSponsoredTx,
-    isPending: isRedeemPending,
-    error: redeemError,
-  } = useSponsoredTx();
+  const { executeSponsoredTx, error: redeemError } = useSponsoredTx();
 
-  const [redeemingCardId, setRedeemingCardId] = useState<string | null>(null);
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const isRedeemingRef = useRef(false);
@@ -65,7 +60,6 @@ function CustomerDashboard() {
   const handleRedeem = async (card: StampCard) => {
     if (!account || isRedeemingRef.current) return;
     isRedeemingRef.current = true;
-    setRedeemingCardId(card.objectId);
     try {
       await executeSponsoredTx(
         buildRedeem(account.address, card.programId, card.objectId),
@@ -75,7 +69,6 @@ function CustomerDashboard() {
       });
     } finally {
       isRedeemingRef.current = false;
-      setRedeemingCardId(null);
     }
   };
 
