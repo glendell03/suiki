@@ -8,7 +8,7 @@ import type { ComponentType } from "react";
 
 type NavTab = {
   href: string;
-  icon: ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+  icon: ComponentType<{ size?: number; className?: string; strokeWidth?: number; style?: React.CSSProperties }>;
   label: string;
   exactMatch?: boolean;
 };
