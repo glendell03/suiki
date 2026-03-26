@@ -55,9 +55,13 @@ export function WalletDropdown() {
 
   /** Copy the full address to clipboard and flash a check icon. */
   async function handleCopy() {
-    await navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard API unavailable (non-secure context or permission denied)
+    }
   }
 
   /* Disconnected state -- show empty circle placeholder */
@@ -78,6 +82,7 @@ export function WalletDropdown() {
         onClick={() => setOpen((v) => !v)}
         aria-label="Wallet menu"
         aria-expanded={open}
+        aria-haspopup="menu"
         className="flex h-8 w-8 items-center justify-center rounded-full border border-[--color-primary]/30 bg-[--color-primary]/15"
       >
         <UserRound
