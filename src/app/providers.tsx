@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createDAppKit } from "@mysten/dapp-kit-core";
 import { DAppKitProvider } from "@mysten/dapp-kit-react";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
+import { MotionConfig } from "framer-motion";
 
 // gRPC endpoints per network (preferred over JSON-RPC per Mysten recommendation)
 const GRPC_URLS: Record<"testnet" | "mainnet" | "devnet", string> = {
@@ -41,7 +42,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DAppKitProvider dAppKit={dAppKit}>{children}</DAppKitProvider>
+      <DAppKitProvider dAppKit={dAppKit}>
+        <MotionConfig reducedMotion="user">{children}</MotionConfig>
+      </DAppKitProvider>
     </QueryClientProvider>
   );
 }
