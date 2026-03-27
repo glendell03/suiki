@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { stampCards, stampPrograms, merchantProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+
+import { db } from '@/lib/db';
+import { programs, cards } from '@/lib/db/schema';
 import type { CardWithProgram } from '@/types/db';
 
 interface RouteParams {
   params: Promise<{ wallet: string }>;
 }
 
-/** GET /api/customer/[wallet]/cards — returns all stamp cards for a customer wallet. */
+/** GET /api/customer/[wallet]/cards — returns all stamp cards for a customer wallet, joined with program metadata. */
 export async function GET(_req: Request, { params }: RouteParams): Promise<NextResponse> {
   const { wallet } = await params;
 
@@ -18,29 +19,27 @@ export async function GET(_req: Request, { params }: RouteParams): Promise<NextR
 
   const rows = await db
     .select({
-      suiObjectId: stampCards.suiObjectId,
-      currentStamps: stampCards.currentStamps,
-      totalEarned: stampCards.totalEarned,
-      lastStamped: stampCards.lastStamped,
-      programSuiObjectId: stampPrograms.suiObjectId,
-      programName: stampPrograms.name,
-      stampsRequired: stampPrograms.stampsRequired,
-      isActive: stampPrograms.isActive,
-      themeId: stampPrograms.themeId,
-      logoUrl: merchantProfiles.logoUrl,
-      rewardDescription: stampPrograms.rewardDescription,
-      businessName: merchantProfiles.businessName,
-      merchantWallet: merchantProfiles.walletAddress,
+      cardId: cards.cardId,
+      programId: cards.programId,
+      customerAddress: cards.customerAddress,
+      currentStamps: cards.currentStamps,
+      totalEarned: cards.totalEarned,
+      lastStampedAt: cards.lastStampedAt,
+      stampsRequired: programs.stampsRequired,
+      merchantName: programs.name,
+      logoUrl: programs.logoUrl,
+      rewardDescription: programs.rewardDescription,
+      isActive: programs.isActive,
+      themeId: programs.themeId,
     })
-    .from(stampCards)
-    .innerJoin(stampPrograms, eq(stampCards.programId, stampPrograms.id))
-    .innerJoin(merchantProfiles, eq(stampPrograms.merchantProfileId, merchantProfiles.id))
-    .where(eq(stampCards.customerWallet, wallet));
+    .from(cards)
+    .innerJoin(programs, eq(cards.programId, programs.programId))
+    .where(eq(cards.customerAddress, wallet));
 
-  const cards: CardWithProgram[] = rows.map((row) => ({
+  const result: CardWithProgram[] = rows.map((row) => ({
     ...row,
-    lastStamped: row.lastStamped?.toISOString() ?? null,
+    lastStampedAt: row.lastStampedAt?.toISOString() ?? null,
   }));
 
-  return NextResponse.json({ data: cards });
+  return NextResponse.json(result);
 }
