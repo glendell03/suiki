@@ -1,7 +1,7 @@
 # Suiki Smart Contract V2 — Architecture & Extensibility Design
 
 **Date:** 2026-03-27
-**Status:** Final — Arweave + Walrus research complete (2026-03-28)
+**Status:** Final — All storage research complete (2026-03-28)
 **Scope:** Move contract redesign for mainnet — metadata extensibility, security hardening, scalability, multi-location support
 **Author:** Brainstorming session (Claude + glendell)
 
@@ -368,137 +368,165 @@ export async function uploadMerchantMetadata(
 }
 ```
 
-### 5.8 Can You Pay Arweave with SUI? (Research: 2026-03-28)
+### 5.8 Should We Use a Database Instead? — Verdict (2026-03-28)
 
-**Short answer: Not directly. But there is a clean practical path.**
+**Yes. Supabase as the primary off-chain layer is the right answer. Arweave is removed from the architecture.**
 
-| Option | SUI payment? | Notes |
-|---|---|---|
-| Irys (formerly Bundlr) | ❌ No | Supports ETH, SOL, MATIC — no SUI |
-| Arweave Turbo (ar.io) | ❌ No | Supports ETH, SOL, USDC, AR, credit card — no SUI |
-| Any Arweave bundler | ❌ No | None of the major bundlers accept SUI |
-| Wormhole / SUI bridge | ❌ No | Arweave is not an EVM chain; no bridge exists |
-| **Credit card via Turbo** | ✅ **Yes — indirect** | Turbo accepts Stripe credit/debit card |
-| **USDC via Turbo** | ✅ **Yes — indirect** | SUI → USDC (on-chain DEX) → USDC on Base → Turbo |
+This matches what every production Web3 loyalty/NFT project actually does:
 
-**Recommended payment path for Suiki:**
-Use Arweave Turbo SDK paid via **credit card or pre-funded USDC wallet**. The platform holds a small Turbo-funded server wallet. No AR tokens, no SUI-AR bridge needed. Top up with credit card when the balance runs low.
+| Project | On-chain | Database | Decentralized storage |
+|---|---|---|---|
+| Starbucks Odyssey (Polygon) | NFT ownership + stamp NFTs | Starbucks centralized backend (all metadata) | None |
+| TradePort (Sui mainnet) | Asset ownership | Centralized DB (operational data) | **Walrus for images only** |
+| Magic Eden / Tensor (Solana) | Token ownership | PostgreSQL (search, listings, profiles) | Arweave for NFT images |
+| Metaplex Candy Machine | Token URI on-chain | Centralized DB (marketplace) | Arweave for image + JSON |
 
-Cost to fund: 1,000 merchants × 10 KB metadata = **~$0.08 total, one-time, permanent.** Reload manually once a year as new merchants join. Trivial operational overhead.
+The pattern is always the same: **database for operational/mutable text data, decentralized storage for static binary assets.**
 
 ---
 
-### 5.9 Cost Comparison: Arweave vs Walrus (Confirmed Numbers)
+### 5.9 Why Arweave Is Removed
 
-Scenario: 1,000 merchants, ~10 KB of metadata JSON each = ~10 MB total.
+Three hard disqualifiers for storing Suiki's text metadata on Arweave:
 
-| Storage | Cost | Duration | Renewal needed? | SUI payment? |
+**1. PDPA right to erasure.** Philippines Data Privacy Act (RA 10173) gives merchants the right to delete their data. Arweave is write-once and cannot be deleted. Storing a merchant's business name + wallet address on Arweave = structural legal non-compliance. The NPC has not issued guidance on "functional erasure" workarounds. This alone disqualifies Arweave for any merchant-identifying text in a Philippines-based service.
+
+**2. Mutability mismatch.** Merchants update program names, descriptions, and rewards regularly. Every update creates a new permanent blob — old versions of the text (including typos, expired promotions, old pricing) live on Arweave forever and cannot be removed. A database `UPDATE` is clean. Arweave has no equivalent.
+
+**3. Over-engineering.** The trust-critical data in Suiki is stamp counts and redemption history — already on-chain in Sui. The program name and reward description are descriptive text, not financial instruments. A database outage affecting "Aling Rosa's Tapsihan" text is a display degradation, not a trust violation.
+
+---
+
+### 5.10 Cost Comparison at Scale
+
+Scenario: 10,000 merchants, 100,000 customers.
+
+| Approach | Monthly | Annual | Mutability | PDPA |
 |---|---|---|---|---|
-| **Arweave (Turbo)** | **~$0.06–$0.08 total** | **Permanent (200+ years)** | Never | Credit card / USDC |
-| Walrus (Quilt batched) | ~$0.01–$0.05 WAL equiv | 2 years (52 epochs) | Every 2 years | WAL token |
-| Walrus (individual blobs) | ~$36+ (64 MB floor × 1,000) | 2 years | Every 2 years | WAL token |
+| **Supabase Pro** | **$25** | **$300** | Full SQL updates | ✅ Clean DELETE |
+| Walrus (text metadata) | ~$0 storage | ~$0 | New blob per update | ⚠️ Gray zone |
+| Arweave (text metadata) | ~$0 | ~$1 one-time | Write-once, immutable | ❌ Cannot delete |
 
-**Arweave wins on every dimension for metadata storage:**
-- Cheaper even before accounting for Walrus renewal cycles
-- No operational overhead — upload once, done
-- Turbo accepts credit card → no crypto complexity
-- Walrus's 64 MB floor per blob makes individual small file uploads 99%+ wasteful
-
-**Where Walrus still wins:** Binary assets (logo images, card visuals) that are large, need to be updatable, and where temporary unavailability is tolerable. Walrus is Sui-native, programmable, and better for mutable content.
+Supabase at $25/month is the right answer. No token volatility, no blob management, no 64 MB floor trap, clean PDPA compliance.
 
 ---
 
-### 5.10 Final Storage Architecture (Definitive)
-
-Three-tier storage model:
+### 5.11 Definitive Four-Tier Storage Architecture
 
 ```
-TIER 1: Sui Dynamic Fields (permanent, on-chain)
-  → name, reward_description, category, theme_id, all config fields
-  → Core logic fields checked in every transaction
-  → Can add new fields after mainnet via df::add()
+TIER 1 — Sui On-Chain (canonical, permanent)
+  PURPOSE: The source of truth for trustless verification
+  ├── Struct:         merchant, stamps_required, is_active, program_id,
+  │                   customer, current_stamps
+  └── Dynamic fields: name, reward_description, category, theme_id,
+                      cooldown, tier_thresholds, logo_blob_id,
+                      total_earned, last_stamped, tier_level
 
-TIER 2: Arweave (permanent, off-chain, immutable)
-  → Merchant metadata JSON (terms, bio, locations, social links)
-  → Card notes (encrypted, merchant-written)
-  → Any content that must survive forever without renewal ops
-  → Paid via Turbo SDK + credit card
+TIER 2 — Supabase PostgreSQL (operational, fast, PDPA-compliant)
+  PURPOSE: Off-chain index for fast queries; auth; analytics; mutable rich data
+  ├── Mirror of on-chain events (event indexer → Supabase)
+  ├── Merchant profiles: bio, locations, social links, category
+  ├── Customer auth: Sign-in with Web3 (wallet address as primary key)
+  ├── Analytics: aggregated visit counts, redemption rates (NOT raw timestamps)
+  └── Right to erasure: DELETE FROM programs WHERE merchant = $1 → done
 
-TIER 3: Walrus (long-term, off-chain, mutable)
-  → Logo images, card visual assets, cover photos
-  → Binary content that needs updates (merchant rebrands their logo)
-  → Walrus Quilt for any small files; 52-epoch booking
-  → Auto-renewal cron (weekly) from a WAL treasury wallet
+TIER 3 — Walrus (binary assets, mutable, Sui-native)
+  PURPOSE: Logo images and visual assets only — binary, large, updatable
+  ├── Merchant logo image → blob ID stored as df "logo_blob_id" on StampProgram
+  ├── Card cover art, stamp visual assets
+  ├── 52-epoch booking (~2 years); auto-renewal cron from WAL treasury wallet
+  └── Confirmed production pattern: TradePort uses Walrus for NFT assets on Sui mainnet
 
-TIER 4: Supabase (controlled, off-chain, deletable)
-  → Behavioral analytics (visit timestamps, frequency)
-  → Anything subject to PDPA right to erasure
-  → Never stored on-chain
+TIER 4 — Nowhere (data that must not be stored)
+  ├── Raw visit timestamps per customer → aggregate only in Supabase
+  ├── Customer behavioral patterns → aggregate only
+  └── PII in card notes → encrypt before writing to Walrus; merchant holds key
 ```
 
-**What goes on-chain vs off-chain:**
+---
 
-| Field | Tier | On-chain ref |
+### 5.12 What Each Tier Owns
+
+| Field / Data | Tier | Rationale |
 |---|---|---|
-| `name` | Dynamic field | Direct (string) |
-| `reward_description` | Dynamic field | Direct (string) |
-| `category` | Dynamic field | Direct (string) |
-| `theme_id`, `cooldown`, `tier_thresholds` | Dynamic field | Direct |
-| `terms_and_conditions`, `bio`, `locations` | Arweave | `arweave_metadata_id: String` df |
-| `logo_url`, card visuals | Walrus | `walrus_logo_blob_id: String` df |
-| Visit timestamps, analytics | Supabase | Never on-chain |
-| Card notes (encrypted) | Arweave | `arweave_note_id: String` df on card |
-
-The on-chain dynamic field `arweave_metadata_id` stores the Arweave TX ID. The wallet or app fetches it via `https://arweave.net/{tx_id}`.
+| `merchant`, `stamps_required`, `is_active` | Tier 1 — struct | Checked in every tx guard |
+| `program_id`, `customer`, `current_stamps` | Tier 1 — struct | Checked in every tx guard |
+| `name`, `reward_description`, `category` | Tier 1 — dynamic field | Display-critical; on-chain = always available |
+| `theme_id`, `cooldown`, `tier_thresholds` | Tier 1 — dynamic field | Config; extensible post-deploy via df::add() |
+| `logo_blob_id` (Walrus ref) | Tier 1 — dynamic field | Pointer to binary asset |
+| `total_earned`, `last_stamped`, `tier_level` | Tier 1 — dynamic field | Card state; rarely in guards |
+| Program list, search, discovery | Tier 2 — Supabase | Sub-ms query vs slow on-chain event scan |
+| Merchant bio, locations, social links | Tier 2 — Supabase | Mutable text; PDPA deletable |
+| Customer wallet sessions, auth | Tier 2 — Supabase | Sign-in with Web3 |
+| Event history mirror (StampIssued, etc.) | Tier 2 — Supabase | Fast indexed reads; resolves ADR-004 pagination |
+| Analytics aggregates | Tier 2 — Supabase | Never raw behavioral data |
+| Logo image, card visual assets | Tier 3 — Walrus | Binary; Sui-native; updatable |
+| Raw visit timestamps, behavioral PII | Tier 4 — Never | PDPA; right to erasure |
 
 ---
 
-### 5.11 Arweave Turbo SDK Integration
+### 5.13 Supabase + Sui Event Indexer Architecture
 
-```typescript
-// src/lib/arweave-client.ts (server-only)
-import { TurboFactory } from "@ardrive/turbo-sdk";
+The Buidly `sui-events-indexer` pattern (open source, Sui mainnet production):
 
-// Platform-held wallet, funded via credit card at turbo.ar.io dashboard
-// Can use ETH/AR/SOL key — ETH on Base is recommended (cheap gas, USDC top-up)
-const turbo = TurboFactory.authenticated({
-  privateKey: process.env.ARWEAVE_ETH_PRIVATE_KEY,
-  token: "base-eth",
-});
-
-export async function uploadMerchantMetadata(
-  programId: string,
-  metadata: object,
-): Promise<string> {
-  const content = JSON.stringify(metadata);
-  const result = await turbo.uploadFile({
-    file: Buffer.from(content),
-    dataItemOpts: {
-      tags: [
-        { name: "Content-Type", value: "application/json" },
-        { name: "App-Name", value: "Suiki" },
-        { name: "Program-ID", value: programId },
-      ],
-    },
-  });
-  // Returns Arweave TX ID — store this in dynamic field on-chain
-  return result.id;
-}
+```
+Sui fullnode (gRPC Laserstream)
+        ↓ checkpoints
+Event indexer service (Node.js / TypeScript)
+        ↓ upserts
+Supabase PostgreSQL
+        ↓ queries
+Next.js API routes
+        ↓ renders
+Browser
 ```
 
-After getting the Arweave TX ID, write it to the Move contract:
-```typescript
-// In transactions.ts
-tx.moveCall({
-  target: `${PACKAGE_ID}::suiki::set_arweave_metadata`,
-  arguments: [
-    tx.object(programId),
-    tx.pure(bcs.string().serialize(arweaveTxId)),
-  ],
-});
+This resolves **ADR-004's critical correctness bug**: `fetchMerchantPrograms` no longer scans all global events with a 50-event page limit — it's a single Supabase query `SELECT * FROM programs WHERE merchant = $1`. Works at any scale.
+
+**Key Supabase tables:**
+
+```sql
+programs (
+  id           text PRIMARY KEY,   -- Sui object ID
+  merchant     text NOT NULL,       -- wallet address → RLS key
+  name         text,
+  stamps_req   int,
+  is_active    bool,
+  logo_blob_id text,                -- Walrus blob ID
+  created_at   timestamptz
+)
+
+cards (
+  id              text PRIMARY KEY,
+  program_id      text REFERENCES programs(id),
+  customer        text NOT NULL,
+  current_stamps  int,
+  total_earned    int,
+  last_stamped    timestamptz
+)
+
+stamp_events (
+  digest      text PRIMARY KEY,    -- Sui tx digest (idempotent)
+  event_type  text,
+  card_id     text,
+  program_id  text,
+  actor       text,
+  payload     jsonb,
+  checkpoint  bigint,
+  ts          timestamptz
+)
 ```
 
-Accessible permanently at: `https://arweave.net/{arweaveTxId}`
+**Auth (Sign-in with Web3):**
+Supabase's native Web3 auth uses the merchant's Sui wallet signature as the credential. `auth.uid()` = wallet address. RLS policies enforce that merchants can only read/write their own rows — no custom auth middleware needed.
+
+---
+
+### 5.14 Walrus for Logo Images (Retained)
+
+Walrus remains the right choice for binary assets. The `@mysten/walrus` SDK extends `SuiGrpcClient` — matches `src/lib/sui-client.ts`. The blob ID is stored as the `logo_blob_id` dynamic field on `StampProgram`.
+
+Use Quilt batch uploads when multiple merchant logos are processed together to avoid the 64 MB per-blob floor. Auto-renewal cron (weekly) from a WAL treasury wallet handles the epoch-based subscription.
 
 ---
 
