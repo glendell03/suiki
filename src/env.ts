@@ -28,6 +28,9 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    DATABASE_URL: z.string().url().describe('Neon pooled connection string'),
+    DATABASE_URL_UNPOOLED: z.string().url().describe('Neon direct URL for migrations'),
+    CRON_SECRET: z.string().min(32).describe('Auth token for Vercel Cron → indexer tick'),
   },
   client: {
     NEXT_PUBLIC_SUI_NETWORK: z
@@ -42,6 +45,9 @@ export const env = createEnv({
   runtimeEnv: {
     SPONSOR_PRIVATE_KEY: process.env.SPONSOR_PRIVATE_KEY,
     NODE_ENV: process.env.NODE_ENV,
+    DATABASE_URL: process.env.DATABASE_URL,
+    DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED,
+    CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_SUI_NETWORK: process.env.NEXT_PUBLIC_SUI_NETWORK,
     NEXT_PUBLIC_PACKAGE_ID: process.env.NEXT_PUBLIC_PACKAGE_ID,
     NEXT_PUBLIC_ENABLE_SPONSOR_GAS: process.env.NEXT_PUBLIC_ENABLE_SPONSOR_GAS,
