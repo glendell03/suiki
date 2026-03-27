@@ -1,0 +1,155 @@
+[     111ms] [WARNING] Skipping wallet initializer: "Error: Registration un-successful.". @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[     126ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant:0
+[    3207ms] [WARNING] The resource http://localhost:3000/_next/static/media/797e433ab948586e-s.p.0.q-h669a_dqa.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/merchant:0
+[  180451ms] [WARNING] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[  180472ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant/create:0
+[  182789ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant:0
+[  184516ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[  186965ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/:0
+[  188308ms] [WARNING] Skipping wallet initializer: "Error: Registration un-successful.". @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[  188326ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[  190958ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/:0
+[  191956ms] [ERROR] Connecting to 'https://api.slush.app/api/wallet/metadata' violates the following Content Security Policy directive: "connect-src 'self' https://fullnode.testnet.sui.io https://fullnode.mainnet.sui.io https://fullnode.devnet.sui.io wss://fullnode.testnet.sui.io https://*.trycloudflare.com wss://*.trycloudflare.com". The action has been blocked. @ http://localhost:3000/_next/static/chunks/node_modules_10-4arv._.js:7822
+[  191957ms] [ERROR] Fetch API cannot load https://api.slush.app/api/wallet/metadata. Refused to connect because it violates the document's Content Security Policy. @ http://localhost:3000/_next/static/chunks/node_modules_10-4arv._.js:7822
+[  191959ms] [ERROR] Error fetching metadata TypeError: Failed to fetch
+    at fetchMetadata (http://localhost:3000/_next/static/chunks/node_modules_10-4arv._.js:7823:28)
+    at registerSlushWallet (http://localhost:3000/_next/static/chunks/node_modules_10-4arv._.js:7840:5)
+    at Object.initialize (http://localhost:3000/_next/static/chunks/node_modules_0tp_zf3._.js:676:232)
+    at http://localhost:3000/_next/static/chunks/node_modules_0tp_zf3._.js:704:39
+    at Array.map (<anonymous>)
+    at registerAdditionalWallets (http://localhost:3000/_next/static/chunks/node_modules_0tp_zf3._.js:701:7)
+    at createDAppKit (http://localhost:3000/_next/static/chunks/node_modules_0tp_zf3._.js:857:5)
+    at module evaluation (http://localhost:3000/_next/static/chunks/src_04hp58q._.js:109:203)
+    at http://localhost:3000/_next/static/chunks/turbopack-_0bct5ah._.js:1307:27
+    at runModuleExecutionHooks (http://localhost:3000/_next/static/chunks/turbopack-_0bct5ah._.js:1636:13)
+    at instantiateModuleShared (http://localhost:3000/_next/static/chunks/turbopack-_0bct5ah._.js:1305:9)
+    at instantiateModule (http://localhost:3000/_next/static/chunks/turbopack-_0bct5ah._.js:1621:12)
+    at getOrInstantiateModuleFromParent (http://localhost:3000/_next/static/chunks/turbopack-_0bct5ah._.js:1604:12)
+    at DevContext.commonJsRequire [as r] (http://localhost:3000/_next/static/chunks/turbopack-_0bct5ah._.js:299:12)
+    at requireModule (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-server-dom-turbopack_0qjiyao._.js:95:84)
+    at initializeModuleChunk (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-server-dom-turbopack_0qjiyao._.js:1110:25)
+    at readChunk (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-server-dom-turbopack_0qjiyao._.js:846:17)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:15101:20)
+    at resolveLazy (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:3866:20)
+    at beginWork (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:6665:77)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:9555:97)
+    at workLoopConcurrentByScheduler (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:9551:58)
+    at renderRootConcurrent (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:9534:71)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:9061:150)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:10255:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_0leokw8._.js:2647:64) @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:3272
+[  191978ms] [WARNING] Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[  192015ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[  195036ms] [WARNING] The resource http://localhost:3000/_next/static/media/797e433ab948586e-s.p.0.q-h669a_dqa.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/customer:0
+[  729678ms] [WARNING] Your application is currently using the unsafe burner wallet. Make sure that this wallet is disabled in production. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[  729686ms] [WARNING] Skipping wallet initializer: "Error: Registration un-successful.". @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[  733069ms] [WARNING] The resource http://localhost:3000/_next/static/media/797e433ab948586e-s.p.0.q-h669a_dqa.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/customer:0
+[ 1035344ms] [WARNING] Your application is currently using the unsafe burner wallet. Make sure that this wallet is disabled in production. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1035345ms] [WARNING] Skipping wallet initializer: "Error: Registration un-successful.". @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1035355ms] [WARNING] Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1035377ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 1040330ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 1044589ms] ReferenceError: useCurrentAccount is not defined
+    at WalletGuard (http://localhost:3000/_next/static/chunks/src_0yul_zj._.js?id=%255Bproject%255D%252Fsrc%252Fcomponents%252Fwallet-guard.tsx+%255Bapp-client%255D+%2528ecmascript%2529:32:21)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:15037:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:4620:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:6081:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:6691:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:9555:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:9449:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:9433:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:9098:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:10263:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:10179:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:9230:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:299:13)
+    at http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_0leokw8._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_0leokw8._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_0leokw8._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_0leokw8._.js:886:13
+[ 1048128ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1048397ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 1048488ms] [WARNING] Your application is currently using the unsafe burner wallet. Make sure that this wallet is disabled in production. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1048489ms] [WARNING] Skipping wallet initializer: "Error: Registration un-successful.". @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1048501ms] [WARNING] Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1048524ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 1061268ms] [WARNING] Your application is currently using the unsafe burner wallet. Make sure that this wallet is disabled in production. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1061268ms] [WARNING] Skipping wallet initializer: "Error: Registration un-successful.". @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1061280ms] [WARNING] Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1061303ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 1074586ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 1087909ms] [WARNING] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1087919ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards:0
+[ 1089536ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 1090978ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards:0
+[ 1092144ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 1092799ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=ElitVJjagFMm2RL2emfMO' failed:  @ http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:13299
+[ 1093804ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=ElitVJjagFMm2RL2emfMO' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:13299
+[ 1093851ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/customer/cards?_rsc=13vw9:0
+[ 1093852ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/customer/cards. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:8084:21)
+    at fetchServerResponse (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:7928:27)
+    at fetchMissingDynamicData (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:9341:75)
+    at spawnDynamicRequests (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:9149:35)
+    at navigateToKnownRoute (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:10033:54)
+    at navigateUsingPrefetchedRouteTree (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:10052:12)
+    at navigateImpl (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:9962:16)
+    at navigate (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:9953:12)
+    at navigateReducer (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:10530:37)
+    at clientReducer (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:11382:61)
+    at Object.action (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:11631:55)
+    at runAction (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:11536:38)
+    at dispatchAction (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:11599:9)
+    at Object.dispatch (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:11629:40)
+    at http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:963:29
+    at startTransition (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:5469:31)
+    at nextDispatch (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:962:13)
+    at dispatchAppRouterAction (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:922:5)
+    at dispatchNavigateAction (http://localhost:3000/_next/static/chunks/0se9_next_dist_client_0-ol1uu._.js:11688:49)
+    at http://localhost:3000/_next/static/chunks/node_modules__pnpm_0_4366w._.js:1079:13
+    at Object.startTransition (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_0leokw8._.js:1279:31)
+    at linkClicked (http://localhost:3000/_next/static/chunks/node_modules__pnpm_0_4366w._.js:1078:24)
+    at onClick (http://localhost:3000/_next/static/chunks/node_modules__pnpm_0_4366w._.js:1318:13)
+    at executeDispatch (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:10329:13)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:965:74)
+    at processDispatchQueue (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:10355:41)
+    at http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:10633:13
+    at batchedUpdates$1 (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:2253:44)
+    at dispatchEventForPluginEventSystem (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:10431:9)
+    at dispatchEvent (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:13002:37)
+    at dispatchDiscreteEvent (http://localhost:3000/_next/static/chunks/0se9_next_dist_compiled_react-dom_0nv6p_b._.js:12984:64) @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:3272
+[ 1093856ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_original-stack-frames:0
+[ 1093858ms] [ERROR] WebSocket is already in CLOSING or CLOSED state. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2790
+[ 1100402ms] [WARNING] Your application is currently using the unsafe burner wallet. Make sure that this wallet is disabled in production. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1100402ms] [WARNING] Skipping wallet initializer: "Error: Registration un-successful.". @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 1101413ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards:0
+[ 1402900ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards:0
+[ 2731117ms] [WARNING] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 2731133ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 2738488ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards/0xcard0000000000000000000000000000000000000000000000000000000000b2:0
+[ 2748751ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards/0xcard0000000000000000000000000000000000000000000000000000000000b2/reward:0
+[ 2755723ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards:0
+[ 2805310ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards/0xcard0000000000000000000000000000000000000000000000000000000000a1:0
+[ 2808567ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards:0
+[ 2809788ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 2811624ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/scan:0
+[ 2844290ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 2845848ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards:0
+[ 2847943ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 2851158ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/search:0
+[ 2856070ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer/cards:0
+[ 2858005ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/customer:0
+[ 2863402ms] [WARNING] Your application is currently using the unsafe burner wallet. Make sure that this wallet is disabled in production. @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 2863402ms] [WARNING] Skipping wallet initializer: "Error: Registration un-successful.". @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 2863415ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/:0
+[ 2865622ms] [WARNING] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[ 2865634ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant:0
+[ 2867572ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant/0xaaaa0000000000000000000000000000000000000000000000000000000000aa:0
+[ 2871781ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant:0
+[ 2872877ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant/create:0
+[ 2875149ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant:0
+[ 2876090ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant/0xaaaa0000000000000000000000000000000000000000000000000000000000aa:0
+[ 2878381ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/merchant:0

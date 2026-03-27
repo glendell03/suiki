@@ -1,0 +1,137 @@
+<style>
+  body { background: #0a1a14; color: #f1f5f9; font-family: -apple-system, 'Inter', sans-serif; }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 760px; margin: 0 auto; }
+  .card { cursor: pointer; border-radius: 16px; border: 2px solid rgba(74,222,128,0.1); background: rgba(10,26,20,0.8); overflow: hidden; transition: border-color 0.2s; }
+  .card:hover { border-color: rgba(74,222,128,0.35); }
+  .card.selected { border-color: #4ade80; }
+  .card-label { padding: 10px 14px; border-top: 1px solid rgba(74,222,128,0.08); }
+  .card-label h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #f1f5f9; }
+  .card-label p { margin: 0; font-size: 12px; color: #7fb891; line-height: 1.4; }
+
+  .nav-demo {
+    background: rgba(10,26,20,0.95);
+    border-top: 1px solid rgba(74,222,128,0.1);
+    padding: 12px 24px 20px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 300px;
+    margin: 32px auto;
+    border-radius: 0 0 24px 24px;
+  }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .tab-icon { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+  .tab-label { font-size: 9px; font-weight: 500; color: #475569; }
+
+  /* A: equal tabs, active gets green pill */
+  .tab-a-active .tab-label { color: #4ade80; }
+  .tab-a-active .tab-bg {
+    background: rgba(74,222,128,0.1);
+    border: 1px solid rgba(74,222,128,0.2);
+    border-radius: 10px;
+    padding: 5px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+
+  /* B: scan as green pill button */
+  .tab-b-scan {
+    background: #4ade80;
+    border-radius: 14px;
+    padding: 8px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .tab-b-scan .tab-label { color: #052e16; font-weight: 700; }
+
+  svg { width: 20px; height: 20px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+
+<h2>Bottom Navigation Style</h2>
+<p class="subtitle">How should the Scan tab look? The photo shows it highlighted as the primary action.</p>
+
+<div class="cards">
+
+  <!-- Option A: equal tabs -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="nav-demo">
+      <!-- Home active -->
+      <div class="tab tab-a-active">
+        <div class="tab-bg">
+          <div class="tab-icon">
+            <svg stroke="#4ade80" viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21" stroke="#4ade80"/></svg>
+          </div>
+          <span class="tab-label" style="color:#4ade80">Home</span>
+        </div>
+      </div>
+      <!-- Cards -->
+      <div class="tab">
+        <div class="tab-icon">
+          <svg stroke="#475569" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
+        <span class="tab-label">Cards</span>
+      </div>
+      <!-- Search -->
+      <div class="tab">
+        <div class="tab-icon">
+          <svg stroke="#475569" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <span class="tab-label">Search</span>
+      </div>
+      <!-- Scan -->
+      <div class="tab">
+        <div class="tab-icon">
+          <svg stroke="#475569" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="17" y="17" width="4" height="4" rx="0.5"/><line x1="14" y1="14" x2="14" y2="14"/></svg>
+        </div>
+        <span class="tab-label">Scan</span>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>A — Equal Tabs</h3>
+      <p>Active tab gets a green pill background. All tabs equal weight. Scan is just another tab.</p>
+    </div>
+  </div>
+
+  <!-- Option B: scan as pill -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="nav-demo">
+      <!-- Home active -->
+      <div class="tab tab-a-active">
+        <div class="tab-bg">
+          <div class="tab-icon">
+            <svg stroke="#4ade80" viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><polyline points="9 21 9 12 15 12 15 21" stroke="#4ade80"/></svg>
+          </div>
+          <span class="tab-label" style="color:#4ade80">Home</span>
+        </div>
+      </div>
+      <!-- Cards -->
+      <div class="tab">
+        <div class="tab-icon">
+          <svg stroke="#475569" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
+        <span class="tab-label">Cards</span>
+      </div>
+      <!-- Search -->
+      <div class="tab">
+        <div class="tab-icon">
+          <svg stroke="#475569" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <span class="tab-label">Search</span>
+      </div>
+      <!-- Scan green pill -->
+      <div class="tab-b-scan">
+        <div class="tab-icon">
+          <svg stroke="#052e16" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="17" y="17" width="4" height="4" rx="0.5"/></svg>
+        </div>
+        <span class="tab-label">Scan</span>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>B — Scan as Green Pill</h3>
+      <p>Scan is visually elevated as the primary CTA — green pill button. Matches the photo exactly. Draws the eye to the most-used action.</p>
+    </div>
+  </div>
+
+</div>

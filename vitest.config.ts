@@ -14,6 +14,11 @@ import path from 'path';
 export default defineConfig({
   test: {
     environment: 'node',
+    env: {
+      // Prevents @t3-oss/env-nextjs from throwing during tests.
+      // Tests must not depend on real env var values — mock at the module level instead.
+      SKIP_ENV_VALIDATION: 'true',
+    },
     // Component tests (*.test.tsx) are excluded until @testing-library/react
     // and jsdom are installed. See docs/qa-dependencies-needed.md.
     include: ['src/**/*.test.ts'],

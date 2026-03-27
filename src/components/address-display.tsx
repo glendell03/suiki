@@ -66,11 +66,11 @@ export function AddressDisplay({
       title={address}
       className={[
         'group inline-flex items-center gap-2',
-        'rounded-lg border border-[--color-border] bg-[--color-bg-surface]',
+        'rounded-lg border border-(--color-border) bg-(--color-bg-surface)',
         'px-3 py-1.5',
         'transition-colors duration-150',
-        'hover:border-[--color-primary] hover:bg-[--color-bg-elevated]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary] focus-visible:ring-offset-2 focus-visible:ring-offset-[--color-bg-base]',
+        'hover:border-(--color-primary) hover:bg-(--color-bg-elevated)',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-base)',
         'active:opacity-75',
         className,
       ]
@@ -78,11 +78,11 @@ export function AddressDisplay({
         .join(' ')}
     >
       {/* Truncated address text */}
-      <span className="font-address text-[--color-text-primary]">{truncated}</span>
+      <span className="font-address text-(--color-text-primary)">{truncated}</span>
 
       {/* Copy / checkmark icon */}
       <span
-        className="flex-shrink-0 text-[--color-text-muted] transition-colors duration-150 group-hover:text-[--color-primary]"
+        className="flex-shrink-0 text-(--color-text-muted) transition-colors duration-150 group-hover:text-(--color-primary)"
         aria-hidden="true"
       >
         {copied ? (
@@ -95,7 +95,7 @@ export function AddressDisplay({
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="h-3.5 w-3.5 text-[--color-success]"
+            className="h-3.5 w-3.5 text-(--color-success)"
           >
             <polyline points="2.5 8.5 6.5 12.5 13.5 4.5" />
           </svg>

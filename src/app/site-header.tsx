@@ -1,44 +1,54 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { ConnectWallet } from '@/components/connect-wallet';
+import Link from "next/link";
+import { Bell } from "lucide-react";
+import { motion } from "framer-motion";
+import { WalletDropdown } from "@/components/wallet-dropdown";
 
 /**
- * SiteHeader — sticky top navigation bar for all Suiki pages.
- *
- * Marked 'use client' because ConnectWallet relies on dapp-kit-react hooks
- * (useCurrentAccount, useWalletConnection). Kept as a focused leaf component
- * so the parent RootLayout remains a Server Component.
- *
- * The backdrop blur gives it a "frosted glass" appearance over page content
- * while the border-b provides a subtle separator on the Suiki dark background.
+ * Slim app header -- logo left, notification bell + wallet dropdown right.
+ * Used by individual pages that need a header (customer, merchant).
+ * No longer rendered globally in layout.tsx.
  */
 export function SiteHeader() {
   return (
-    <header
-      className={[
-        'fixed inset-x-0 top-0 z-50 h-16',
-        'flex items-center justify-between px-5',
-        'border-b border-[--color-border]',
-        'bg-[--color-bg-base]/80 backdrop-blur-md',
-      ].join(' ')}
-    >
-      {/* Brand */}
+    <header className="flex items-center justify-between px-5 py-4">
+      {/* Logo */}
       <Link
         href="/"
-        className={[
-          'text-lg font-bold text-[--color-text-primary]',
-          'transition-opacity hover:opacity-80 focus-visible:outline-none',
-          'focus-visible:ring-2 focus-visible:ring-[--color-primary] rounded',
-        ].join(' ')}
         aria-label="Suiki home"
+        className="flex items-center gap-1.5 text-(--color-primary) transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) rounded"
       >
-        Suiki
+        <span
+          aria-hidden="true"
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 22,
+            fontWeight: 700,
+            color: "var(--color-brand)",
+            lineHeight: 1,
+          }}
+        >
+          水
+        </span>
+        <span className="text-base font-bold text-(--color-text-primary)">
+          Suiki
+        </span>
       </Link>
 
-      {/* Wallet connection — constrained width so it doesn't dominate the header */}
-      <div className="w-auto max-w-[180px]">
-        <ConnectWallet />
+      {/* Right actions */}
+      <div className="flex items-center gap-3">
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          aria-label="Notifications"
+          disabled
+          aria-disabled="true"
+          className="flex items-center justify-center rounded-full text-(--color-text-secondary) transition-colors hover:text-(--color-text-primary) disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Bell size={20} aria-hidden={true} />
+        </motion.button>
+
+        <WalletDropdown />
       </div>
     </header>
   );

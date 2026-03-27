@@ -2,6 +2,7 @@
 
 import type { StampCard } from '@/types/sui';
 import { StampProgress } from '@/components/stamp-progress';
+import { GlassCard } from '@/components/glass-card';
 
 interface StampCardDisplayProps {
   /** The customer's stamp card to render. */
@@ -31,16 +32,16 @@ export function StampCardDisplay({
       : `${card.totalEarned} rewards earned`;
 
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-5">
+    <GlassCard as="article" padding="lg" className="flex flex-col gap-4">
       {/* Merchant identity row */}
       <div className="flex items-center gap-3">
         <MerchantLogo src={card.merchantLogo} alt={card.merchantName} />
 
         <div className="flex flex-col min-w-0">
-          <h3 className="font-semibold text-[--color-text-primary] truncate">
+          <h3 className="font-semibold text-(--color-text-primary) truncate">
             {card.merchantName || 'Unknown Merchant'}
           </h3>
-          <p className="text-xs text-[--color-text-muted]">{rewardsLabel}</p>
+          <p className="text-xs text-(--color-accent-loyalty)">{rewardsLabel}</p>
         </div>
       </div>
 
@@ -58,12 +59,12 @@ export function StampCardDisplay({
           disabled={isRedeeming}
           className={[
             'w-full rounded-xl px-4 py-3 text-sm font-semibold',
-            'bg-[--color-accent-loyalty] text-[--color-bg-base]',
+            'bg-(--color-accent-loyalty) text-(--color-bg-base)',
             'transition-opacity duration-150',
             'hover:opacity-90 active:opacity-75',
             'focus-visible:outline-none focus-visible:ring-2',
-            'focus-visible:ring-[--color-accent-loyalty] focus-visible:ring-offset-2',
-            'focus-visible:ring-offset-[--color-bg-surface]',
+            'focus-visible:ring-(--color-accent-loyalty) focus-visible:ring-offset-2',
+            'focus-visible:ring-offset-(--color-bg-surface)',
             'disabled:pointer-events-none disabled:opacity-50',
           ]
             .filter(Boolean)
@@ -73,7 +74,7 @@ export function StampCardDisplay({
           {isRedeeming ? 'Redeeming…' : 'Redeem Reward'}
         </button>
       )}
-    </article>
+    </GlassCard>
   );
 }
 
@@ -97,7 +98,7 @@ function MerchantLogo({ src, alt }: MerchantLogoProps) {
   if (!src) {
     return (
       <span
-        className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[--color-bg-elevated] text-2xl"
+        className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-(--color-bg-elevated) text-2xl"
         aria-hidden="true"
       >
         🏪

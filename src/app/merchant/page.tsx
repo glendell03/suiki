@@ -1,174 +1,287 @@
-'use client';
+// src/app/merchant/page.tsx
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useMyPrograms } from '@/hooks/use-my-programs';
-import { WalletGuard } from '@/components/wallet-guard';
-import { Button } from '@/components/ui/button';
-import type { StampProgram } from '@/types/sui';
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { Plus, ArrowRight, Store } from "lucide-react";
+import { useAccount } from "@/hooks/use-account";
+import { useMyPrograms } from "@/hooks/use-my-programs";
+import { WalletGuard } from "@/components/wallet-guard";
+import { WalletDropdown } from "@/components/wallet-dropdown";
+import { MerchantAvatar } from "@/components/merchant-avatar";
+import { Badge } from "@/components/badge";
+import { Skeleton } from "@/components/skeleton";
+import { EmptyState } from "@/components/empty-state";
 
 // ---------------------------------------------------------------------------
-// Sub-components — kept small and focused (≤50 lines each)
+// Stagger animation variants
 // ---------------------------------------------------------------------------
 
-/** Placeholder shown while programs are loading. */
-function ProgramCardSkeleton() {
+/** Stagger animation for the program list container. */
+const containerVariants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.06, delayChildren: 0.08 },
+  },
+};
+
+/** Spring entrance animation for each program tile. */
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 380, damping: 28 },
+  },
+};
+
+/**
+ * Merchant landing hero section with brand gradient, watermark, and wallet avatar.
+ */
+function HeroSection() {
   return (
-    <div className="animate-pulse rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-5">
-      <div className="flex items-center gap-4">
-        {/* Logo placeholder */}
-        <div className="h-12 w-12 shrink-0 rounded-xl bg-[--color-bg-elevated]" />
-        <div className="flex flex-1 flex-col gap-2">
-          <div className="h-4 w-3/5 rounded bg-[--color-bg-elevated]" />
-          <div className="h-3 w-2/5 rounded bg-[--color-bg-elevated]" />
-        </div>
+    <section
+      className="relative flex flex-col items-center justify-center px-5"
+      style={{
+        background: "var(--color-brand)",
+        minHeight: "30vh",
+        paddingTop: "env(safe-area-inset-top)",
+      }}
+    >
+      {/* Watermark — clipped inside its own div so the section allows dropdown overflow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <span
+          aria-hidden="true"
+          className="absolute select-none"
+          style={{
+            right: 16,
+            top: "50%",
+            transform: "translateY(-50%)",
+            fontFamily: "var(--font-display)",
+            fontWeight: 800,
+            fontSize: 100,
+            color: "rgba(255, 255, 255, 0.10)",
+            lineHeight: 1,
+          }}
+        >
+          水
+        </span>
       </div>
-    </div>
+
+      {/* Wallet avatar — top right */}
+      <div className="absolute top-4 right-4" style={{ top: "max(16px, env(safe-area-inset-top))" }}>
+        <WalletDropdown variant="light" />
+      </div>
+
+      {/* Title block */}
+      <h1
+        className="text-white text-center"
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 800,
+          fontSize: 28,
+          lineHeight: 1.15,
+        }}
+      >
+        Suiki for Merchants
+      </h1>
+
+      <p
+        className="mt-2 text-center"
+        style={{ fontSize: 15, color: "rgba(255, 255, 255, 0.75)" }}
+      >
+        Build loyalty. Keep customers.
+      </p>
+    </section>
   );
 }
 
-/** Single program card with logo, name, and issued count. */
-function ProgramCard({ program }: { program: StampProgram }) {
-  const [imgError, setImgError] = useState(false);
-  const showFallback = !program.logoUrl || imgError;
-
+/**
+ * CTA card linking to the create-program flow.
+ */
+function CreateProgramCard() {
   return (
-    <Link
-      href={`/merchant/${program.objectId}`}
-      className="flex items-center gap-4 rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-5 transition-colors hover:border-[--color-primary] hover:bg-[--color-bg-elevated]"
-      aria-label={`View program: ${program.name}`}
-    >
-      {/* Logo with emoji fallback — conditional rendering avoids DOM mutation */}
-      {showFallback ? (
-        <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[--color-bg-elevated] text-2xl"
-          aria-hidden="true"
-        >
-          🏪
-        </div>
-      ) : (
-        <img
-          src={program.logoUrl}
-          alt={`${program.name} logo`}
-          className="h-12 w-12 shrink-0 rounded-xl object-cover"
-          onError={() => setImgError(true)}
-        />
-      )}
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-[--color-text-primary]">
-          {program.name}
-        </p>
-        <p className="mt-0.5 text-sm text-[--color-text-secondary]">
-          {program.totalIssued} stamp{program.totalIssued !== 1 ? 's' : ''} issued
-        </p>
-      </div>
-
-      {/* Chevron — indicates navigability */}
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        className="h-5 w-5 shrink-0 text-[--color-text-muted]"
-        aria-hidden="true"
+    <Link href="/merchant/create" className="block">
+      <div
+        className="tap-target flex items-center gap-4 bg-(--color-surface) p-4 transition-transform active:scale-[0.98]"
+        style={{
+          borderRadius: "var(--radius-xl)",
+          boxShadow: "var(--shadow-card)",
+        }}
       >
-        <path
-          fillRule="evenodd"
-          d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-          clipRule="evenodd"
+        {/* Plus icon */}
+        <div
+          className="shrink-0 flex items-center justify-center rounded-full"
+          style={{
+            width: 44,
+            height: 44,
+            background: "var(--color-brand-subtle)",
+          }}
+        >
+          <Plus size={24} aria-hidden={true} style={{ color: "var(--color-brand)" }} />
+        </div>
+
+        {/* Text */}
+        <div className="flex-1 min-w-0">
+          <p
+            className="text-(--color-text-primary)"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 600,
+              fontSize: 17,
+            }}
+          >
+            Create New Program
+          </p>
+          <p
+            className="text-(--color-text-secondary) mt-0.5"
+            style={{ fontSize: 13 }}
+          >
+            Set up your loyalty stamp card
+          </p>
+        </div>
+
+        {/* Arrow */}
+        <ArrowRight
+          size={20}
+          className="shrink-0 text-(--color-text-muted)"
+          aria-hidden="true"
         />
-      </svg>
+      </div>
     </Link>
   );
 }
 
-/** Empty state shown when the merchant has no programs yet. */
-function EmptyState() {
+/**
+ * Single program tile linking to the program detail page.
+ */
+function ProgramTile({
+  program,
+}: {
+  program: {
+    objectId: string;
+    name: string;
+    logoUrl: string;
+    totalIssued: number;
+  };
+}) {
   return (
-    <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-[--color-border] bg-[--color-bg-surface] px-8 py-14 text-center">
-      <span className="text-5xl" aria-hidden="true">🏪</span>
-      <div className="flex flex-col gap-1">
-        <p className="font-semibold text-[--color-text-primary]">No programs yet</p>
-        <p className="text-sm text-[--color-text-secondary]">
-          Create your first loyalty program to start issuing stamps.
-        </p>
+    <Link href={`/merchant/${program.objectId}`} className="block">
+      <div
+        className="tap-target flex items-center gap-3 bg-(--color-surface) p-4 transition-transform active:scale-[0.98]"
+        style={{
+          borderRadius: "var(--radius-xl)",
+          boxShadow: "var(--shadow-card)",
+        }}
+      >
+        <MerchantAvatar
+          logoUrl={program.logoUrl}
+          name={program.name}
+          size={40}
+        />
+
+        <div className="flex-1 min-w-0">
+          <p
+            className="truncate text-(--color-text-primary) font-semibold"
+            style={{ fontSize: 15, fontFamily: "var(--font-display)" }}
+          >
+            {program.name}
+          </p>
+          <p
+            className="text-(--color-text-secondary) mt-0.5"
+            style={{ fontSize: 13 }}
+          >
+            {program.totalIssued} stamp{program.totalIssued !== 1 ? "s" : ""}{" "}
+            issued
+          </p>
+        </div>
+
+        <Badge variant="active">Active</Badge>
       </div>
-      <Link href="/merchant/create">
-        <Button variant="primary">Create your first loyalty program</Button>
-      </Link>
-    </div>
+    </Link>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Dashboard content — rendered only when wallet is connected
-// ---------------------------------------------------------------------------
-
 /**
- * Inner dashboard rendered inside WalletGuard once the account is available.
- * Handles loading, error, and data states for the merchant's program list.
+ * Main dashboard content rendered after wallet guard passes.
+ * Handles loading, empty, and populated states for the program list.
  */
 function DashboardContent() {
-  const { data: programs, isLoading, isError, error, refetch } = useMyPrograms();
+  const account = useAccount();
+  const { data: programs, isLoading } = useMyPrograms();
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-8">
-      {/* Header row */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-[--color-text-primary]">
-          Merchant Dashboard
-        </h1>
-        <Link href="/merchant/create">
-          <Button variant="primary" className="text-xs">
-            + Create New Program
-          </Button>
-        </Link>
+    <div className="min-h-dvh bg-(--color-bg-base)">
+      {/* Hero */}
+      {account && <HeroSection />}
+
+      {/* Content */}
+      <div className="mx-auto w-full max-w-[430px] flex flex-col gap-4 px-4 py-6">
+        {/* Create CTA -- always visible */}
+        <CreateProgramCard />
+
+        {/* Loading state */}
+        {isLoading && (
+          <div
+            className="flex flex-col gap-3"
+            aria-busy="true"
+            aria-label="Loading programs"
+          >
+            <Skeleton variant="card" />
+            <Skeleton variant="card" />
+          </div>
+        )}
+
+        {/* Program list */}
+        {!isLoading && programs && programs.length > 0 && (
+          <>
+            <h2
+              className="text-(--color-text-secondary) mt-2"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 600,
+                fontSize: 13,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              Your Programs
+            </h2>
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+              className="flex flex-col gap-3"
+              role="list"
+              aria-label="Your programs"
+            >
+              {programs.map((program) => (
+                <motion.div key={program.objectId} variants={itemVariants} role="listitem">
+                  <ProgramTile program={program} />
+                </motion.div>
+              ))}
+            </motion.div>
+          </>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && programs?.length === 0 && (
+          <EmptyState
+            icon={Store}
+            title="No programs yet"
+            description="Create your first loyalty stamp program to start rewarding customers."
+            action={{ label: "Create Program", href: "/merchant/create" }}
+          />
+        )}
       </div>
-
-      {/* Loading state — 3 skeleton cards */}
-      {isLoading && (
-        <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading programs">
-          <ProgramCardSkeleton />
-          <ProgramCardSkeleton />
-          <ProgramCardSkeleton />
-        </div>
-      )}
-
-      {/* Error state */}
-      {isError && (
-        <div className="rounded-2xl border border-[--color-error] bg-[--color-bg-surface] p-5 text-center">
-          <p className="mb-4 text-sm text-[--color-error]">
-            {error?.message ?? 'Failed to load programs.'}
-          </p>
-          <Button variant="secondary" onClick={() => void refetch()}>
-            Retry
-          </Button>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!isLoading && !isError && programs?.length === 0 && <EmptyState />}
-
-      {/* Program list */}
-      {!isLoading && !isError && programs && programs.length > 0 && (
-        <div className="flex flex-col gap-3">
-          {programs.map((program) => (
-            <ProgramCard key={program.objectId} program={program} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Page export
-// ---------------------------------------------------------------------------
-
 /**
- * Merchant dashboard page — lists all loyalty programs created by the
- * currently connected wallet. Guarded by WalletGuard so the connect prompt
- * is shown when no wallet is present.
+ * Merchant landing page -- lists all loyalty programs created by the connected
+ * wallet. Guarded by WalletGuard so a connect prompt is shown when no wallet
+ * is present.
  */
 export default function MerchantPage() {
   return (

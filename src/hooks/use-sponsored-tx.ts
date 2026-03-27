@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useDAppKit, useCurrentAccount } from '@mysten/dapp-kit-react';
+import { useDAppKit, useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Transaction } from '@mysten/sui/transactions';
+import { fromBase64 } from '@mysten/utils';
+import { env } from '@/env';
 import type {
   SponsoredTxRequest,
   SponsoredTxResponse,
@@ -11,11 +13,25 @@ import type {
 } from '@/types/sui';
 import { asSuiAddress } from '@/types/sui';
 
+/**
+ * Granular phase of the async transaction flow.
+ * Consumers can use this to render step-specific status copy (e.g. "Approve in wallet").
+ */
+export type TxPhase =
+  | 'idle'
+  | 'building'      // building tx bytes / calling /api/sponsor
+  | 'signing'       // wallet prompt is open, awaiting user approval
+  | 'confirming'    // tx submitted, awaiting on-chain finality
+  | 'done';         // confirmed — digest is set
+
 interface UseSponsoredTxResult {
-  /** Execute a sponsored transaction. The gas station pays the fee. */
+  /** Execute a transaction. When NEXT_PUBLIC_ENABLE_SPONSOR_GAS is true, the
+   *  gas station pays the fee; otherwise the connected wallet pays. */
   executeSponsoredTx: (tx: Transaction) => Promise<void>;
   /** True while the transaction is being signed, sponsored, or waited on. */
   isPending: boolean;
+  /** Granular phase for step-specific status copy. */
+  phase: TxPhase;
   /** Set when any step of the flow fails. Cleared on the next call. */
   error: Error | null;
   /** The confirmed transaction digest on success, null otherwise. */
@@ -23,23 +39,35 @@ interface UseSponsoredTxResult {
 }
 
 /**
- * Hook for the gas-sponsored transaction flow.
+ * Hook for executing Suiki Move transactions.
  *
- * Flow:
+ * Direct path (NEXT_PUBLIC_ENABLE_SPONSOR_GAS=false):
+ *   1. Calls signAndExecuteTransaction — wallet signs and the wallet adapter submits.
+ *   2. Checks result.FailedTransaction for on-chain failure.
+ *   3. Calls client.waitForTransaction so the indexer has caught up before cache
+ *      invalidation.
+ *   4. Invalidates React Query caches.
+ *
+ * Sponsored path (NEXT_PUBLIC_ENABLE_SPONSOR_GAS=true):
  *   1. Caller builds a Transaction and passes it to executeSponsoredTx().
  *   2. Hook sets the sender on the transaction (required before signing).
- *   3. User signs the transaction bytes (no gas payment yet).
- *   4. Signed bytes are posted to /api/sponsor; the server attaches its own
- *      sponsor signature and returns the fully-sponsored transaction bytes.
- *   5. The combined transaction is executed on-chain via dAppKit.
+ *   3. Transaction kind bytes are built (onlyTransactionKind: true) and posted
+ *      to /api/sponsor; the server attaches gas owner/payment/budget, signs as
+ *      sponsor, and returns the full transaction bytes + sponsor signature.
+ *   4. User signs the sponsored bytes (now containing gas fields) via signTransaction.
+ *   5. Both signatures are submitted together via client.core.executeTransaction.
  *   6. Hook waits for finality then invalidates relevant React Query caches.
  */
 export function useSponsoredTx(): UseSponsoredTxResult {
   const account = useCurrentAccount();
   const dAppKit = useDAppKit();
+  // useCurrentClient must be called at the top level of the hook — not inside the
+  // callback — so it always participates in the React rules-of-hooks call order.
+  const client = useCurrentClient();
   const queryClient = useQueryClient();
 
   const [isPending, setIsPending] = useState(false);
+  const [phase, setPhase] = useState<TxPhase>('idle');
   const [error, setError] = useState<Error | null>(null);
   const [digest, setDigest] = useState<string | null>(null);
 
@@ -51,22 +79,52 @@ export function useSponsoredTx(): UseSponsoredTxResult {
       }
 
       setIsPending(true);
+      setPhase('building');
       setError(null);
       setDigest(null);
 
       try {
-        // Step 1: bind sender so the transaction bytes include the correct sender field.
-        tx.setSender(account.address);
+        tx.setSenderIfNotSet(account.address);
 
-        // Step 2: user signs the transaction — wallet approves the Move calls
-        // but does NOT pay gas yet (the sponsor will cover it).
-        const { bytes, signature } = await dAppKit.signTransaction({
-          transaction: tx,
+        if (!env.NEXT_PUBLIC_ENABLE_SPONSOR_GAS) {
+          // --- Direct path: user pays their own gas -------------------------
+          // signAndExecuteTransaction opens the wallet prompt internally.
+          setPhase('signing');
+          const result = await dAppKit.signAndExecuteTransaction({ transaction: tx });
+
+          // result is a discriminated union — always check for failure first.
+          if (result.FailedTransaction) {
+            throw new Error(
+              result.FailedTransaction.status.error?.message ?? 'Transaction failed on-chain',
+            );
+          }
+
+          const confirmedDigest = result.Transaction.digest;
+
+          // Wait for the transaction to be indexed before invalidating queries.
+          // Without this, re-fetched queries may return stale data.
+          setPhase('confirming');
+          await client.waitForTransaction({ digest: confirmedDigest });
+
+          setPhase('done');
+          setDigest(confirmedDigest);
+          await queryClient.invalidateQueries({ queryKey: ['programs', account.address] });
+          await queryClient.invalidateQueries({ queryKey: ['cards', account.address] });
+          return;
+        }
+
+        // --- Sponsored path -----------------------------------------------
+        // Step 1: build unsigned transaction-kind bytes to send to the gas station.
+        // onlyTransactionKind: true produces a TransactionKind BCS blob that the
+        // sponsor wraps in a full TransactionData envelope (adds gas fields).
+        const kindBytes = await tx.build({
+          client,
+          onlyTransactionKind: true,
         });
 
-        // Step 3: hand the signed bytes to the gas station.
+        // Step 2: POST the kind bytes + sender address to the gas station.
         const body: SponsoredTxRequest = {
-          txKindBytes: bytes,
+          txKindBytes: Buffer.from(kindBytes).toString('base64'),
           sender: asSuiAddress(account.address),
         };
 
@@ -84,43 +142,53 @@ export function useSponsoredTx(): UseSponsoredTxResult {
         const { transactionBytes, sponsorSignature }: SponsoredTxResponse =
           await sponsorRes.json();
 
-        // Step 4: execute with both the user signature and the sponsor signature.
-        // dAppKit.signAndExecuteTransaction does not accept additionalSignatures
-        // (that is a wallet-standard concept). For sponsored transactions we must
-        // call the lower-level client executeTransaction directly, passing both
-        // signatures (user + sponsor) in the signatures array.
-        const txBytes = Transaction.from(transactionBytes);
-        const builtBytes = await txBytes.build({ client: dAppKit.getClient() });
-        const result = await dAppKit.getClient().core.executeTransaction({
-          transaction: builtBytes,
-          signatures: [signature, sponsorSignature],
+        // Step 3: user signs the SPONSORED bytes — the version with the
+        // sponsor's gas owner/payment/budget already encoded.
+        // The wallet adapter must sign exactly these bytes (not the original kind bytes).
+        setPhase('signing');
+        const { signature: userSignature } = await dAppKit.signTransaction({
+          transaction: Transaction.from(transactionBytes),
+        });
+
+        // Step 4: execute with both signatures.
+        // Order: [userSignature, sponsorSignature] — user first, sponsor second.
+        //
+        // transactionBytes is a base64 string (tx.sign() calls toBase64 internally).
+        // executeTransaction expects Uint8Array — decode before passing.
+        setPhase('confirming');
+        const result = await client.core.executeTransaction({
+          transaction: fromBase64(transactionBytes),
+          signatures: [userSignature, sponsorSignature],
         });
 
         // Step 5: check for on-chain failure before declaring success.
-        if (result.$kind === 'FailedTransaction') {
+        if (result.FailedTransaction) {
           const status = result.FailedTransaction.status;
-          const reason = status.success ? 'unknown error' : status.error.message;
+          const reason = status.error?.message ?? 'unknown error';
           throw new Error(`Transaction failed on-chain: ${reason}`);
         }
 
         const confirmedDigest = result.Transaction.digest;
 
-        // Step 6: wait for the transaction to be indexed by the node.
-        await dAppKit.getClient().core.waitForTransaction({ digest: confirmedDigest });
+        // Step 6: wait for the transaction to be indexed by the node before
+        // invalidating React Query caches.
+        await client.waitForTransaction({ digest: confirmedDigest });
 
+        setPhase('done');
         setDigest(confirmedDigest);
 
         // Invalidate wallet-specific caches so UI reflects the new on-chain state.
         await queryClient.invalidateQueries({ queryKey: ['programs', account.address] });
         await queryClient.invalidateQueries({ queryKey: ['cards', account.address] });
       } catch (err) {
+        setPhase('idle');
         setError(err instanceof Error ? err : new Error(String(err)));
       } finally {
         setIsPending(false);
       }
     },
-    [account, dAppKit, queryClient],
+    [account, dAppKit, client, queryClient],
   );
 
-  return { executeSponsoredTx, isPending, error, digest };
+  return { executeSponsoredTx, isPending, phase, error, digest };
 }

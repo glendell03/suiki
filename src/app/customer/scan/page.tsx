@@ -1,287 +1,128 @@
-'use client';
-
-import { useState } from 'react';
-import Link from 'next/link';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
-import { WalletGuard } from '@/components/wallet-guard';
-import QrScanner from '@/components/qr-scanner';
-import QrCode from '@/components/qr-code';
-import { StampProgress } from '@/components/stamp-progress';
-import { getProgramById, findCardForProgram } from '@/lib/queries';
-import type { StampProgram, StampCard } from '@/types/sui';
-import { asSuiObjectId, asSuiAddress } from '@/types/sui';
-import { parseQRPayload } from '@/lib/qr-utils';
+"use client";
 
 /**
- * Customer QR scan page.
+ * /customer/scan — QR Code Display (V2 SUI Water Design)
  *
- * Flow:
- *   1. Customer scans the merchant's QR code with their camera.
- *   2. App fetches the program details and any existing card in parallel.
- *   3. Shows program info + customer's own QR for the merchant to scan back.
- *   4. "Scan Another" resets all state back to the scanner view.
+ * Focused action screen where customers show their wallet QR code
+ * for merchants to scan. Uses a solid brand-blue hero section with
+ * a floating white QR card that overlaps the boundary.
+ *
+ * BottomNav is intentionally hidden — this is a focused action screen.
  */
-export default function CustomerScanPage() {
+
+import { Suspense } from "react";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { motion } from "framer-motion";
+import { useAccount } from "@/hooks/use-account";
+import { WalletGuard } from "@/components/wallet-guard";
+import { WalletChip } from "@/components/wallet-chip";
+import { BeautifulQR } from "@/components/beautiful-qr";
+import { encodeCustomerCardQR } from "@/lib/qr-utils";
+
+export default function ScanPage() {
   return (
-    <WalletGuard>
-      <ScanView />
+    <WalletGuard heading="Connect wallet" description="To display your QR code">
+      <ScanContent />
     </WalletGuard>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Inner view — rendered only after wallet is connected
-// ---------------------------------------------------------------------------
-
-type ScanPhase =
-  | { kind: 'scanning' }
-  | { kind: 'loading' }
-  | { kind: 'ready'; program: StampProgram; existingCard: StampCard | null }
-  | { kind: 'error'; message: string };
-
-function ScanView() {
-  const account = useCurrentAccount();
-  const [phase, setPhase] = useState<ScanPhase>({ kind: 'scanning' });
-
-  /** Parse and validate a scanned QR payload, then fetch program data. */
-  const handleScan = async (raw: string) => {
-    if (!account) return;
-
-    // Only handle one scan — the ScanPhase discriminated union prevents
-    // re-entry: subsequent frames from the scanner are ignored while loading.
-    if (phase.kind !== 'scanning') return;
-
-    // Use canonical parser with String() coercion to guard against object injection.
-    const parsed = parseQRPayload(raw);
-
-    if (!parsed) {
-      setPhase({ kind: 'error', message: 'Invalid QR code. Please scan a Suiki merchant QR.' });
-      return;
-    }
-
-    if (parsed.type !== 'merchant') {
-      setPhase({ kind: 'error', message: 'This QR code is not a Suiki merchant code.' });
-      return;
-    }
-
-    setPhase({ kind: 'loading' });
-
-    try {
-      const [program, existingCard] = await Promise.all([
-        getProgramById(parsed.programId),
-        findCardForProgram(account.address, parsed.programId),
-      ]);
-
-      if (!program) {
-        setPhase({ kind: 'error', message: 'Stamp program not found on-chain.' });
-        return;
-      }
-
-      setPhase({ kind: 'ready', program, existingCard });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load program data.';
-      setPhase({ kind: 'error', message });
-    }
-  };
-
-  const reset = () => setPhase({ kind: 'scanning' });
+/** Inner content rendered after wallet is connected. */
+function ScanContent() {
+  const account = useAccount();
+  const qrValue = account ? encodeCustomerCardQR("default", account.address) : "";
 
   return (
-    <div className="mx-auto w-full max-w-md px-5 py-8">
-      {/* Back navigation */}
-      <div className="mb-6">
+    <div className="min-h-dvh flex flex-col bg-(--color-bg-base)">
+      {/* Brand-blue hero section */}
+      <div className="relative flex flex-col items-center justify-center h-44 bg-(--color-brand) px-6" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        {/* Back button */}
         <Link
           href="/customer"
-          className={[
-            'text-sm text-[--color-text-secondary]',
-            'transition-opacity hover:opacity-80',
-            'focus-visible:outline-none focus-visible:ring-2',
-            'focus-visible:ring-[--color-primary] rounded',
-          ].join(' ')}
+          aria-label="Back to home"
+          className="absolute top-4 left-4 tap-target flex items-center justify-center w-10 h-10 rounded-full bg-white/20"
+          style={{ top: "max(16px, env(safe-area-inset-top))" }}
         >
-          ← Back to My Stamps
+          <ChevronLeft size={20} aria-hidden={true} style={{ color: "white" }} strokeWidth={2} />
         </Link>
+
+        {/* Decorative watermark */}
+        <span
+          aria-hidden="true"
+          className="absolute select-none pointer-events-none"
+          style={{
+            fontSize: 120,
+            fontFamily: "var(--font-display)",
+            fontWeight: 800,
+            color: "rgba(255, 255, 255, 0.10)",
+          }}
+        >
+          水
+        </span>
+
+        {/* Title */}
+        <h1
+          className="text-2xl text-white"
+          style={{ fontFamily: "var(--font-display)", fontWeight: 800 }}
+        >
+          Show QR Code
+        </h1>
+        <p className="mt-1.5 text-sm" style={{ color: "rgba(255, 255, 255, 0.75)" }}>
+          Hold up to the merchant scanner
+        </p>
       </div>
 
-      <h1 className="text-2xl font-bold text-[--color-text-primary] mb-6">
-        Scan Merchant QR
-      </h1>
-
-      {phase.kind === 'scanning' && (
-        <QrScanner onScan={handleScan} />
-      )}
-
-      {phase.kind === 'loading' && (
-        <div className="flex flex-col items-center gap-4 py-12">
-          <div
-            className="h-10 w-10 rounded-full border-2 border-[--color-primary] border-t-transparent animate-spin"
-            aria-label="Loading program data"
-            role="status"
-          />
-          <p className="text-sm text-[--color-text-secondary]">
-            Loading stamp program…
-          </p>
-        </div>
-      )}
-
-      {phase.kind === 'error' && (
-        <ErrorCard message={phase.message} onRetry={reset} />
-      )}
-
-      {phase.kind === 'ready' && account && (
-        <ProgramCard
-          program={phase.program}
-          existingCard={phase.existingCard}
-          customerAddress={account.address}
-          onReset={reset}
-        />
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-interface ProgramCardProps {
-  program: StampProgram;
-  existingCard: StampCard | null;
-  customerAddress: string;
-  onReset: () => void;
-}
-
-/**
- * ProgramCard — shown after a successful merchant QR scan.
- *
- * Displays program details, the customer's current progress (if any),
- * instructions for getting stamped, and the customer's own QR code for
- * the merchant to scan.
- */
-function ProgramCard({
-  program,
-  existingCard,
-  customerAddress,
-  onReset,
-}: ProgramCardProps) {
-  /** Build the customer QR payload to show to the merchant. */
-  const customerQrData: CustomerQRPayload = {
-    type: 'customer',
-    customerAddress: asSuiAddress(customerAddress),
-  };
-
-  return (
-    <div className="flex flex-col gap-6">
-      {/* Program info */}
-      <div className="rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-5">
-        <div className="flex items-center gap-3 mb-4">
-          {program.logoUrl ? (
-            <img
-              src={program.logoUrl}
-              alt={program.name}
-              width={48}
-              height={48}
-              className="h-12 w-12 flex-shrink-0 rounded-xl object-cover"
-            />
-          ) : (
-            <span
-              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[--color-bg-elevated] text-2xl"
-              aria-hidden="true"
+      {/* White lower section */}
+      <div className="flex-1 flex flex-col items-center px-6 pb-8 mx-auto w-full max-w-[430px]">
+        {/* Floating QR card — overlaps hero boundary */}
+        <motion.div
+          initial={{ opacity: 0, y: 40, scale: 0.92 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          className="mt-6 flex flex-col items-center bg-(--color-surface) p-6"
+          style={{
+            borderRadius: "var(--radius-2xl)",
+            boxShadow: "var(--shadow-float)",
+          }}
+        >
+          {qrValue ? (
+            <Suspense
+              fallback={
+                <div className="h-64 w-64 animate-pulse rounded-2xl bg-(--color-border)" />
+              }
             >
-              🏪
-            </span>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 28, delay: 0.12 }}
+              >
+                <BeautifulQR
+                  value={qrValue}
+                  size={256}
+                  label="Your wallet QR code"
+                  foregroundColor="#111111"
+                  backgroundColor="#ffffff"
+                />
+              </motion.div>
+            </Suspense>
+          ) : (
+            <div className="flex h-64 w-64 items-center justify-center rounded-2xl bg-(--color-border)">
+              <p className="text-sm text-(--color-text-muted)">Connect wallet first</p>
+            </div>
           )}
+        </motion.div>
 
-          <div className="flex flex-col min-w-0">
-            <h2 className="font-semibold text-[--color-text-primary] truncate">
-              {program.name}
-            </h2>
-            <p className="text-xs text-[--color-text-muted]">
-              {program.rewardDescription}
-            </p>
-          </div>
-        </div>
-
-        {/* Current progress or intro text */}
-        {existingCard ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-[--color-text-secondary]">
-              Your current progress:
-            </p>
-            <StampProgress
-              current={existingCard.currentStamps}
-              required={existingCard.stampsRequired}
-            />
-          </div>
-        ) : (
-          <p className="text-sm text-[--color-text-secondary]">
-            Collect {program.stampsRequired} stamps to earn: {program.rewardDescription}
-          </p>
+        {/* Wallet address chip */}
+        {account && (
+          <WalletChip address={account.address} className="mt-4" />
         )}
-      </div>
 
-      {/* Instruction */}
-      <div className="rounded-xl border border-[--color-border] bg-[--color-bg-elevated] px-4 py-3">
-        <p className="text-sm text-[--color-text-secondary] text-center">
-          Ask the merchant to scan your QR code to receive a stamp
+        {/* Helper text */}
+        <p className="mt-3 text-[13px] text-(--color-text-muted) text-center">
+          The merchant will scan this to add a stamp to your card
         </p>
       </div>
-
-      {/* Customer QR */}
-      <div className="flex flex-col items-center gap-2 rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-6">
-        <p className="text-sm font-medium text-[--color-text-secondary] mb-2">
-          Your stamp QR
-        </p>
-        <QrCode
-          data={JSON.stringify(customerQrData)}
-          size={220}
-          label={`${customerAddress.slice(0, 6)}…${customerAddress.slice(-4)}`}
-        />
-      </div>
-
-      {/* Reset */}
-      <button
-        type="button"
-        onClick={onReset}
-        className={[
-          'w-full rounded-xl px-4 py-3 text-sm font-semibold',
-          'border border-[--color-border] bg-transparent',
-          'text-[--color-text-secondary]',
-          'transition-colors hover:bg-[--color-bg-elevated]',
-          'focus-visible:outline-none focus-visible:ring-2',
-          'focus-visible:ring-[--color-primary] focus-visible:ring-offset-2',
-          'focus-visible:ring-offset-[--color-bg-base]',
-        ].join(' ')}
-      >
-        Scan Another
-      </button>
-    </div>
-  );
-}
-
-interface ErrorCardProps {
-  message: string;
-  onRetry: () => void;
-}
-
-function ErrorCard({ message, onRetry }: ErrorCardProps) {
-  return (
-    <div className="flex flex-col items-center gap-4 rounded-2xl border border-[--color-error]/30 bg-[--color-error]/10 p-6 text-center">
-      <p className="text-sm text-[--color-error]">{message}</p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className={[
-          'rounded-xl px-5 py-2.5 text-sm font-semibold',
-          'border border-[--color-border] bg-[--color-bg-surface]',
-          'text-[--color-text-primary]',
-          'transition-colors hover:bg-[--color-bg-elevated]',
-          'focus-visible:outline-none focus-visible:ring-2',
-          'focus-visible:ring-[--color-primary]',
-        ].join(' ')}
-      >
-        Try Again
-      </button>
     </div>
   );
 }

@@ -1,0 +1,293 @@
+<style>
+  body { background: #0a1a14; color: #f1f5f9; font-family: -apple-system, 'Inter', sans-serif; }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 760px; margin: 0 auto; }
+  .card { cursor: pointer; border-radius: 16px; border: 2px solid rgba(74,222,128,0.1); background: rgba(10,26,20,0.8); overflow: hidden; transition: border-color 0.2s; }
+  .card:hover { border-color: rgba(74,222,128,0.35); }
+  .card.selected { border-color: #4ade80; }
+  .card-label { padding: 10px 14px; border-top: 1px solid rgba(74,222,128,0.08); }
+  .card-label h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #f1f5f9; }
+  .card-label p { margin: 0; font-size: 12px; color: #7fb891; line-height: 1.4; }
+
+  .phone {
+    width: 260px;
+    min-height: 400px;
+    margin: 16px auto;
+    border-radius: 36px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.08);
+    position: relative;
+  }
+
+  /* A: Green gradient bg, white QR card floating */
+  .screen-a {
+    background: linear-gradient(160deg, #0a3d20 0%, #0a2a18 50%, #061a10 100%);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 32px 20px 24px;
+    min-height: 400px;
+    position: relative;
+  }
+  .screen-a-back {
+    position: absolute; top: 16px; left: 16px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    display: flex; align-items:center; justify-content:center;
+    font-size: 12px;
+  }
+  .screen-a-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; margin-top: 8px; }
+  .screen-a-sub { font-size: 10px; color: rgba(255,255,255,0.6); text-align: center; margin-bottom: 24px; }
+  .qr-card-a {
+    background: white;
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .qr-mock {
+    width: 140px; height: 140px;
+    display: grid; grid-template-columns: repeat(11, 1fr); gap: 1.5px;
+    padding: 8px;
+    background: white;
+    border-radius: 8px;
+  }
+  .qr-dot { border-radius: 2px; background: #111; }
+  .qr-empty { background: transparent; }
+  .qr-corner {
+    width: 22px; height: 22px;
+    border: 3px solid #111;
+    border-radius: 4px;
+    position: relative;
+  }
+  .qr-inner-corner {
+    width: 10px; height: 10px;
+    background: #111;
+    border-radius: 2px;
+    position: absolute; top: 3px; left: 3px;
+  }
+
+  /* Simplified QR visual */
+  .qr-visual {
+    width: 130px; height: 130px;
+    background: #fff;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .qr-visual svg { width: 110px; height: 110px; }
+
+  .qr-addr { font-size: 9px; color: #999; font-family: monospace; }
+
+  /* B: Dark frosted glass card, green QR dots */
+  .screen-b {
+    background: #0a1a14;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 20px 24px;
+    min-height: 400px;
+    position: relative;
+  }
+  .screen-b-header {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .screen-b-back {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(74,222,128,0.1);
+    display: flex; align-items:center; justify-content:center;
+    font-size: 12px;
+  }
+  .screen-b-title { font-size: 13px; font-weight: 700; }
+  .qr-card-b {
+    background: rgba(19,42,31,0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(74,222,128,0.15);
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    width: 100%;
+  }
+  .qr-card-b-label { font-size: 10px; color: #7fb891; }
+  .qr-green-bg {
+    background: #0a1a14;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex; align-items:center; justify-content:center;
+  }
+
+  .screen-b-bottom { margin-top: 20px; width: 100%; }
+  .btn-enter {
+    width: 100%; padding: 12px;
+    background: rgba(74,222,128,0.15);
+    border: 1px solid rgba(74,222,128,0.25);
+    border-radius: 14px;
+    text-align: center;
+    font-size: 12px; font-weight: 600; color: #4ade80;
+  }
+</style>
+
+<h2>QR Code Screen</h2>
+<p class="subtitle">The screen customers show merchants. Which presentation feels more premium?</p>
+
+<div class="cards">
+
+  <!-- A: Green gradient + white QR card (matches photo) -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="phone">
+      <div class="screen-a">
+        <div class="screen-a-back">‹</div>
+        <div style="height:20px"></div>
+        <div class="screen-a-title">Show QR Code</div>
+        <div class="screen-a-sub">Please show this to the cashier</div>
+
+        <div class="qr-card-a">
+          <!-- Simplified QR mockup with rounded dots -->
+          <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+            <!-- Corner TL -->
+            <rect x="8" y="8" width="32" height="32" rx="6" fill="none" stroke="#111" stroke-width="4"/>
+            <rect x="16" y="16" width="16" height="16" rx="3" fill="#111"/>
+            <!-- Corner TR -->
+            <rect x="100" y="8" width="32" height="32" rx="6" fill="none" stroke="#111" stroke-width="4"/>
+            <rect x="108" y="16" width="16" height="16" rx="3" fill="#111"/>
+            <!-- Corner BL -->
+            <rect x="8" y="100" width="32" height="32" rx="6" fill="none" stroke="#111" stroke-width="4"/>
+            <rect x="16" y="108" width="16" height="16" rx="3" fill="#111"/>
+            <!-- Data dots (random pattern) -->
+            <rect x="52" y="10" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="64" y="10" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="76" y="10" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="88" y="10" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="52" y="22" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="76" y="22" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="52" y="34" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="64" y="34" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="88" y="34" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="10" y="52" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="22" y="52" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="34" y="52" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="52" y="52" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="64" y="52" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="88" y="52" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="100" y="52" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="112" y="52" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="124" y="52" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="10" y="64" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="52" y="64" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="76" y="64" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="100" y="64" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="124" y="64" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="22" y="76" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="34" y="76" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="64" y="76" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="88" y="76" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="112" y="76" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="10" y="88" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="52" y="88" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="76" y="88" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="100" y="88" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="124" y="88" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="52" y="100" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="64" y="100" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="88" y="100" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="112" y="100" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="52" y="112" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="76" y="112" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="100" y="112" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="124" y="112" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="52" y="124" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="64" y="124" width="7" height="7" rx="2" fill="#111"/>
+            <rect x="88" y="124" width="7" height="7" rx="2" fill="#111"/>
+          </svg>
+          <div class="qr-addr">0x1a2b…9f3e</div>
+        </div>
+
+        <div style="margin-top: 20px; text-align:center;">
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);">Suiki · Loyalty on SUI</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>A — Gradient + White Card</h3>
+      <p>Green gradient background, white floating QR card with rounded dot pattern. Matches the reference photo. High contrast, easy to scan.</p>
+    </div>
+  </div>
+
+  <!-- B: Dark glass card, green QR -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="phone">
+      <div class="screen-b">
+        <div class="screen-b-header">
+          <div class="screen-b-back">‹</div>
+          <div class="screen-b-title">Show QR Code</div>
+          <div style="width:28px"></div>
+        </div>
+
+        <div class="qr-card-b">
+          <div class="qr-card-b-label">Show this to the cashier</div>
+          <div class="qr-green-bg">
+            <svg width="130" height="130" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+              <!-- Corner TL -->
+              <rect x="8" y="8" width="32" height="32" rx="6" fill="none" stroke="#4ade80" stroke-width="4"/>
+              <rect x="16" y="16" width="16" height="16" rx="3" fill="#4ade80"/>
+              <!-- Corner TR -->
+              <rect x="100" y="8" width="32" height="32" rx="6" fill="none" stroke="#4ade80" stroke-width="4"/>
+              <rect x="108" y="16" width="16" height="16" rx="3" fill="#4ade80"/>
+              <!-- Corner BL -->
+              <rect x="8" y="100" width="32" height="32" rx="6" fill="none" stroke="#4ade80" stroke-width="4"/>
+              <rect x="16" y="108" width="16" height="16" rx="3" fill="#4ade80"/>
+              <rect x="52" y="10" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="64" y="10" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="76" y="10" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="88" y="10" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="52" y="22" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="76" y="22" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="52" y="34" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="64" y="34" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="88" y="34" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="10" y="52" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="22" y="52" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="34" y="52" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="52" y="52" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="64" y="52" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="88" y="52" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="100" y="52" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="112" y="52" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="124" y="52" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="10" y="64" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="52" y="64" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="76" y="64" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="100" y="64" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="124" y="64" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="22" y="76" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="34" y="76" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="64" y="76" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="88" y="76" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="112" y="76" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="10" y="88" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="52" y="88" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="76" y="88" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="100" y="88" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="124" y="88" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="52" y="100" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="64" y="100" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="88" y="100" width="7" height="7" rx="2" fill="#4ade80"/>
+              <rect x="112" y="100" width="7" height="7" rx="2" fill="#4ade80"/>
+            </svg>
+          </div>
+          <div class="qr-addr" style="font-size:9px;color:#475569;font-family:monospace;">0x1a2b…9f3e</div>
+        </div>
+
+        <div class="screen-b-bottom">
+          <div class="btn-enter">Enter code manually</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>B — Dark Glass + Green QR</h3>
+      <p>Stays in the dark green theme. Glass card with green QR dots on dark bg. Cohesive with the rest of the app but lower contrast for scanning.</p>
+    </div>
+  </div>
+
+</div>

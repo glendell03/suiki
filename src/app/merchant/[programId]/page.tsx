@@ -1,19 +1,22 @@
-'use client';
+"use client";
 
-import { use, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
-import { WalletGuard } from '@/components/wallet-guard';
-import { Button } from '@/components/ui/button';
-import { useSponsoredTx } from '@/hooks/use-sponsored-tx';
-import { getProgramById, findCardForProgram } from '@/lib/queries';
+import { use, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ScanLine, AlertTriangle } from "lucide-react";
+import { useAccount } from "@/hooks/use-account";
+import { WalletGuard } from "@/components/wallet-guard";
+import { PageHeader } from "@/components/page-header";
+import { MerchantAvatar } from "@/components/merchant-avatar";
+import { useSponsoredTx } from "@/hooks/use-sponsored-tx";
+import { findCardForProgram } from "@/lib/queries";
+import { useProgram } from "@/hooks/use-program";
 import {
   buildCreateCardAndStamp,
   buildIssueStamp,
-} from '@/lib/transactions';
-import type { StampCard } from '@/types/sui';
-import { asSuiAddress } from '@/types/sui';
+} from "@/lib/transactions";
+import type { StampCard } from "@/types/sui";
+import { asSuiAddress } from "@/types/sui";
 import {
   getDailyTxCount,
   incrementDailyTxCount,
@@ -21,13 +24,30 @@ import {
   isNearDailyLimit,
   DAILY_LIMIT,
   NEAR_LIMIT_THRESHOLD,
-} from '@/lib/rate-limit';
-import QrCode from '@/components/qr-code';
-import QrScanner from '@/components/qr-scanner';
-import { parseQRPayload } from '@/lib/qr-utils';
+} from "@/lib/rate-limit";
+import QrScanner from "@/components/qr-scanner";
+import { decodeQRPayload } from "@/lib/qr-utils";
 
 // SUI address: 0x followed by exactly 64 hex characters
 const SUI_ADDRESS_RE = /^0x[0-9a-fA-F]{64}$/;
+
+// ---------------------------------------------------------------------------
+// Shared back button for all states (loading, error, main)
+// ---------------------------------------------------------------------------
+
+const backButton = (
+  <Link
+    href="/merchant"
+    aria-label="Back"
+    className="flex items-center justify-center w-10 h-10 rounded-full tap-target"
+  >
+    <ChevronLeft
+      size={20}
+      className="text-(--color-text-primary)"
+      strokeWidth={2}
+    />
+  </Link>
+);
 
 // ---------------------------------------------------------------------------
 // Types used for the scan/confirm flow
@@ -42,10 +62,10 @@ interface ConfirmData {
 }
 
 // ---------------------------------------------------------------------------
-// Sub-component: Program header info
+// Sub-component: Program info card
 // ---------------------------------------------------------------------------
 
-interface ProgramHeaderProps {
+interface ProgramInfoCardProps {
   name: string;
   logoUrl: string;
   stampsRequired: number;
@@ -53,51 +73,79 @@ interface ProgramHeaderProps {
   totalIssued: number;
 }
 
-/** Displays the key attributes of a StampProgram. */
-function ProgramHeader({
+/** Displays the key attributes of a StampProgram inside a card. */
+function ProgramInfoCard({
   name,
   logoUrl,
   stampsRequired,
   rewardDescription,
   totalIssued,
-}: ProgramHeaderProps) {
+}: ProgramInfoCardProps) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-5">
-      <div className="flex items-center gap-4">
-        {logoUrl ? (
-          <img
-            src={logoUrl}
-            alt={`${name} logo`}
-            className="h-14 w-14 shrink-0 rounded-xl object-cover"
-          />
-        ) : (
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[--color-bg-elevated] text-3xl"
-            aria-hidden="true"
-          >
-            🏪
-          </div>
-        )}
+    <div
+      className="flex flex-col gap-4 p-5"
+      style={{
+        background: "var(--color-surface)",
+        borderRadius: "var(--radius-2xl)",
+        boxShadow: "var(--shadow-card)",
+        border: "1px solid var(--color-border)",
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <MerchantAvatar logoUrl={logoUrl} name={name} size={52} />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-bold text-[--color-text-primary]">
+          <h2
+            className="truncate text-[17px] font-bold text-(--color-text-primary)"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
             {name}
           </h2>
-          <p className="mt-0.5 text-sm text-[--color-text-secondary]">
-            {totalIssued} stamp{totalIssued !== 1 ? 's' : ''} issued total
+          <p className="mt-0.5 text-[13px] text-(--color-text-muted)">
+            {totalIssued} stamp{totalIssued !== 1 ? "s" : ""} issued total
           </p>
         </div>
       </div>
 
+      {/* Divider */}
+      <div className="h-px bg-(--color-border)" />
+
+      {/* Stats */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-[--color-bg-elevated] px-4 py-3">
-          <p className="text-xs text-[--color-text-muted]">Stamps for reward</p>
-          <p className="mt-0.5 text-xl font-bold text-[--color-accent-loyalty]">
+        {/* Stamps required */}
+        <div
+          className="flex flex-col gap-1 rounded-(--radius-xl) p-4"
+          style={{ background: "var(--color-loyalty-subtle)" }}
+        >
+          <p
+            className="text-[11px] font-semibold uppercase tracking-wider"
+            style={{ color: "var(--color-loyalty-dark)", letterSpacing: "0.06em" }}
+          >
+            Stamps needed
+          </p>
+          <p
+            className="text-[28px] font-bold leading-none"
+            style={{ fontFamily: "var(--font-display)", color: "var(--color-loyalty)" }}
+          >
             {stampsRequired}
           </p>
         </div>
-        <div className="rounded-xl bg-[--color-bg-elevated] px-4 py-3">
-          <p className="text-xs text-[--color-text-muted]">Reward</p>
-          <p className="mt-0.5 text-sm font-medium text-[--color-text-primary] line-clamp-2">
+
+        {/* Reward */}
+        <div
+          className="flex flex-col gap-1 rounded-(--radius-xl) p-4"
+          style={{ background: "var(--color-brand-subtle)" }}
+        >
+          <p
+            className="text-[11px] font-semibold uppercase tracking-wider"
+            style={{ color: "var(--color-brand-dark)", letterSpacing: "0.06em" }}
+          >
+            Reward
+          </p>
+          <p
+            className="text-[13px] font-semibold line-clamp-3 leading-snug"
+            style={{ color: "var(--color-brand-dark)" }}
+          >
             {rewardDescription}
           </p>
         </div>
@@ -121,53 +169,33 @@ interface RateLimitBarProps {
 function RateLimitBar({ count }: RateLimitBarProps) {
   if (count < NEAR_LIMIT_THRESHOLD) return null;
 
-  const isAtLimit = count >= DAILY_LIMIT;
+  const atLimit = count >= DAILY_LIMIT;
 
   return (
     <div
-      className={[
-        'rounded-lg px-4 py-3 text-sm',
-        isAtLimit
-          ? 'border border-[--color-error] bg-[--color-bg-surface] text-[--color-error]'
-          : 'border border-[--color-warning] bg-[--color-bg-surface] text-[--color-warning]',
-      ].join(' ')}
+      className="flex items-center gap-3 rounded-(--radius-xl) px-4 py-3"
+      style={{
+        background: atLimit ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)",
+        border: `1px solid ${atLimit ? "rgba(239,68,68,0.2)" : "rgba(245,158,11,0.2)"}`,
+      }}
       role="alert"
     >
-      {isAtLimit
-        ? 'Daily limit reached — stamps paused until tomorrow.'
-        : `Warning: ${count}/${DAILY_LIMIT} daily stamps used`}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Sub-component: QR Merchant display (the merchant's own QR code)
-// ---------------------------------------------------------------------------
-
-interface MerchantQrSectionProps {
-  programId: string;
-  merchantAddress: string;
-}
-
-/** Renders the merchant's QR code that customers scan to get stamped. */
-function MerchantQrSection({ programId, merchantAddress }: MerchantQrSectionProps) {
-  const payload = JSON.stringify({
-    type: 'merchant',
-    programId,
-    merchantAddress,
-  });
-
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-5">
-      <p className="text-sm font-medium text-[--color-text-secondary]">
-        Show this QR to customers to collect stamps
+      <AlertTriangle
+        size={16}
+        style={{ color: atLimit ? "var(--color-error)" : "var(--color-warning)", flexShrink: 0 }}
+      />
+      <p
+        className="text-[13px] font-medium"
+        style={{ color: atLimit ? "var(--color-error)" : "#92400e" }}
+      >
+        {atLimit
+          ? "Daily limit reached — stamps paused until tomorrow."
+          : `${count}/${DAILY_LIMIT} daily stamps used`}
       </p>
-      <div className="rounded-xl bg-white p-3">
-        <QrCode data={payload} size={180} />
-      </div>
     </div>
   );
 }
+
 
 // ---------------------------------------------------------------------------
 // Sub-component: Scan confirmation UI
@@ -176,15 +204,16 @@ function MerchantQrSection({ programId, merchantAddress }: MerchantQrSectionProp
 interface StampConfirmProps {
   confirmData: ConfirmData;
   isPending: boolean;
+  phase: import("@/hooks/use-sponsored-tx").TxPhase;
   txError: Error | null;
   successMessage: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-/** Truncates an address to the first 8 characters (after 0x). */
+/** Truncates an address to the first 10 characters. */
 function truncateAddress(address: string): string {
-  return address.length > 10 ? `${address.slice(0, 10)}…` : address;
+  return address.length > 10 ? `${address.slice(0, 10)}...` : address;
 }
 
 /**
@@ -193,6 +222,7 @@ function truncateAddress(address: string): string {
  */
 function StampConfirm({
   confirmData,
+  phase,
   isPending,
   txError,
   successMessage,
@@ -201,82 +231,145 @@ function StampConfirm({
 }: StampConfirmProps) {
   const { customerAddress, card, cardLoading } = confirmData;
 
-  return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-5">
-      <h3 className="font-semibold text-[--color-text-primary]">Confirm Stamp</h3>
+  /** Maps tx phase to button label text. */
+  function issuingLabel(): string {
+    switch (phase) {
+      case "building":
+        return "Preparing...";
+      case "signing":
+        return "Approve in wallet...";
+      case "confirming":
+        return "Confirming...";
+      default:
+        return "Issuing...";
+    }
+  }
 
-      <p className="text-sm text-[--color-text-secondary]">
-        Issue stamp to{' '}
-        <span className="font-mono font-medium text-[--color-text-primary]">
+  return (
+    <div className="glass-card p-5">
+      <h3
+        className="text-[15px] font-semibold text-(--color-text-primary)"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        Confirm Stamp
+      </h3>
+
+      <p className="mt-3 text-[13px] text-(--color-text-secondary)">
+        Issue stamp to{" "}
+        <span className="font-mono font-medium text-(--color-text-primary)">
           {truncateAddress(customerAddress)}
         </span>
         ?
       </p>
 
       {/* Card status */}
-      {cardLoading ? (
-        <div className="h-5 w-2/3 animate-pulse rounded bg-[--color-bg-elevated]" />
-      ) : card ? (
-        <p className="text-sm text-[--color-text-secondary]">
-          Current:{' '}
-          <span className="font-semibold text-[--color-accent-loyalty]">
-            {card.currentStamps}/{card.stampsRequired} stamps
-          </span>
-        </p>
-      ) : (
-        <p className="text-sm text-[--color-text-secondary]">
-          New customer — will create stamp card
-        </p>
-      )}
+      <div className="mt-3">
+        {cardLoading ? (
+          <div className="h-5 w-2/3 animate-pulse rounded bg-(--color-bg-elevated)" />
+        ) : card ? (
+          <p className="text-[13px] text-(--color-text-secondary)">
+            Current:{" "}
+            <span
+              className="font-semibold"
+              style={{ color: "var(--color-loyalty)" }}
+            >
+              {card.currentStamps}/{card.stampsRequired} stamps
+            </span>
+          </p>
+        ) : (
+          <p className="text-[13px] text-(--color-text-secondary)">
+            New customer -- will create stamp card
+          </p>
+        )}
+      </div>
 
       {/* Success message */}
-      {successMessage && (
-        <div className="rounded-lg bg-[--color-success] bg-opacity-10 px-4 py-2 text-sm font-medium text-[--color-success]" role="status">
-          {successMessage}
-        </div>
-      )}
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            key="stamp-success"
+            initial={{ opacity: 0, scale: 0.85, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -4 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className="mt-3 rounded-(--radius-lg) px-4 py-2 text-[13px] font-medium text-center"
+            style={{ background: "var(--color-loyalty-subtle)", color: "var(--color-loyalty-dark)" }}
+            role="status"
+          >
+            {successMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Transaction error */}
-      {txError && (
-        <div className="rounded-lg border border-[--color-error] px-4 py-2 text-sm text-[--color-error]" role="alert">
-          {txError.message}
-        </div>
-      )}
+      <AnimatePresence>
+        {txError && (
+          <motion.div
+            key="stamp-error"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="mt-3 rounded-(--radius-lg) border border-red-200 bg-red-50 px-4 py-2 text-[13px] text-red-600"
+            role="alert"
+          >
+            {txError.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="flex gap-3">
-        <Button
-          variant="secondary"
+      <div className="mt-4 flex gap-3">
+        <button
+          type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="flex-1"
+          className="flex-1 inline-flex items-center justify-center rounded-full px-4 py-3 text-[15px] font-semibold text-(--color-text-primary) border border-(--color-border) bg-(--color-surface) transition-opacity hover:opacity-80 active:opacity-60 tap-target disabled:opacity-40"
         >
           Cancel
-        </Button>
-        <Button
-          variant="primary"
+        </button>
+        <button
+          type="button"
           onClick={onConfirm}
           disabled={isPending || cardLoading}
-          className="flex-1"
+          className="flex-1 inline-flex items-center justify-center rounded-full px-4 py-3 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-75 tap-target disabled:opacity-40"
+          style={{ background: "var(--color-brand)" }}
         >
           {isPending ? (
             <>
-              <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <svg
+                className="h-4 w-4 animate-spin mr-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
-              Issuing…
+              {issuingLabel()}
             </>
           ) : (
-            'Issue Stamp'
+            "Issue Stamp"
           )}
-        </Button>
+        </button>
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Main page content — rendered inside WalletGuard
+// Main page content -- rendered inside WalletGuard
 // ---------------------------------------------------------------------------
 
 interface ProgramDetailContentProps {
@@ -288,8 +381,14 @@ interface ProgramDetailContentProps {
  * Manages program data fetch, QR display, QR scanning, and stamp issuance.
  */
 function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
-  const account = useCurrentAccount();
-  const { executeSponsoredTx, isPending, error: txError, digest } = useSponsoredTx();
+  const account = useAccount();
+  const {
+    executeSponsoredTx,
+    isPending,
+    phase,
+    error: txError,
+    digest,
+  } = useSponsoredTx();
 
   // Prevents concurrent handleScan executions when the scanner fires multiple frames.
   const isHandlingScanRef = useRef(false);
@@ -320,9 +419,11 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
     const card = confirmData.card;
     if (card) {
       const next = card.currentStamps + 1;
-      setSuccessMessage(`✓ Stamp issued! (${next}/${card.stampsRequired} stamps)`);
+      setSuccessMessage(
+        `Stamp issued! (${next}/${card.stampsRequired} stamps)`,
+      );
     } else {
-      setSuccessMessage('✓ Stamp issued! New card created.');
+      setSuccessMessage("Stamp issued! New card created.");
     }
 
     // Auto-dismiss the success banner after 3 s then reset confirm state.
@@ -332,7 +433,7 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
     }, 3000);
 
     return () => window.clearTimeout(timer);
-    // We only want to run when digest changes — a new digest means a new confirmed tx.
+    // We only want to run when digest changes -- a new digest means a new confirmed tx.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [digest]);
 
@@ -341,11 +442,7 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
     data: program,
     isLoading: programLoading,
     isError: programError,
-  } = useQuery({
-    queryKey: ['program', programId],
-    queryFn: () => getProgramById(programId),
-    enabled: !!programId,
-  });
+  } = useProgram(programId);
 
   // ---------------------------------------------------------------------------
   // QR scan handler
@@ -353,7 +450,7 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
 
   /** Called by QrScanner when a QR code is successfully decoded. */
   const handleScan = async (raw: string) => {
-    // Prevent concurrent executions — the scanner emits one event per decoded
+    // Prevent concurrent executions -- the scanner emits one event per decoded
     // frame, so multiple fires can arrive before the first await resolves.
     if (isHandlingScanRef.current) return;
     isHandlingScanRef.current = true;
@@ -362,18 +459,20 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
     setScanError(null);
 
     try {
-      // Use the canonical parser (String() coercion guards against object injection).
-      const parsed = parseQRPayload(raw);
-      if (!parsed || parsed.type !== 'customer') {
-        setScanError('Not a valid customer QR code. Ask the customer to show their Suiki QR.');
+      // Decode the compact v1 QR payload produced by encodeCustomerCardQR.
+      const decoded = decodeQRPayload(raw);
+      if (decoded.type !== "card_scan" || !decoded.walletAddress) {
+        setScanError(
+          "Not a valid customer QR code. Ask the customer to show their Suiki QR.",
+        );
         return;
       }
 
-      const customerAddress = parsed.customerAddress;
+      const customerAddress = decoded.walletAddress;
 
       // Validate the address format before sending it on-chain.
       if (!SUI_ADDRESS_RE.test(customerAddress)) {
-        setScanError('Invalid wallet address in QR code.');
+        setScanError("Invalid wallet address in QR code.");
         return;
       }
 
@@ -408,131 +507,134 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
   };
 
   // ---------------------------------------------------------------------------
-  // Render
+  // Render: Loading state
   // ---------------------------------------------------------------------------
 
   if (programLoading) {
     return (
-      <div className="mx-auto w-full max-w-lg px-4 py-8">
-        <div className="flex flex-col gap-4">
-          <div className="h-40 animate-pulse rounded-2xl bg-[--color-bg-surface]" />
-          <div className="h-48 animate-pulse rounded-2xl bg-[--color-bg-surface]" />
+      <div className="min-h-dvh bg-(--color-bg-base)">
+        <PageHeader title="" leftAction={backButton} />
+        <div className="mx-auto w-full max-w-[430px] pt-14 px-4 pb-10 flex flex-col gap-4">
+          <div className="rounded-(--radius-xl) h-40 bg-(--color-border) animate-pulse" />
+          <div className="rounded-(--radius-xl) h-60 bg-(--color-border) animate-pulse" />
         </div>
       </div>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Render: Error state
+  // ---------------------------------------------------------------------------
+
   if (programError || !program) {
     return (
-      <div className="mx-auto w-full max-w-lg px-4 py-8 text-center">
-        <p className="text-[--color-error]">Program not found.</p>
-        <Link href="/merchant" className="mt-4 inline-block">
-          <Button variant="secondary">Back to Dashboard</Button>
-        </Link>
+      <div className="min-h-dvh bg-(--color-bg-base)">
+        <PageHeader title="" leftAction={backButton} />
+        <div className="flex flex-col items-center gap-4 py-20 px-6 text-center">
+          <p className="text-(--color-text-secondary)">Program not found</p>
+          <Link
+            href="/merchant"
+            className="text-(--color-brand-dark) font-medium"
+          >
+            &larr; Back to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Render: Main content
+  // ---------------------------------------------------------------------------
 
   const isAtLimit = dailyCount >= DAILY_LIMIT;
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-8">
-      {/* Back navigation */}
-      <Link
-        href="/merchant"
-        className="inline-flex items-center gap-1 text-sm text-[--color-text-secondary] hover:text-[--color-text-primary]"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
-          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-        </svg>
-        Back to Dashboard
-      </Link>
+    <div className="min-h-dvh bg-(--color-bg-base)">
+      <PageHeader title={program.name} leftAction={backButton} />
 
-      {/* Program header */}
-      <ProgramHeader
-        name={program.name}
-        logoUrl={program.logoUrl}
-        stampsRequired={program.stampsRequired}
-        rewardDescription={program.rewardDescription}
-        totalIssued={program.totalIssued}
-      />
-
-      {/* Daily rate-limit status */}
-      <RateLimitBar count={dailyCount} />
-
-      {/* Merchant QR code — always visible so merchant can show it to customers */}
-      {account?.address && (
-        <MerchantQrSection
-          programId={programId}
-          merchantAddress={account.address}
+      <div className="mx-auto w-full max-w-[430px] pt-[72px] px-4 pb-10 flex flex-col gap-4">
+        {/* Program info card */}
+        <ProgramInfoCard
+          name={program.name}
+          logoUrl={program.logoUrl}
+          stampsRequired={program.stampsRequired}
+          rewardDescription={program.rewardDescription}
+          totalIssued={program.totalIssued}
         />
-      )}
 
-      {/* Scan error feedback */}
-      {scanError && !scanMode && !confirmData && (
-        <div
-          className="rounded-lg border border-[--color-error] bg-[--color-bg-surface] px-4 py-3 text-sm text-[--color-error]"
-          role="alert"
-        >
-          {scanError}
-        </div>
-      )}
+        {/* Daily rate-limit status */}
+        <RateLimitBar count={dailyCount} />
 
-      {/* Scan customer QR section */}
-      {!confirmData && !scanMode && (
-        <Button
-          variant="primary"
-          onClick={() => { setScanMode(true); setScanError(null); }}
-          disabled={isAtLimit}
-          className="w-full"
-        >
-          Scan Customer QR
-        </Button>
-      )}
-
-      {/* Inline QR scanner — not a modal, renders in flow */}
-      {scanMode && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-[--color-text-secondary]">
-              Point camera at customer QR
-            </p>
-            <button
-              type="button"
-              onClick={() => setScanMode(false)}
-              className="text-xs text-[--color-text-muted] hover:text-[--color-text-primary]"
-              aria-label="Close scanner"
-            >
-              Cancel
-            </button>
+        {/* Scan error feedback */}
+        {scanError && !scanMode && !confirmData && (
+          <div
+            className="rounded-(--radius-lg) border border-(--color-error)/30 bg-(--color-error)/10 px-4 py-3 text-[13px] text-(--color-error)"
+            role="alert"
+          >
+            {scanError}
           </div>
-          <QrScanner
-            onScan={(raw: string) => void handleScan(raw)}
-            onError={() => setScanMode(false)}
-          />
-        </div>
-      )}
+        )}
 
-      {/* Stamp issuance confirmation panel */}
-      {confirmData && !scanMode && (
-        <StampConfirm
-          confirmData={confirmData}
-          isPending={isPending}
-          txError={txError}
-          successMessage={successMessage}
-          onConfirm={() => void handleIssueStamp()}
-          onCancel={() => {
-            setConfirmData(null);
-            setSuccessMessage(null);
-          }}
-        />
-      )}
+        {/* Scan customer QR button */}
+        {!confirmData && !scanMode && (
+          <button
+            type="button"
+            onClick={() => {
+              setScanMode(true);
+              setScanError(null);
+            }}
+            disabled={isAtLimit}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-75 tap-target disabled:opacity-40"
+            style={{ background: "var(--color-brand)" }}
+          >
+            <ScanLine size={18} aria-hidden={true} />
+            Scan Customer QR
+          </button>
+        )}
+
+        {/* Inline QR scanner -- not a modal, renders in flow */}
+        {scanMode && (
+          <div className="glass-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[13px] font-medium text-(--color-text-secondary)">
+                Point camera at customer QR
+              </p>
+              <button
+                type="button"
+                onClick={() => setScanMode(false)}
+                className="text-[12px] text-(--color-text-muted) hover:text-(--color-text-primary)"
+                aria-label="Close scanner"
+              >
+                Cancel
+              </button>
+            </div>
+            <QrScanner onScan={(raw: string) => void handleScan(raw)} />
+          </div>
+        )}
+
+        {/* Stamp issuance confirmation panel */}
+        {confirmData && !scanMode && (
+          <StampConfirm
+            confirmData={confirmData}
+            isPending={isPending}
+            phase={phase}
+            txError={txError}
+            successMessage={successMessage}
+            onConfirm={() => void handleIssueStamp()}
+            onCancel={() => {
+              setConfirmData(null);
+              setSuccessMessage(null);
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Page export — params is a Promise in Next.js App Router
+// Page export -- params is a Promise in Next.js App Router
 // ---------------------------------------------------------------------------
 
 interface PageProps {
@@ -546,7 +648,7 @@ interface PageProps {
  * Displays the program info, merchant QR code, and the inline stamp-issuance
  * flow including QR scanning and sponsored transaction submission.
  *
- * Unwraps the async `params` Promise with React's `use()` hook — this is the
+ * Unwraps the async `params` Promise with React's `use()` hook -- this is the
  * correct pattern for client components with dynamic segments in Next.js 16.
  */
 export default function ProgramDetailPage({ params }: PageProps) {

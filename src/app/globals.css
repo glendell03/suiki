@@ -1,121 +1,260 @@
 @import "tailwindcss";
 
 /**
- * Suiki Design System — CSS Custom Properties
+ * Suiki V2 Design System — SUI Water Theme
  *
- * Color strategy: dark-first. The app targets Filipino MSME customers who are
- * predominantly mobile-only. A dark background (#0f172a) reduces battery drain
- * on OLED screens (common in mid-range Android phones) and matches the PWA
- * manifest background_color for a seamless install-to-launch experience.
+ * Color strategy: SUI sky-blue brand with slate neutral scale.
+ * Amber gold is kept as the loyalty accent for stamp cards and rewards.
  *
  * All tokens are defined unconditionally — Suiki does not use a light/dark
- * toggle. The product is always dark. This simplifies component logic and
- * avoids theme-flicker on first paint.
+ * toggle. This simplifies component logic and avoids theme-flicker on first paint.
+ *
+ * Token naming convention:
+ *   --color-{role}         primary value
+ *   --color-{role}-dark    high-contrast variant (text on white)
+ *   --color-{role}-subtle  tinted background / chip fill
+ *   --color-{role}-border  translucent border for that color family
  */
 
 :root {
-  /* --- Brand palette --- */
+  /* --- Brand — SUI Water --- */
 
-  /** Primary action color. Used for CTAs, active states, and the PWA theme bar. */
-  --color-primary: #3b82f6;
+  /** Primary brand color — sky-500. CTAs, active states, hero fills. */
+  --color-brand: #0ea5e9;
 
-  /** Lighter primary for hover/focus rings on dark backgrounds. */
-  --color-primary-light: #60a5fa;
+  /** Dark brand — sky-700. Brand text on white (4.7:1 WCAG AA). */
+  --color-brand-dark: #0369a1;
 
-  /** Deeper primary for pressed/active states. */
-  --color-primary-dark: #2563eb;
+  /** Subtle brand — sky-100. Chip backgrounds, tinted surfaces. */
+  --color-brand-subtle: #e0f2fe;
 
-  /**
-   * Loyalty gold — the brand accent for stamp cards, progress indicators,
-   * and reward unlocked states. Warm amber stands out against the slate
-   * background and communicates value without the crypto-green cliché.
-   */
-  --color-accent-loyalty: #f59e0b;
+  /** Brand border — translucent sky for outlined elements. */
+  --color-brand-border: rgba(14, 165, 233, 0.18);
 
-  /** Muted accent for empty stamp slots and disabled progress segments. */
-  --color-accent-loyalty-muted: #78350f;
+  /* --- Loyalty — Amber Gold --- */
 
-  /* --- Surface / background scale --- */
+  /** Loyalty gold — amber-600. Stamp cards, progress, rewards. */
+  --color-loyalty: #d97706;
 
-  /** Page background. Matches manifest background_color for install UX. */
-  --color-bg-base: #0f172a;
+  /** Dark loyalty — amber-700. Loyalty text on white surfaces. */
+  --color-loyalty-dark: #b45309;
 
-  /** Card surfaces — slightly elevated above base. */
-  --color-bg-surface: #1e293b;
+  /** Subtle loyalty — amber-100. Empty stamp slots, muted progress. */
+  --color-loyalty-subtle: #fef3c7;
 
-  /** Elevated modals, sheets, dropdowns. */
-  --color-bg-elevated: #334155;
+  /** Loyalty border — translucent amber for outlined elements. */
+  --color-loyalty-border: rgba(217, 119, 6, 0.2);
 
-  /** Borders and dividers on dark surfaces. */
-  --color-border: #475569;
+  /* --- Surfaces --- */
 
-  /** Subtle, low-contrast borders (e.g., inactive stamp slots). */
-  --color-border-subtle: #1e293b;
+  /** App background — slate-50. Warm off-white. */
+  --color-bg-base: #f8fafc;
+
+  /** Card / sheet / modal surface — pure white. */
+  --color-surface: #ffffff;
 
   /* --- Text scale --- */
 
-  /** Primary body text — near-white for readability on dark backgrounds. */
-  --color-text-primary: #f1f5f9;
+  /** Primary body text — slate-900. */
+  --color-text-primary: #0f172a;
 
-  /** Secondary/caption text. */
-  --color-text-secondary: #94a3b8;
+  /** Secondary / caption text — slate-600. */
+  --color-text-secondary: #475569;
 
-  /** Placeholder and disabled text. */
-  --color-text-muted: #475569;
+  /** Placeholder text — slate-400. */
+  --color-text-muted: #94a3b8;
 
-  /* --- Semantic states --- */
+  /** Disabled text — slate-300. */
+  --color-text-disabled: #cbd5e1;
 
-  /** Success — stamp earned, redemption confirmed. */
-  --color-success: #22c55e;
+  /** Text on brand-colored backgrounds — white. */
+  --color-text-on-brand: #ffffff;
 
-  /** Error — transaction failed, QR scan error. */
+  /* --- Borders --- */
+
+  /** Standard border — slate-200. */
+  --color-border: #e2e8f0;
+
+  /** Strong border — slate-300. Focus rings, active states. */
+  --color-border-strong: #cbd5e1;
+
+  /* --- Semantic status --- */
+
+  /** Success — emerald-500. Stamp earned, redemption confirmed. */
+  --color-success: #10b981;
+
+  /** Error — red-500. Transaction failed, QR scan error. */
   --color-error: #ef4444;
 
-  /** Warning — gas wallet low, nearing daily limit. */
+  /** Warning — amber-500. Gas wallet low, expiring reward. */
   --color-warning: #f59e0b;
+
+  /* --- Shadows --- */
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sheet: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.08);
 
   /* --- Typography --- */
 
-  /** Body font stack — Geist Sans set via next/font, falls back to system. */
+  /** Display font — Plus Jakarta Sans for hero headings. */
+  --font-display-stack: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  /** Body font — Geist Sans, falls back to system sans. */
   --font-body: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
-  /** Monospace — used for wallet addresses and transaction IDs. */
-  --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Code", monospace;
+  /** Monospace — wallet addresses and transaction IDs. */
+  --font-mono-stack: var(--font-geist-mono), ui-monospace, "Cascadia Code", monospace;
 
-  /* --- Spacing & radius --- */
+  /* --- Spacing (8pt grid) --- */
 
-  /** Base border-radius for cards and buttons. */
-  --radius-base: 0.75rem;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
-  /** Pill radius for badges and stamp dots. */
-  --radius-pill: 9999px;
+  /* --- Radius --- */
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* --- Animation --- */
+
+  /** Ease-out — entrances and response to user input. */
+  --ease-out: cubic-bezier(0.0, 0, 0.2, 1);
+
+  /** Ease-in — exits. */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /** Standard easing — general-purpose transitions. */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /** Micro — 80ms for instant press feedback. */
+  --duration-micro: 80ms;
+
+  /** Fast — 150ms for hover transitions. */
+  --duration-fast: 150ms;
+
+  /** Normal — 250ms for card expand/collapse, color changes. */
+  --duration-normal: 250ms;
+
+  /** Page — 280ms for route transitions. */
+  --duration-page: 280ms;
+
+  /** Sheet — 350ms for bottom sheet and modal transitions. */
+  --duration-sheet: 350ms;
+
+  /* --- Bottom navigation --- */
+
+  /** Content height only — safe area is added separately. */
+  --nav-height: 64px;
+
+  /* --- Floating surface tokens (BottomNav only) --- */
+
+  /** Near-opaque white for frosted nav surface. */
+  --liquid-bg: rgba(255, 255, 255, 0.92);
+
+  /** Subtle border for floating surfaces. */
+  --liquid-border: rgba(0, 0, 0, 0.1);
+
+  /** Blur radius for backdrop-filter (BottomNav only). */
+  --liquid-blur: 16px;
+
+  /** Shadow for floating nav surfaces. */
+  --liquid-shadow: var(--shadow-float);
+
+  /* --- Semantic aliases — map legacy token names to SUI Water values --- */
+
+  /** Primary action color — sky-500. Used by buttons, active states, filled stamps. */
+  --color-primary: var(--color-brand);
+
+  /** Lighter primary — sky-100. Hover glow, tinted surfaces. */
+  --color-primary-light: var(--color-brand-subtle);
+
+  /** Loyalty/stamp accent — amber-600. */
+  --color-accent-loyalty: var(--color-loyalty);
+
+  /** Muted loyalty — amber-100. Empty stamp slots. */
+  --color-accent-loyalty-muted: var(--color-loyalty-subtle);
+
+  /** Card/modal surface alias. */
+  --color-bg-surface: var(--color-surface);
+
+  /** Slightly elevated surface — slate-100. Slot backgrounds, elevated cards. */
+  --color-bg-elevated: #f1f5f9;
+
+  /** Standard border alias. */
+  --color-border-subtle: var(--color-border);
+
+  /** Strong border alias — slate-300. Focus rings, dividers. */
+  --color-border-strong: var(--color-border-strong-val, #cbd5e1);
+
+  /** Inactive icon color — slate-400. */
+  --color-icon-inactive: var(--color-text-muted);
+
+  /** Icon on solid brand button — white. */
+  --color-scan-icon: var(--color-text-on-brand);
+
+  /** Soft primary glow — for active nav icons. */
+  --glow-primary-soft: rgba(14, 165, 233, 0.25);
+
+  /** Strong primary glow. */
+  --glow-primary-strong: rgba(14, 165, 233, 0.45);
+
+  /** Bottom nav background alias. */
+  --nav-bg: var(--liquid-bg);
+
+  /* --- Semantic radius shortcuts --- */
+
+  /** Button corner radius. */
+  --radius-button: var(--radius-md);
+
+  /** Card corner radius. */
+  --radius-card: var(--radius-lg);
+
+  /** Input / search bar radius. */
+  --radius-input: var(--radius-md);
+
+  /** Pill / badge radius. */
+  --radius-pill: var(--radius-full);
+
+  /* --- Semantic spacing shortcuts --- */
+
+  /** Page horizontal padding. */
+  --spacing-page-x: 16px;
+
+  /** Card internal padding. */
+  --spacing-card-padding: 16px;
 }
 
 /**
- * Expose tokens to Tailwind v4's @theme layer so they are available as
- * utility classes (e.g. bg-[--color-primary], text-[--color-text-secondary]).
- * Tailwind v4 resolves CSS variables defined here automatically when using
- * CSS-first config — no tailwind.config.js needed.
+ * Expose V2 tokens to Tailwind v4 so they work as utility classes
+ * (e.g. bg-(--color-brand), text-(--color-text-secondary)) — parentheses, not brackets.
  */
 @theme inline {
   --color-background: var(--color-bg-base);
   --color-foreground: var(--color-text-primary);
   --font-sans: var(--font-body);
-  --font-mono: var(--font-mono);
+  --font-mono: var(--font-mono-stack);
+  --font-display: var(--font-display-stack);
+  --radius: var(--radius-lg);
 }
 
-/**
- * Base reset — mobile-first PWA hardening.
- *
- * Key decisions:
- * - -webkit-tap-highlight-color: transparent — removes the grey flash on tap
- *   that degrades perceived performance on Android Chrome.
- * - scroll-behavior: smooth — enables anchor scrolling without JS.
- * - -webkit-font-smoothing: antialiased — consistent subpixel rendering across
- *   iOS Safari and Android Chrome.
- * - touch-action: manipulation on interactive elements — eliminates the 300ms
- *   tap delay without breaking pinch-zoom on content areas.
- */
+/* ================================================================
+ * Base reset — mobile-first PWA hardening
+ * ================================================================ */
+
 *,
 *::before,
 *::after {
@@ -123,7 +262,6 @@
 }
 
 html {
-  /* Prevent font size inflation on iOS when rotating to landscape. */
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
   height: 100%;
@@ -134,35 +272,120 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-body);
   line-height: 1.6;
-
-  /* Smooth subpixel antialiasing — improves text clarity on Retina/AMOLED. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  /* Remove grey tap flash on all tappable elements in Android Chrome. */
   -webkit-tap-highlight-color: transparent;
-
   min-height: 100%;
   min-height: 100dvh;
 }
 
-/**
- * Buttons and links — eliminate tap delay on mobile.
- * touch-action: manipulation allows tap + double-tap zoom on the page
- * while removing the 300ms delay on interactive elements specifically.
- */
+/** Eliminate tap delay on mobile for interactive elements. */
 button,
 a,
 [role="button"] {
   touch-action: manipulation;
 }
 
-/**
- * Wallet address and transaction ID display.
- * Monospace ensures character-level alignment and prevents ambiguous glyphs.
- */
+/* ================================================================
+ * Utility classes
+ * ================================================================ */
+
+/** Wallet address and transaction ID display — monospace, compact. */
 .font-address {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono-stack);
   font-size: 0.8125rem;
   letter-spacing: 0.02em;
+}
+
+/**
+ * Floating surface — frosted white for BottomNav and wallet dropdown.
+ * Backdrop blur is allowed ONLY on nav and modal overlays per perf budget.
+ */
+.liquid-surface {
+  background: var(--liquid-bg);
+  backdrop-filter: blur(var(--liquid-blur));
+  -webkit-backdrop-filter: blur(var(--liquid-blur));
+  border: 1px solid var(--liquid-border);
+  box-shadow: var(--liquid-shadow);
+}
+
+/** Touch-action utility for pressable elements. */
+.tap-target {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/**
+ * Glass card surface — white card with subtle border and shadow.
+ * Performance budget: NO backdrop-filter. Only BottomNav and modals may blur.
+ */
+.glass-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.glass-card:hover {
+  border-color: var(--color-border-strong, #cbd5e1);
+}
+
+/** Full-screen page background. */
+.page-gradient {
+  background: var(--color-bg-base);
+}
+
+/** Bottom nav safe-area padding — clears floating nav. */
+.pb-nav {
+  padding-bottom: calc(var(--nav-height) + max(env(safe-area-inset-bottom), 16px));
+}
+
+/** Safe area top padding (notch/status bar). */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/** Safe area bottom padding (home indicator). */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/** Hide scrollbars for horizontal scroll containers. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ================================================================
+ * Accessibility
+ * ================================================================ */
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ================================================================
+ * dapp-kit web component overrides
+ * CSS custom properties pierce shadow DOM; ::part() targets
+ * the exported trigger button inside the web component.
+ * ================================================================ */
+
+/** Full-width connect button with proper tap target height. */
+mysten-dapp-kit-connect-button::part(trigger) {
+  width: 100%;
+  height: 52px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
 }

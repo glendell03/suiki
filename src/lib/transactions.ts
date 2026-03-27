@@ -129,7 +129,8 @@ export function buildIssueStamp(
  *
  * The caller must be the customer (card.customer == ctx.sender()).
  * Requires card.current_stamps >= program.stamps_required.
- * Resets current_stamps to 0 and increments total_earned.
+ * Subtracts stamps_required from current_stamps (excess stamps carry forward)
+ * and increments total_earned by 1 (counts completed redemption cycles).
  *
  * Move signature:
  *   public fun redeem(program: &StampProgram, card: &mut StampCard, ctx)

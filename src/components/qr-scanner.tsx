@@ -1,170 +1,246 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-import { Button } from '@/components/ui/button';
+import { useEffect, useRef, useState } from 'react';
+import QrScanner from 'qr-scanner';
+import { Camera, CameraOff } from 'lucide-react';
+
 
 interface QrScannerProps {
-  /** Called with the decoded string when a QR code is successfully scanned. */
   onScan: (data: string) => void;
-  /** Optional callback for non-fatal scan errors (per-frame decode failures). */
   onError?: (err: Error) => void;
 }
 
-/** Internal states for the scanner lifecycle. */
-type ScannerState = 'loading' | 'scanning' | 'permission-denied' | 'error';
+type ScannerState =
+  | 'checking'          // querying navigator.permissions
+  | 'prompt'            // show our own "allow camera" screen
+  | 'requesting'        // browser permission dialog is open
+  | 'scanning'          // camera feed active
+  | 'permission-denied'
+  | 'error'
 
 /**
- * QrScanner — camera-based QR code scanner component.
+ * QrScanner — camera QR scanner built on the `qr-scanner` package (Nimiq).
  *
- * Lifecycle:
- *   loading → scanning (camera permission granted)
- *   loading → permission-denied (camera blocked)
- *   loading / scanning → error (unexpected failure)
+ * Unlike html5-qrcode, qr-scanner works directly with a <video> ref —
+ * no container ID, no DOM ID lookups, no StrictMode lifecycle issues.
  *
- * The html5-qrcode scanner is mounted on the container div, auto-started,
- * and cleaned up on unmount. The retry button reloads the page so the
- * browser re-requests camera permission.
+ * Flow:
+ *   checking → granted        → scanning        (camera starts immediately)
+ *   checking → denied         → permission-denied
+ *   checking → prompt/unknown → our prompt screen → scanning or permission-denied
  */
-export default function QrScanner({ onScan, onError }: QrScannerProps) {
-  const [state, setState] = useState<ScannerState>('loading');
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-  // Track current state in a ref so the setTimeout closure reads the live value,
-  // not the stale captured value from when the effect ran.
-  const stateRef = useRef<ScannerState>('loading');
+export default function QrScannerComponent({ onScan, onError }: QrScannerProps) {
+  const [state, setState] = useState<ScannerState>('checking');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // useId produces a stable per-instance id, ensuring two simultaneous QrScanner
-  // mounts never target the same DOM element (html5-qrcode requires a unique id).
-  const rawId = useId();
-  // Replace colons from React's internal id format with hyphens for a valid DOM id.
-  const containerId = `qr-scanner-${rawId.replace(/:/g, '')}`;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerRef = useRef<QrScanner | null>(null);
 
+  // ── Check permission on mount ──────────────────────────────────────────────
   useEffect(() => {
-    let mounted = true;
-    stateRef.current = 'loading';
+    let cancelled = false;
 
-    const scanner = new Html5QrcodeScanner(
-      containerId,
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      /* verbose */ false,
+    async function check() {
+      try {
+        const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        if (cancelled) return;
+        if (result.state === 'granted') setState('scanning');
+        else if (result.state === 'denied') setState('permission-denied');
+        else setState('prompt');
+      } catch {
+        // Permissions API unsupported — fall through; the scanner will surface
+        // a NotAllowedError itself if permission is actually denied.
+        if (!cancelled) setState('scanning');
+      }
+    }
+
+    void check();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── Attach QrScanner to the <video> element when scanning ─────────────────
+  useEffect(() => {
+    if (state !== 'scanning') return;
+    if (!videoRef.current) return;
+
+    const scanner = new QrScanner(
+      videoRef.current,
+      (result) => onScan(result.data),
+      {
+        preferredCamera: 'environment',
+        highlightScanRegion: true,
+        highlightCodeOutline: true,
+      },
     );
 
     scannerRef.current = scanner;
 
-    scanner.render(
-      (decodedText) => {
-        if (!mounted) return;
-        onScan(decodedText);
-      },
-      (errorMessage) => {
-        if (!mounted) return;
-
-        // Permission errors are surfaced as a specific string prefix by the library.
-        if (
-          typeof errorMessage === 'string' &&
-          errorMessage.toLowerCase().includes('permission')
-        ) {
-          stateRef.current = 'permission-denied';
+    scanner.start().catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+        if (msg.includes('permission') || msg.includes('notallowed') || msg.includes('denied')) {
           setState('permission-denied');
-          return;
+        } else {
+          const error = err instanceof Error ? err : new Error(String(err));
+          setErrorMsg(error.message);
+          setState('error');
+          onError?.(error);
         }
-
-        // Per-frame decode failures are normal noise — only forward to caller.
-        onError?.(new Error(errorMessage));
-      },
-    );
-
-    // After render, the library starts the camera. Transition to scanning only if
-    // state is still 'loading' — checked via ref to avoid stale closure.
-    const transitionTimer = setTimeout(() => {
-      if (mounted && stateRef.current === 'loading') {
-        stateRef.current = 'scanning';
-        setState('scanning');
-      }
-    }, 800);
+      });
 
     return () => {
-      mounted = false;
-      clearTimeout(transitionTimer);
-
-      // Clean up: stop the scanner and remove the DOM elements it created.
-      scannerRef.current
-        ?.clear()
-        .catch(() => {
-          // Ignore cleanup errors — the component is already unmounting.
-        });
       scannerRef.current = null;
+      // destroy() stops the camera stream and removes all injected DOM nodes —
+      // safe to call even if start() hasn't resolved yet.
+      scanner.destroy();
     };
-  // onScan and onError are intentionally excluded: they change reference on
-  // every render but we only want the scanner mounted once.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  if (state === 'permission-denied') {
+    // onScan/onError intentionally omitted — scanner is recreated when state
+    // transitions to 'scanning', which is the correct lifecycle boundary.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
+  // ── Request permission (user clicked "Allow Camera") ──────────────────────
+  async function requestPermission() {
+    setState('requesting');
+    try {
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      setState('scanning');
+    } catch {
+      setState('permission-denied');
+    }
+  }
+
+  // ── Permission prompt / requesting ────────────────────────────────────────
+  if (state === 'checking' || state === 'prompt' || state === 'requesting') {
+    const isRequesting = state === 'requesting';
+
     return (
-      <div className="flex flex-col items-center gap-4 rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-8 text-center">
-        {/* Camera blocked icon */}
+      <div className="flex flex-col items-center gap-6 py-8 px-4 text-center">
         <div
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-[--color-error]/20"
+          className="flex items-center justify-center rounded-full"
+          style={{ width: 72, height: 72, background: 'var(--color-brand-subtle)' }}
           aria-hidden="true"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.75}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-7 w-7 text-[--color-error]"
+          <Camera size={32} aria-hidden={true} style={{ color: 'var(--color-brand)' }} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <p
+            className="text-(--color-text-primary)"
+            style={{ fontSize: 17, fontWeight: 700, fontFamily: 'var(--font-display)' }}
           >
-            <path d="M23 7 16 12 23 17V7Z" />
-            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-            <line x1="1" y1="1" x2="23" y2="23" />
-          </svg>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <p className="font-semibold text-[--color-text-primary]">
-            Camera access denied
+            Camera access needed
           </p>
-          <p className="text-sm text-[--color-text-secondary]">
-            Allow camera access in your browser settings, then try again.
+          <p className="text-(--color-text-secondary)" style={{ fontSize: 14, lineHeight: 1.5 }}>
+            We need your camera to scan loyalty QR codes.
           </p>
         </div>
 
-        <Button
-          variant="secondary"
-          onClick={() => window.location.reload()}
+        <button
+          type="button"
+          onClick={() => void requestPermission()}
+          disabled={isRequesting}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold text-white tap-target disabled:opacity-60 transition-opacity"
+          style={{ background: 'var(--color-brand)' }}
         >
-          Retry
-        </Button>
+          {isRequesting ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Waiting for permission…
+            </>
+          ) : (
+            <><Camera size={16} aria-hidden={true} /> Allow Camera</>
+          )}
+        </button>
+
+        <p className="text-(--color-text-muted)" style={{ fontSize: 12, lineHeight: 1.5 }}>
+          Your camera is only used for scanning QR codes.
+        </p>
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col items-center gap-4">
-      {state === 'loading' && (
-        <p className="text-sm text-[--color-text-muted]">
-          Initializing camera…
-        </p>
-      )}
+  // ── Permission denied ─────────────────────────────────────────────────────
+  if (state === 'permission-denied') {
+    return (
+      <div className="flex flex-col items-center gap-5 py-8 px-4 text-center">
+        <div
+          className="flex items-center justify-center rounded-full"
+          style={{ width: 64, height: 64, background: 'rgba(239,68,68,0.1)' }}
+          aria-hidden="true"
+        >
+          <CameraOff size={28} style={{ color: 'var(--color-error)' }} />
+        </div>
 
-      {/* The pulsing border signals active scanning to the user. */}
-      <div
-        className={[
-          'rounded-2xl overflow-hidden w-full',
-          state === 'scanning'
-            ? 'ring-2 ring-[--color-primary] animate-pulse'
-            : 'ring-1 ring-[--color-border]',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-      >
-        {/* html5-qrcode mounts its own DOM into this container. */}
-        <div id={containerId} />
+        <div className="flex flex-col gap-1.5">
+          <p
+            className="text-(--color-text-primary)"
+            style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)' }}
+          >
+            Camera blocked
+          </p>
+          <p className="text-(--color-text-secondary)" style={{ fontSize: 14, lineHeight: 1.5 }}>
+            Allow camera access in your browser settings, then try again.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface) px-6 py-2.5 text-[14px] font-semibold text-(--color-text-primary) tap-target transition-opacity hover:opacity-80"
+        >
+          Retry
+        </button>
       </div>
+    );
+  }
+
+  // ── Non-permission scanner error ───────────────────────────────────────────
+  if (state === 'error') {
+    return (
+      <div className="flex flex-col items-center gap-5 py-8 px-4 text-center">
+        <div
+          className="flex items-center justify-center rounded-full"
+          style={{ width: 64, height: 64, background: 'rgba(239,68,68,0.1)' }}
+          aria-hidden="true"
+        >
+          <CameraOff size={28} style={{ color: 'var(--color-error)' }} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <p className="text-(--color-text-primary)" style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)' }}>
+            Camera error
+          </p>
+          {errorMsg && (
+            <p className="text-(--color-text-secondary)" style={{ fontSize: 13, lineHeight: 1.5 }}>
+              {errorMsg}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => { setErrorMsg(null); setState('checking'); }}
+          className="inline-flex items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface) px-6 py-2.5 text-[14px] font-semibold text-(--color-text-primary) tap-target transition-opacity hover:opacity-80"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // ── Active scanner — video element is always mounted in this branch ────────
+  // qr-scanner attaches to the ref and manages the MediaStream directly.
+  return (
+    <div className="rounded-2xl overflow-hidden w-full bg-black" style={{ minHeight: 260 }}>
+      <video
+        ref={videoRef}
+        className="w-full h-full object-cover"
+        style={{ minHeight: 260 }}
+        muted
+        playsInline
+      />
     </div>
   );
 }

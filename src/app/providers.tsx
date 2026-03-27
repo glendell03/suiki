@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createDAppKit } from "@mysten/dapp-kit-core";
 import { DAppKitProvider } from "@mysten/dapp-kit-react";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
+import { MotionConfig } from "framer-motion";
+import { PageTransition } from "@/components/page-transition";
 
 // gRPC endpoints per network (preferred over JSON-RPC per Mysten recommendation)
 const GRPC_URLS: Record<"testnet" | "mainnet" | "devnet", string> = {
@@ -18,6 +20,8 @@ const dAppKit = createDAppKit({
   defaultNetwork: "testnet",
   createClient: (network) =>
     new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
+  // Unsafe burner wallet is available in development for screenshot/demo purposes only.
+  enableBurnerWallet: process.env.NODE_ENV === "development",
 });
 
 // TypeScript module augmentation so useDAppKit() is fully typed
@@ -41,7 +45,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DAppKitProvider dAppKit={dAppKit}>{children}</DAppKitProvider>
+      <DAppKitProvider dAppKit={dAppKit}>
+        <MotionConfig reducedMotion="user">
+          <PageTransition>{children}</PageTransition>
+        </MotionConfig>
+      </DAppKitProvider>
     </QueryClientProvider>
   );
 }

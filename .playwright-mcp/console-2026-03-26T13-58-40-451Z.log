@@ -1,0 +1,3 @@
+[    5655ms] [WARNING] Skipping wallet initializer: "Error: Registration un-successful.". @ http://localhost:3000/_next/static/chunks/0se9_next_dist_097w0nm._.js:2431
+[    5676ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/:0
+[  198358ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/:0

@@ -1,41 +1,56 @@
 /**
  * On-chain query functions for reading Suiki contract state.
  *
- * Uses the server-side suiClient singleton (SuiGrpcClient) and the v2 core
- * API — no JSON-RPC methods (queryEvents, multiGetObjects) are used here.
- *
  * Query strategy:
- *   getProgramsByMerchant — lists objects owned by any address that match the
- *     StampProgram struct type, then filters in-memory by the merchant field.
- *     Note: StampProgram is a shared object so we list from the zero address.
- *     In practice, merchants query their own created programs by filtering the
- *     json.merchant field returned with include: { json: true }.
+ *   StampProgram and StampCard are both SHARED objects (transfer::share_object).
+ *   Shared objects have no owner and cannot be found via listOwnedObjects.
+ *   Instead, we query the on-chain events emitted at creation time:
  *
- *   getCardsByCustomer — lists StampCard objects owned by the customer address
- *     using listOwnedObjects with a type filter.
+ *   getProgramsByMerchant — queries ProgramCreated events filtered by
+ *     Sender == merchantAddress, extracts the program_id from each event,
+ *     then batch-fetches the live object state via suiClient.getObjects().
  *
- *   getProgramById — fetches a single object by ID.
+ *   getCardsByCustomer — queries CardCreated events filtered by MoveEventType,
+ *     filters in memory for events where parsedJson.customer == customerAddress,
+ *     then batch-fetches the live object state.
+ *
+ * Event queries use SuiJsonRpcClient (suix_queryEvents RPC method) because the
+ * gRPC client does not expose an event-query surface. Object reads use the
+ * gRPC suiClient singleton for efficiency.
  */
 
+import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { suiClient } from './sui-client';
 import type { StampProgram, StampCard, SuiRawStampProgram, SuiRawStampCard } from '../types/sui';
 import { asSuiAddress, asSuiObjectId } from '../types/sui';
-import { PACKAGE_ID, MODULE_NAME } from './constants';
+import { PACKAGE_ID, MODULE_NAME, EVENT_TYPES, SUI_NETWORK } from './constants';
 
 // ---------------------------------------------------------------------------
-// Move struct type strings for listOwnedObjects type filter
+// JSON-RPC client — event queries only
+// ---------------------------------------------------------------------------
+
+/**
+ * Lightweight JSON-RPC client used exclusively for suix_queryEvents.
+ * The gRPC suiClient handles all object reads and transaction execution.
+ */
+const jsonRpcClient = new SuiJsonRpcClient({
+  url: getJsonRpcFullnodeUrl(SUI_NETWORK),
+  network: SUI_NETWORK,
+});
+
+// ---------------------------------------------------------------------------
+// Move struct type strings
 // ---------------------------------------------------------------------------
 
 const STAMP_PROGRAM_TYPE = `${PACKAGE_ID}::${MODULE_NAME}::StampProgram` as const;
 const STAMP_CARD_TYPE = `${PACKAGE_ID}::${MODULE_NAME}::StampCard` as const;
 
 // ---------------------------------------------------------------------------
-// Internal parse helpers — json field shapes → app types
+// Internal parse helpers — object json fields → app types
 // ---------------------------------------------------------------------------
 
 /**
  * Parses the json field of a v2 Object response into a typed StampProgram.
- * The json field is available when `include: { json: true }` is passed.
  * Returns null if required fields are absent or malformed.
  */
 function parseStampProgram(objectId: string, json: Record<string, unknown> | null | undefined): StampProgram | null {
@@ -96,59 +111,96 @@ function parseStampCard(objectId: string, json: Record<string, unknown> | null |
 /**
  * Fetches all StampPrograms created by a specific merchant address.
  *
- * Uses listOwnedObjects on the zero address (shared objects are "owned" by
- * the shared-object sentinel) filtered by StampProgram type, then filters
- * in memory by the merchant field. For production scale, index on-chain
- * events or use a backend index.
+ * Flow:
+ *  1. Query ProgramCreated events filtered by Sender == merchantAddress.
+ *  2. Extract program_id from each event's parsedJson.
+ *  3. Batch-fetch live object state via suiClient.getObjects().
  *
  * @param merchantAddress - The merchant's wallet address (0x-prefixed).
  * @returns Array of parsed StampPrograms. Empty array if none found.
  */
 export async function getProgramsByMerchant(merchantAddress: string): Promise<StampProgram[]> {
-  // StampPrograms are shared objects. We page through all objects of this
-  // type and filter by the merchant field in the JSON representation.
-  const response = await suiClient.listOwnedObjects({
-    // The SUI shared-object sentinel owner address.
-    owner: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    type: STAMP_PROGRAM_TYPE,
+  // Step 1: query events where tx sender == merchantAddress, then filter by type.
+  // Sui indexes events by sender — this is an efficient indexed query.
+  // There is no AND compound filter in queryEvents; we filter by type in memory.
+  const events = await jsonRpcClient.queryEvents({
+    query: { Sender: merchantAddress },
+    order: 'descending',
+    limit: 50,
+  });
+
+  // Step 2: extract program object IDs from ProgramCreated events only.
+  const programIds = events.data
+    .filter((event) => event.type === EVENT_TYPES.programCreated)
+    .map((event) => {
+      const json = event.parsedJson as Record<string, unknown> | undefined;
+      return json?.['program_id'];
+    })
+    .filter((id): id is string => typeof id === 'string');
+
+  if (programIds.length === 0) return [];
+
+  // Step 3: batch-fetch live object state (versions, fields) via gRPC.
+  const objectsResult = await suiClient.getObjects({
+    objectIds: programIds,
     include: { json: true },
   });
 
-  return response.objects
-    .filter((obj) => {
-      const json = obj.json as Record<string, unknown> | null | undefined;
-      return json?.['merchant'] === merchantAddress;
-    })
+  return objectsResult.objects
     .map((obj) => parseStampProgram(obj.objectId, obj.json as Record<string, unknown> | null))
     .filter((p): p is StampProgram => p !== null);
 }
 
 /**
- * Fetches all StampCards owned by a specific customer address.
+ * Fetches all StampCards for a specific customer address.
  *
- * StampCards are shared objects transferred to the customer at creation.
- * Uses listOwnedObjects with the StampCard type filter.
+ * Flow:
+ *  1. Query CardCreated events filtered by MoveEventType (cards for any customer).
+ *  2. Filter in memory for events where parsedJson.customer == customerAddress.
+ *  3. Batch-fetch live object state via suiClient.getObjects().
+ *
+ * Note: StampCards are shared objects emitted by the merchant's transaction.
+ * The Sender filter would return cards the customer created themselves
+ * (not applicable), so we filter on the event data field instead.
  *
  * @param customerAddress - The customer's wallet address (0x-prefixed).
  * @returns Array of parsed StampCards. Empty array if none found.
  */
 export async function getCardsByCustomer(customerAddress: string): Promise<StampCard[]> {
-  const response = await suiClient.listOwnedObjects({
-    owner: customerAddress,
-    type: STAMP_CARD_TYPE,
+  // Step 1: query all CardCreated events of this package/module.
+  const events = await jsonRpcClient.queryEvents({
+    query: { MoveEventType: EVENT_TYPES.cardCreated },
+    order: 'descending',
+    limit: 50,
+  });
+
+  // Step 2: filter by customer address in event data.
+  const cardIds = events.data
+    .filter((event) => {
+      const json = event.parsedJson as Record<string, unknown> | undefined;
+      return json?.['customer'] === customerAddress;
+    })
+    .map((event) => {
+      const json = event.parsedJson as Record<string, unknown> | undefined;
+      return json?.['card_id'];
+    })
+    .filter((id): id is string => typeof id === 'string');
+
+  if (cardIds.length === 0) return [];
+
+  // Step 3: batch-fetch live object state via gRPC.
+  const objectsResult = await suiClient.getObjects({
+    objectIds: cardIds,
     include: { json: true },
   });
 
-  return response.objects
+  return objectsResult.objects
     .map((obj) => parseStampCard(obj.objectId, obj.json as Record<string, unknown> | null))
     .filter((c): c is StampCard => c !== null);
 }
 
 /**
  * Fetches a single StampProgram by its object ID.
- *
- * Use this when you already know the program ID (e.g., from scanning a
- * merchant QR code or navigating to a program detail page).
  *
  * @param programId - The on-chain object ID of the StampProgram.
  * @returns The parsed StampProgram, or null if not found or parse fails.
@@ -166,10 +218,6 @@ export async function getProgramById(programId: string): Promise<StampProgram | 
 /**
  * Finds a customer's StampCard for a specific program ID, if one exists.
  *
- * Useful in the merchant's stamp-issuance flow: after scanning the customer's
- * QR, the app calls this to determine whether to use create_card_and_stamp
- * (new customer) or issue_stamp (existing card).
- *
  * @param customerAddress - The customer's wallet address.
  * @param programId - The StampProgram's object ID to match against.
  * @returns The StampCard if found, null otherwise.
@@ -178,25 +226,12 @@ export async function findCardForProgram(
   customerAddress: string,
   programId: string,
 ): Promise<StampCard | null> {
-  const response = await suiClient.listOwnedObjects({
-    owner: customerAddress,
-    type: STAMP_CARD_TYPE,
-    include: { json: true },
-  });
-
-  const match = response.objects.find((obj) => {
-    const json = obj.json as Record<string, unknown> | null | undefined;
-    return json?.['program_id'] === programId;
-  });
-
-  if (!match) return null;
-
-  return parseStampCard(match.objectId, match.json as Record<string, unknown> | null);
+  const cards = await getCardsByCustomer(customerAddress);
+  return cards.find((c) => c.programId === programId) ?? null;
 }
 
 // ---------------------------------------------------------------------------
 // Legacy name aliases — consumed by useMyPrograms / useMyCards hooks.
-// These delegate to the canonical implementations above.
 // ---------------------------------------------------------------------------
 
 /** @deprecated Use getProgramsByMerchant */

@@ -1,0 +1,156 @@
+<style>
+  body { background: #0a1a14; color: #f1f5f9; font-family: -apple-system, 'Inter', sans-serif; }
+  .phone { width: 320px; background: #0d2118; border-radius: 36px; overflow: hidden; border: 2px solid rgba(74,222,128,0.15); box-shadow: 0 24px 60px rgba(0,0,0,0.6); margin: 0 auto; }
+  .phone-inner { padding: 16px; }
+  /* header */
+  .ph { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+  .logo { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #4ade80; font-size: 14px; }
+  .logo-icon { width: 22px; height: 22px; background: #4ade80; border-radius: 6px; }
+  .hdr-right { display: flex; align-items: center; gap: 8px; }
+  .bell { width: 32px; height: 32px; border-radius: 50%; background: rgba(74,222,128,0.1); display: flex; align-items:center; justify-content:center; font-size: 13px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#4ade80,#22c55e); display:flex; align-items:center; justify-content:center; font-size: 12px; }
+  /* greeting */
+  .greet { padding: 4px 16px 12px; }
+  .greet h2 { font-size: 22px; font-weight: 800; margin: 0; }
+  .greet p { font-size: 11px; color: #7fb891; margin: 2px 0 0; }
+  /* search */
+  .search { margin: 0 16px 14px; background: rgba(20,60,40,0.6); border: 1px solid rgba(74,222,128,0.12); border-radius: 12px; padding: 9px 12px; display:flex; align-items:center; gap:8px; }
+  .search span { font-size: 11px; color: #475569; }
+  /* section title */
+  .sec-title { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 8px; }
+  .sec-title h3 { font-size: 13px; font-weight: 700; margin: 0; }
+  .sec-title a { font-size: 10px; color: #4ade80; }
+  /* OPTION A: 2-column feature grid */
+  .feat-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 14px; }
+  .feat-cell { border-radius: 16px; padding: 12px; min-height: 80px; display:flex; flex-direction:column; justify-content:space-between; }
+  .feat-cell.green { background: linear-gradient(135deg, rgba(17,94,89,0.9), rgba(6,78,59,0.9)); border: 1px solid rgba(45,212,191,0.2); }
+  .feat-cell.gold { background: linear-gradient(135deg, rgba(120,53,15,0.9), rgba(69,26,3,0.9)); border: 1px solid rgba(245,158,11,0.25); }
+  .feat-cell.pink { background: linear-gradient(135deg, rgba(136,19,55,0.85), rgba(80,7,36,0.85)); border: 1px solid rgba(244,63,94,0.25); }
+  .feat-cell.purple { background: linear-gradient(135deg, rgba(76,29,149,0.85), rgba(46,16,101,0.85)); border: 1px solid rgba(167,139,250,0.25); }
+  .feat-cell-icon { font-size: 24px; }
+  .feat-cell-title { font-size: 11px; font-weight: 700; }
+  .feat-cell-sub { font-size: 9px; color: rgba(255,255,255,0.6); margin-top: 1px; }
+  /* OPTION B: hero + row */
+  .feat-hero { margin: 0 16px 8px; border-radius: 16px; padding: 14px; background: linear-gradient(135deg, rgba(17,94,89,0.9), rgba(6,78,59,0.9)); border: 1px solid rgba(45,212,191,0.2); display: flex; align-items: center; gap: 12px; }
+  .feat-hero-icon { font-size: 36px; }
+  .feat-hero-title { font-size: 14px; font-weight: 700; }
+  .feat-hero-sub { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .feat-row { display: flex; gap: 8px; padding: 0 16px 14px; }
+  .feat-mini { flex: 1; border-radius: 14px; padding: 10px; display:flex; flex-direction:column; align-items: flex-start; gap: 4px; }
+  .feat-mini-icon { font-size: 18px; }
+  .feat-mini-title { font-size: 10px; font-weight: 700; }
+  /* OPTION C: horizontal scroll */
+  .feat-scroll { display: flex; gap: 10px; padding: 0 16px 14px; overflow-x: auto; }
+  .feat-scroll::-webkit-scrollbar { display: none; }
+  .feat-scroll-card { flex: none; width: 100px; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  /* merchant list */
+  .merchant-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+  .merchant-row { background: rgba(20,60,40,0.4); border: 1px solid rgba(74,222,128,0.1); border-radius: 14px; padding: 12px; display: flex; align-items: center; gap: 10px; }
+  .m-avatar { width: 40px; height: 40px; border-radius: 12px; background: rgba(26,61,42,0.8); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .m-info { flex: 1; min-width: 0; }
+  .m-name { font-size: 12px; font-weight: 600; }
+  .m-cat { font-size: 10px; color: #7fb891; }
+  .m-chevron { font-size: 12px; color: #475569; }
+  /* bottom nav */
+  .bnav { display: flex; justify-content: space-around; align-items: center; padding: 10px 16px 14px; border-top: 1px solid rgba(74,222,128,0.08); margin-top: 12px; }
+  .bnav-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .bnav-icon { font-size: 16px; color: #475569; }
+  .bnav-label { font-size: 8px; color: #475569; }
+  .bnav-active .bnav-icon, .bnav-active .bnav-label { color: #4ade80; }
+  .bnav-scan { background: #4ade80; border-radius: 14px; padding: 6px 14px; }
+  .bnav-scan .bnav-icon { color: #0a1a14; }
+  .bnav-scan .bnav-label { color: #0a1a14; font-weight: 700; }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 760px; margin: 0 auto; }
+  .card { cursor: pointer; border-radius: 16px; border: 2px solid rgba(74,222,128,0.1); background: rgba(10,26,20,0.8); overflow: hidden; transition: border-color 0.2s; }
+  .card:hover { border-color: rgba(74,222,128,0.35); }
+  .card.selected { border-color: #4ade80; }
+  .card-label { padding: 10px 14px; border-top: 1px solid rgba(74,222,128,0.08); }
+  .card-label h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #f1f5f9; }
+  .card-label p { margin: 0; font-size: 12px; color: #7fb891; line-height: 1.4; }
+</style>
+
+<h2>Home Page Layout — Which approach?</h2>
+<p class="subtitle">Choose the layout for the feature section on the customer home page. All retain the same deep green theme.</p>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div style="padding: 16px 0 0;">
+      <div class="phone" style="border-radius: 24px; width: 280px; margin: 0 auto;">
+        <div class="ph">
+          <div class="logo"><div class="logo-icon"></div> Suiki</div>
+          <div class="hdr-right"><div class="bell">🔔</div><div class="avatar">👤</div></div>
+        </div>
+        <div class="greet"><h2>Hey, <span style="color:#4ade80">you!</span></h2><p>Let's earn more stamps</p></div>
+        <div class="search">🔍 <span>Search merchants...</span></div>
+        <div class="sec-title"><h3>Quick Access</h3></div>
+        <div class="feat-grid-2col">
+          <div class="feat-cell green"><div class="feat-cell-icon">🔖</div><div><div class="feat-cell-title">Earn Stamps</div><div class="feat-cell-sub">Scan at store</div></div></div>
+          <div class="feat-cell gold"><div class="feat-cell-icon">🎁</div><div><div class="feat-cell-title">Rewards</div><div class="feat-cell-sub">Redeem stamps</div></div></div>
+          <div class="feat-cell pink"><div class="feat-cell-icon">🎰</div><div><div class="feat-cell-title">Lucky Draw</div><div class="feat-cell-sub">Holders only</div></div></div>
+          <div class="feat-cell purple"><div class="feat-cell-icon">👥</div><div><div class="feat-cell-title">Referral</div><div class="feat-cell-sub">Invite friends</div></div></div>
+        </div>
+        <div class="sec-title"><h3>My Cards</h3><a>View all →</a></div>
+        <div class="merchant-list">
+          <div class="merchant-row"><div class="m-avatar">🍔</div><div class="m-info"><div class="m-name">Pretty Patty</div><div class="m-cat">Food & Drinks · 3/9</div></div><span class="m-chevron">›</span></div>
+          <div class="merchant-row"><div class="m-avatar">☕</div><div class="m-info"><div class="m-name">Coffee Fellow</div><div class="m-cat">Café · 6/8</div></div><span class="m-chevron">›</span></div>
+        </div>
+        <div class="bnav">
+          <div class="bnav-tab bnav-active"><div class="bnav-icon">🏠</div><div class="bnav-label">Home</div></div>
+          <div class="bnav-tab"><div class="bnav-icon">💳</div><div class="bnav-label">Cards</div></div>
+          <div class="bnav-tab"><div class="bnav-icon">🔍</div><div class="bnav-label">Search</div></div>
+          <div class="bnav-tab bnav-scan"><div class="bnav-icon">⬜</div><div class="bnav-label">Scan</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>A — 2×2 Feature Grid</h3>
+      <p>Equal-weight feature tiles in a 2-column grid. Matches the photo's "Birthday Club / Referral / Eco Hero / Scratch & Win" layout. Clean and explorable.</p>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div style="padding: 16px 0 0;">
+      <div class="phone" style="border-radius: 24px; width: 280px; margin: 0 auto;">
+        <div class="ph">
+          <div class="logo"><div class="logo-icon"></div> Suiki</div>
+          <div class="hdr-right"><div class="bell">🔔</div><div class="avatar">👤</div></div>
+        </div>
+        <div class="greet"><h2>Hey, <span style="color:#4ade80">you!</span></h2><p>Let's earn more stamps</p></div>
+        <div class="search">🔍 <span>Search merchants...</span></div>
+        <div class="sec-title"><h3>Featured</h3></div>
+        <div class="feat-hero">
+          <div class="feat-hero-icon">🔖</div>
+          <div>
+            <div class="feat-hero-title">Earn Stamps</div>
+            <div class="feat-hero-sub">Scan at any partner store</div>
+          </div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-mini gold"><div class="feat-mini-icon">🎁</div><div class="feat-mini-title">Rewards</div></div>
+          <div class="feat-mini pink"><div class="feat-mini-icon">🎰</div><div class="feat-mini-title">Lucky</div></div>
+          <div class="feat-mini purple"><div class="feat-mini-icon">👥</div><div class="feat-mini-title">Referral</div></div>
+        </div>
+        <div class="sec-title"><h3>My Cards</h3><a>View all →</a></div>
+        <div class="merchant-list">
+          <div class="merchant-row"><div class="m-avatar">🍔</div><div class="m-info"><div class="m-name">Pretty Patty</div><div class="m-cat">Food & Drinks · 3/9</div></div><span class="m-chevron">›</span></div>
+          <div class="merchant-row"><div class="m-avatar">☕</div><div class="m-info"><div class="m-name">Coffee Fellow</div><div class="m-cat">Café · 6/8</div></div><span class="m-chevron">›</span></div>
+        </div>
+        <div class="bnav">
+          <div class="bnav-tab bnav-active"><div class="bnav-icon">🏠</div><div class="bnav-label">Home</div></div>
+          <div class="bnav-tab"><div class="bnav-icon">💳</div><div class="bnav-label">Cards</div></div>
+          <div class="bnav-tab"><div class="bnav-icon">🔍</div><div class="bnav-label">Search</div></div>
+          <div class="bnav-tab bnav-scan"><div class="bnav-icon">⬜</div><div class="bnav-label">Scan</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>B — Hero + Mini Row</h3>
+      <p>One large primary action (Scan/Earn) with 3 smaller secondary features below. Emphasizes the core action. More hierarchy.</p>
+    </div>
+  </div>
+
+</div>

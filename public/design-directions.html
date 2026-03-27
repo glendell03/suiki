@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Suiki V2 — Design Direction Proposals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: #0a0a0a;
+    color: #fff;
+    min-height: 100vh;
+  }
+
+  /* ─── PRESENTATION SHELL ─── */
+  .presentation {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 48px 32px;
+  }
+
+  .presentation-header {
+    text-align: center;
+    margin-bottom: 64px;
+  }
+  .presentation-header h1 {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 12px;
+  }
+  .presentation-header p {
+    font-size: 16px;
+    color: rgba(255,255,255,0.5);
+    font-family: 'Inter', sans-serif;
+  }
+  .badge {
+    display: inline-block;
+    background: #16a34a;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  /* ─── DIRECTION SECTION ─── */
+  .direction-section {
+    margin-bottom: 80px;
+  }
+  .direction-label {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .direction-letter {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .direction-info h2 {
+    font-size: 26px; font-weight: 800; letter-spacing: -0.02em;
+  }
+  .direction-info p {
+    font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 3px;
+    font-family: 'Inter', sans-serif;
+  }
+  .screens-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .screen-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .screen-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    font-family: 'Inter', sans-serif;
+    padding-left: 4px;
+  }
+  .phone-frame {
+    width: 100%;
+    aspect-ratio: 390/844;
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .phone-screen {
+    width: 100%; height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ────────────────────────────────────────────
+     DIRECTION A — "Refined Current"
+     White + Black + Amber — better execution
+  ──────────────────────────────────────────── */
+
+  /* A: Home */
+  .a-home { background: #ffffff; font-family: 'Inter', sans-serif; }
+  .a-home .hero-band {
+    background: linear-gradient(160deg, #f9fafb 0%, #ffffff 60%);
+    padding: 56px 24px 32px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    gap: 12px;
+  }
+  .a-home .logo-icon {
+    width: 64px; height: 64px; border-radius: 20px;
+    background: #0a0a0a; display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+  .a-home .app-name { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 36px; font-weight: 800; color: #0a0a0a; letter-spacing: -0.03em; }
+  .a-home .tagline { font-size: 13px; color: #6b7280; line-height: 1.5; max-width: 220px; }
+  .a-home .cta-stack { padding: 0 24px; display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+  .a-home .cta-card {
+    background: #fff; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 16px;
+    padding: 16px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  }
+  .a-home .cta-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+  }
+  .a-home .cta-icon.merchant { background: rgba(10,10,10,0.08); }
+  .a-home .cta-icon.customer { background: rgba(217,119,6,0.1); }
+  .a-home .cta-text .title { font-size: 15px; font-weight: 700; color: #111827; }
+  .a-home .cta-text .sub { font-size: 12px; color: #9ca3af; margin-top: 1px; }
+  .a-home .arrow { margin-left: auto; color: #9ca3af; font-size: 18px; }
+  .a-home .props { padding: 20px 24px 0; display: flex; flex-direction: column; gap: 10px; }
+  .a-home .prop { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #6b7280; }
+  .a-home .prop-dot { width: 20px; height: 20px; border-radius: 50%; background: rgba(10,10,10,0.06); display: flex; align-items: center; justify-content: center; font-size: 9px; color: #374151; font-weight: 700; flex-shrink: 0; }
+
+  /* A: Dashboard */
+  .a-dash { background: #f9fafb; font-family: 'Inter', sans-serif; }
+  .a-header { background: #fff; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .a-header .brand { display: flex; align-items: center; gap: 8px; font-family: 'Plus Jakarta Sans',sans-serif; font-weight: 700; font-size: 16px; color: #0a0a0a; }
+  .a-header .brand-dot { width: 24px; height: 24px; background: #0a0a0a; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .a-header .right { display: flex; gap: 8px; }
+  .a-header .avatar { width: 30px; height: 30px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #6b7280; }
+  .a-greeting { padding: 20px 20px 12px; }
+  .a-greeting h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 800; color: #111827; letter-spacing: -0.02em; }
+  .a-greeting h1 span { color: #d97706; }
+  .a-greeting p { font-size: 13px; color: #9ca3af; margin-top: 3px; }
+  .a-search { margin: 0 20px 16px; background: #fff; border: 1.5px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+  .a-search span { font-size: 13px; color: #9ca3af; }
+  .a-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 20px 16px; }
+  .a-tile {
+    border-radius: 14px; padding: 14px; border: 1.5px solid rgba(0,0,0,0.07);
+    min-height: 80px; display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .a-tile.t1 { background: linear-gradient(135deg, #f5f5f5, #e8e8e8); }
+  .a-tile.t2 { background: linear-gradient(135deg, #f8f8f8, #ececec); }
+  .a-tile.t3 { background: linear-gradient(135deg, #fffbf0, #fef3c7); border-color: rgba(217,119,6,0.2); }
+  .a-tile.t4 { background: linear-gradient(135deg, #f3f3f3, #e4e4e4); }
+  .a-tile .tile-icon { font-size: 18px; }
+  .a-tile .tile-title { font-size: 12px; font-weight: 700; color: #111827; }
+  .a-tile .tile-sub { font-size: 10px; color: #9ca3af; }
+  .a-section-hd { display: flex; justify-content: space-between; align-items: center; padding: 0 20px 10px; }
+  .a-section-hd span { font-size: 14px; font-weight: 700; color: #111827; }
+  .a-section-hd a { font-size: 12px; color: #d97706; }
+  .a-empty { text-align: center; padding: 24px 20px; }
+  .a-empty .ei { font-size: 32px; margin-bottom: 8px; }
+  .a-empty p { font-size: 13px; font-weight: 600; color: #374151; }
+  .a-empty small { font-size: 11px; color: #9ca3af; }
+  .a-nav-a {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.92); backdrop-filter: blur(16px);
+    border: 1px solid rgba(0,0,0,0.1); border-radius: 999px;
+    padding: 10px 20px; display: flex; gap: 4px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  }
+  .nav-tab { width: 44px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .nav-tab.active { color: #d97706; }
+  .nav-tab.scan { background: #0a0a0a; border-radius: 12px; font-size: 14px; }
+
+  /* A: Scan */
+  .a-scan { background: #f9fafb; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 40px 24px; }
+  .a-back { align-self: flex-start; width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: center; font-size: 16px; color: #374151; }
+  .a-scan h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700; color: #111827; text-align: center; }
+  .a-scan p { font-size: 13px; color: #9ca3af; text-align: center; }
+  .a-qr-card { background: #fff; border-radius: 24px; padding: 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.08); }
+  .qr-placeholder {
+    width: 180px; height: 180px; border-radius: 12px; overflow: hidden;
+    background: repeating-conic-gradient(#111 0% 25%, #fff 0% 50%) 0 0 / 12px 12px;
+    image-rendering: pixelated;
+  }
+  .a-addr { font-family: 'Inter', monospace; font-size: 10px; color: #9ca3af; }
+
+
+  /* ────────────────────────────────────────────
+     DIRECTION B — "Suiki Forest"
+     White base + Forest Green + Amber
+  ──────────────────────────────────────────── */
+
+  :root { --forest: #00704A; --forest-light: #e8f5ef; --forest-dark: #004d33; --amber: #d97706; --amber-light: #fef3c7; }
+
+  /* B: Home */
+  .b-home { background: #ffffff; font-family: 'Inter', sans-serif; }
+  .b-home .hero-band {
+    background: linear-gradient(160deg, #003d26 0%, #00704A 55%, #009659 100%);
+    padding: 56px 24px 40px;
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
+  }
+  .b-home .logo-icon {
+    width: 68px; height: 68px; border-radius: 22px;
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    display: flex; align-items: center; justify-content: center; font-size: 30px;
+  }
+  .b-home .app-name { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 38px; font-weight: 800; color: #fff; letter-spacing: -0.03em; }
+  .b-home .tagline { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.5; max-width: 220px; }
+  .b-home .cta-stack { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; margin-top: -20px; }
+  .b-home .cta-card {
+    background: #fff; border: 1.5px solid rgba(0,0,0,0.08); border-radius: 18px;
+    padding: 16px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04);
+  }
+  .b-home .cta-icon {
+    width: 46px; height: 46px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+  }
+  .b-home .cta-icon.merchant { background: rgba(0,112,74,0.1); }
+  .b-home .cta-icon.customer { background: rgba(217,119,6,0.1); }
+  .b-home .cta-text .title { font-size: 15px; font-weight: 700; color: #111827; }
+  .b-home .cta-text .sub { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+  .b-home .arrow { margin-left: auto; color: #00704A; font-size: 20px; font-weight: 700; }
+  .b-home .props { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .b-home .prop { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #6b7280; }
+  .b-home .prop-dot { width: 20px; height: 20px; border-radius: 50%; background: rgba(0,112,74,0.1); display: flex; align-items: center; justify-content: center; font-size: 9px; color: #00704A; font-weight: 700; flex-shrink: 0; }
+
+  /* B: Dashboard */
+  .b-dash { background: #f0f7f4; font-family: 'Inter', sans-serif; }
+  .b-header { background: #fff; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,112,74,0.08); }
+  .b-header .brand { display: flex; align-items: center; gap: 8px; font-family: 'Plus Jakarta Sans',sans-serif; font-weight: 700; font-size: 16px; color: #004d33; }
+  .b-header .brand-dot { width: 26px; height: 26px; background: #00704A; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .b-header .avatar { width: 30px; height: 30px; border-radius: 50%; background: #e8f5ef; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #00704A; border: 1.5px solid rgba(0,112,74,0.2); }
+  .b-greeting { padding: 20px 20px 14px; }
+  .b-greeting h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 800; color: #111827; letter-spacing: -0.02em; }
+  .b-greeting h1 span { color: #00704A; }
+  .b-greeting p { font-size: 13px; color: #6b7280; margin-top: 3px; }
+  .b-search { margin: 0 20px 16px; background: #fff; border: 1.5px solid rgba(0,112,74,0.12); border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+  .b-search .icon { color: #00704A; font-size: 14px; }
+  .b-search span { font-size: 13px; color: #9ca3af; }
+  .b-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 20px 16px; }
+  .b-tile {
+    border-radius: 16px; padding: 14px; border: 1.5px solid transparent;
+    min-height: 84px; display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden;
+  }
+  .b-tile.t1 { background: linear-gradient(135deg, #e8f5ef, #d1ead9); border-color: rgba(0,112,74,0.15); }
+  .b-tile.t2 { background: linear-gradient(135deg, #f0faf5, #d8f0e3); border-color: rgba(0,112,74,0.12); }
+  .b-tile.t3 { background: linear-gradient(135deg, #fffbf0, #fef3c7); border-color: rgba(217,119,6,0.25); }
+  .b-tile.t4 { background: linear-gradient(135deg, #f9f9f9, #efefef); border-color: rgba(0,0,0,0.08); }
+  .b-tile .tile-icon { font-size: 20px; }
+  .b-tile .tile-title { font-size: 12px; font-weight: 700; color: #111827; }
+  .b-tile .tile-sub { font-size: 10px; }
+  .b-tile.t1 .tile-sub { color: #00704A; }
+  .b-tile.t2 .tile-sub { color: #00704A; }
+  .b-tile.t3 .tile-sub { color: #d97706; }
+  .b-tile.t4 .tile-sub { color: #6b7280; }
+  .b-section-hd { display: flex; justify-content: space-between; align-items: center; padding: 0 20px 10px; }
+  .b-section-hd span { font-size: 14px; font-weight: 700; color: #111827; }
+  .b-section-hd a { font-size: 12px; color: #00704A; font-weight: 600; }
+  .b-stamp-card {
+    margin: 0 20px; background: #fff; border-radius: 16px; padding: 14px;
+    border: 1.5px solid rgba(0,0,0,0.07);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .b-card-header { display: flex; align-items: center; gap: 10px; }
+  .b-card-logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #00704A, #009659); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .b-card-name { font-size: 14px; font-weight: 700; color: #111827; }
+  .b-card-cat { font-size: 11px; color: #9ca3af; }
+  .b-card-badge { margin-left: auto; background: rgba(0,112,74,0.1); color: #00704A; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+  .b-stamps { display: flex; gap: 6px; }
+  .b-stamp { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+  .b-stamp.filled { background: rgba(217,119,6,0.15); border: 1.5px solid #d97706; }
+  .b-stamp.empty { background: transparent; border: 1.5px dashed rgba(0,0,0,0.15); }
+  .b-stamp.reward { background: rgba(0,112,74,0.1); border: 1.5px solid rgba(0,112,74,0.4); }
+  .b-progress { height: 4px; background: rgba(0,0,0,0.06); border-radius: 999px; overflow: hidden; }
+  .b-progress-fill { height: 100%; width: 55%; background: linear-gradient(90deg, #d97706, #f59e0b); border-radius: 999px; }
+  .b-nav {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.94); backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,112,74,0.12); border-radius: 999px;
+    padding: 10px 20px; display: flex; gap: 4px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,112,74,0.05) inset;
+  }
+  .b-nav .nav-tab.active { color: #00704A; }
+  .b-nav .nav-tab.scan { background: #00704A; }
+
+  /* B: Scan */
+  .b-scan {
+    background: linear-gradient(160deg, #003d26 0%, #00704A 60%, #00875a 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; padding: 40px 24px;
+  }
+  .b-back { align-self: flex-start; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; }
+  .b-scan h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700; color: #fff; text-align: center; }
+  .b-scan p { font-size: 13px; color: rgba(255,255,255,0.65); text-align: center; }
+  .b-qr-card {
+    background: #fff; border-radius: 28px; padding: 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .b-leaf-badge { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .b-leaf-badge span { font-size: 12px; font-weight: 700; color: #00704A; }
+  .b-addr { font-family: 'Inter', monospace; font-size: 10px; color: #9ca3af; }
+  .b-scan-nav {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,30,18,0.6); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 999px;
+    padding: 10px 20px; display: flex; gap: 4px;
+  }
+  .b-scan-nav .nav-tab { color: rgba(255,255,255,0.4); }
+  .b-scan-nav .nav-tab.active { color: rgba(255,255,255,0.9); }
+  .b-scan-nav .nav-tab.scan { background: rgba(255,255,255,0.2); }
+
+
+  /* ────────────────────────────────────────────
+     DIRECTION C — "Warm Cream"
+     Parchment base + Charcoal + Bold Amber
+  ──────────────────────────────────────────── */
+
+  /* C: Home */
+  .c-home { background: #faf8f4; font-family: 'Inter', sans-serif; }
+  .c-home .hero-band {
+    padding: 56px 24px 32px;
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
+    background: linear-gradient(160deg, #faf8f4 0%, #fff8ee 100%);
+  }
+  .c-home .logo-icon {
+    width: 68px; height: 68px; border-radius: 22px;
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    display: flex; align-items: center; justify-content: center; font-size: 30px;
+    box-shadow: 0 8px 24px rgba(217,119,6,0.35);
+  }
+  .c-home .app-name { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 38px; font-weight: 800; color: #1c1109; letter-spacing: -0.03em; }
+  .c-home .tagline { font-size: 13px; color: #92400e; line-height: 1.5; max-width: 220px; opacity: 0.7; }
+  .c-home .cta-stack { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .c-home .cta-card {
+    background: #fff; border: 1.5px solid rgba(217,119,6,0.12); border-radius: 18px;
+    padding: 16px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 8px rgba(217,119,6,0.06), 0 8px 24px rgba(0,0,0,0.03);
+  }
+  .c-home .cta-icon {
+    width: 46px; height: 46px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+  }
+  .c-home .cta-icon.merchant { background: rgba(28,17,9,0.07); }
+  .c-home .cta-icon.customer { background: linear-gradient(135deg, rgba(217,119,6,0.12), rgba(245,158,11,0.08)); }
+  .c-home .cta-text .title { font-size: 15px; font-weight: 700; color: #1c1109; }
+  .c-home .cta-text .sub { font-size: 12px; color: #92400e; opacity: 0.6; margin-top: 2px; }
+  .c-home .arrow { margin-left: auto; color: #d97706; font-size: 20px; font-weight: 700; }
+  .c-home .props { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .c-home .prop { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #92400e; opacity: 0.7; }
+  .c-home .prop-dot { width: 20px; height: 20px; border-radius: 50%; background: rgba(217,119,6,0.12); display: flex; align-items: center; justify-content: center; font-size: 9px; color: #d97706; font-weight: 700; flex-shrink: 0; }
+
+  /* C: Dashboard */
+  .c-dash { background: #faf8f4; font-family: 'Inter', sans-serif; }
+  .c-header { background: #faf8f4; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(217,119,6,0.1); }
+  .c-header .brand { display: flex; align-items: center; gap: 8px; font-family: 'Plus Jakarta Sans',sans-serif; font-weight: 700; font-size: 16px; color: #1c1109; }
+  .c-header .brand-dot { width: 26px; height: 26px; background: linear-gradient(135deg, #d97706, #f59e0b); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .c-header .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, rgba(217,119,6,0.2), rgba(245,158,11,0.15)); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #92400e; border: 1.5px solid rgba(217,119,6,0.2); }
+  .c-greeting { padding: 20px 20px 14px; }
+  .c-greeting h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 800; color: #1c1109; letter-spacing: -0.02em; }
+  .c-greeting h1 span { color: #d97706; }
+  .c-greeting p { font-size: 13px; color: #92400e; opacity: 0.6; margin-top: 3px; }
+  .c-search { margin: 0 20px 16px; background: #fff; border: 1.5px solid rgba(217,119,6,0.15); border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+  .c-search .icon { color: #d97706; font-size: 14px; }
+  .c-search span { font-size: 13px; color: #b88a4a; opacity: 0.6; }
+  .c-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 20px 16px; }
+  .c-tile {
+    border-radius: 16px; padding: 14px; border: 1.5px solid transparent;
+    min-height: 84px; display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .c-tile.t1 { background: linear-gradient(135deg, #fff8ee, #fef3c7); border-color: rgba(217,119,6,0.2); }
+  .c-tile.t2 { background: linear-gradient(135deg, #fff, #fafaf8); border-color: rgba(217,119,6,0.12); }
+  .c-tile.t3 { background: linear-gradient(135deg, #d97706, #f59e0b); border-color: transparent; }
+  .c-tile.t4 { background: linear-gradient(135deg, #faf8f4, #f0ece4); border-color: rgba(0,0,0,0.08); }
+  .c-tile .tile-icon { font-size: 20px; }
+  .c-tile .tile-title { font-size: 12px; font-weight: 700; }
+  .c-tile.t1 .tile-title, .c-tile.t2 .tile-title, .c-tile.t4 .tile-title { color: #1c1109; }
+  .c-tile.t3 .tile-title { color: #fff; }
+  .c-tile .tile-sub { font-size: 10px; }
+  .c-tile.t1 .tile-sub, .c-tile.t2 .tile-sub { color: #92400e; opacity: 0.6; }
+  .c-tile.t3 .tile-sub { color: rgba(255,255,255,0.7); }
+  .c-tile.t4 .tile-sub { color: #6b7280; }
+  .c-section-hd { display: flex; justify-content: space-between; align-items: center; padding: 0 20px 10px; }
+  .c-section-hd span { font-size: 14px; font-weight: 700; color: #1c1109; }
+  .c-section-hd a { font-size: 12px; color: #d97706; font-weight: 600; }
+  .c-stamp-card {
+    margin: 0 20px; background: #fff; border-radius: 16px; padding: 14px;
+    border: 1.5px solid rgba(217,119,6,0.12);
+    box-shadow: 0 2px 8px rgba(217,119,6,0.06), 0 4px 16px rgba(0,0,0,0.03);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .c-card-logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #d97706, #f59e0b); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .c-stamp { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+  .c-stamp.filled { background: rgba(217,119,6,0.15); border: 1.5px solid #d97706; }
+  .c-stamp.empty { background: transparent; border: 1.5px dashed rgba(217,119,6,0.25); }
+  .c-stamp.reward { background: rgba(217,119,6,0.1); border: 1.5px solid rgba(217,119,6,0.4); }
+  .c-progress { height: 4px; background: rgba(217,119,6,0.1); border-radius: 999px; overflow: hidden; }
+  .c-progress-fill { height: 100%; width: 55%; background: linear-gradient(90deg, #d97706, #f59e0b); border-radius: 999px; }
+  .c-nav {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,252,245,0.94); backdrop-filter: blur(20px);
+    border: 1px solid rgba(217,119,6,0.15); border-radius: 999px;
+    padding: 10px 20px; display: flex; gap: 4px;
+    box-shadow: 0 4px 24px rgba(217,119,6,0.1);
+  }
+  .c-nav .nav-tab.active { color: #d97706; }
+  .c-nav .nav-tab.scan { background: linear-gradient(135deg, #d97706, #f59e0b); }
+
+  /* C: Scan */
+  .c-scan {
+    background: linear-gradient(160deg, #1c1109 0%, #2d1a06 50%, #3d2408 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; padding: 40px 24px;
+  }
+  .c-back { align-self: flex-start; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; }
+  .c-scan h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700; color: #fff; text-align: center; }
+  .c-scan p { font-size: 13px; color: rgba(255,255,255,0.55); text-align: center; }
+  .c-qr-card {
+    background: #fff; border-radius: 28px; padding: 24px;
+    box-shadow: 0 8px 40px rgba(217,119,6,0.3), 0 2px 8px rgba(0,0,0,0.2);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .c-amber-glow {
+    position: absolute; width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(217,119,6,0.4) 0%, transparent 70%);
+    filter: blur(40px); pointer-events: none;
+    top: 50%; left: 50%; transform: translate(-50%, -70%);
+  }
+  .c-scan-nav {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(28,17,9,0.7); backdrop-filter: blur(20px);
+    border: 1px solid rgba(217,119,6,0.2); border-radius: 999px;
+    padding: 10px 20px; display: flex; gap: 4px;
+  }
+  .c-scan-nav .nav-tab { color: rgba(255,255,255,0.35); }
+  .c-scan-nav .nav-tab.active { color: rgba(255,255,255,0.9); }
+  .c-scan-nav .nav-tab.scan { background: linear-gradient(135deg, rgba(217,119,6,0.5), rgba(245,158,11,0.4)); }
+
+  /* ─── COMPARISON BAR ─── */
+  .compare-bar {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 16px; margin-bottom: 80px; padding: 0 0 24px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 32px;
+  }
+  .compare-block { }
+  .compare-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.3); font-family: 'Inter',sans-serif; margin-bottom: 12px; }
+  .compare-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .compare-trait { font-size: 12px; color: rgba(255,255,255,0.5); font-family: 'Inter',sans-serif; }
+  .stars { display: flex; gap: 2px; }
+  .star { font-size: 12px; }
+  .star.on { color: #f59e0b; }
+  .star.off { color: rgba(255,255,255,0.15); }
+
+  .rec-banner {
+    grid-column: 1/-1;
+    background: linear-gradient(135deg, rgba(0,112,74,0.15), rgba(0,112,74,0.05));
+    border: 1px solid rgba(0,112,74,0.25); border-radius: 16px; padding: 16px 20px;
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Inter',sans-serif;
+  }
+  .rec-icon { font-size: 24px; }
+  .rec-text strong { display: block; font-size: 14px; font-weight: 700; color: #fff; }
+  .rec-text span { font-size: 12px; color: rgba(255,255,255,0.5); }
+
+  /* direction label colors */
+  .dir-a .direction-letter { background: rgba(255,255,255,0.07); color: #fff; }
+  .dir-b .direction-letter { background: rgba(0,112,74,0.2); color: #4ade80; }
+  .dir-c .direction-letter { background: rgba(217,119,6,0.2); color: #fbbf24; }
+  .dir-d .direction-letter { background: rgba(14,165,233,0.2); color: #38bdf8; }
+  .dir-a .direction-info h2 { color: rgba(255,255,255,0.9); }
+  .dir-b .direction-info h2 { color: #4ade80; }
+  .dir-c .direction-info h2 { color: #fbbf24; }
+  .dir-d .direction-info h2 { color: #38bdf8; }
+
+  /* ─── DIRECTION D — SUI Water Blue ─── */
+  .d-home { background: #ffffff; font-family: 'Inter', sans-serif; }
+  .d-home .hero-band {
+    background: linear-gradient(160deg, #0369a1 0%, #0ea5e9 55%, #38bdf8 100%);
+    padding: 56px 24px 40px;
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
+  }
+  .d-home .logo-icon {
+    width: 68px; height: 68px; border-radius: 22px;
+    background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255,255,255,0.4);
+    display: flex; align-items: center; justify-content: center; font-size: 30px;
+  }
+  .d-home .app-name { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 38px; font-weight: 800; color: #fff; letter-spacing: -0.03em; }
+  .d-home .tagline { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5; max-width: 220px; }
+  .d-home .sub-tagline { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; text-transform: uppercase; }
+  .d-home .cta-stack { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; margin-top: -12px; }
+  .d-home .cta-card {
+    background: #fff; border: 1.5px solid rgba(14,165,233,0.12); border-radius: 18px;
+    padding: 16px; display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 8px rgba(14,165,233,0.08), 0 8px 24px rgba(0,0,0,0.04);
+  }
+  .d-home .cta-icon { width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .d-home .cta-icon.merchant { background: rgba(14,165,233,0.08); }
+  .d-home .cta-icon.customer { background: rgba(217,119,6,0.1); }
+  .d-home .cta-text .title { font-size: 15px; font-weight: 700; color: #0c1a2e; }
+  .d-home .cta-text .sub { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+  .d-home .arrow { margin-left: auto; color: #0ea5e9; font-size: 20px; font-weight: 700; }
+  .d-home .props { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .d-home .prop { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #6b7280; }
+  .d-home .prop-dot { width: 20px; height: 20px; border-radius: 50%; background: rgba(14,165,233,0.1); display: flex; align-items: center; justify-content: center; font-size: 9px; color: #0ea5e9; font-weight: 700; flex-shrink: 0; }
+
+  .d-dash { background: #f0f8ff; font-family: 'Inter', sans-serif; }
+  .d-header { background: #fff; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(14,165,233,0.1); }
+  .d-header .brand { display: flex; align-items: center; gap: 8px; font-family: 'Plus Jakarta Sans',sans-serif; font-weight: 700; font-size: 16px; color: #0369a1; }
+  .d-header .brand-dot { width: 26px; height: 26px; background: linear-gradient(135deg, #0369a1, #0ea5e9); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .d-header .avatar { width: 30px; height: 30px; border-radius: 50%; background: #e0f2fe; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #0369a1; border: 1.5px solid rgba(14,165,233,0.25); }
+  .d-greeting { padding: 20px 20px 14px; }
+  .d-greeting h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 800; color: #0c1a2e; letter-spacing: -0.02em; }
+  .d-greeting h1 span { color: #0ea5e9; }
+  .d-greeting p { font-size: 13px; color: #6b7280; margin-top: 3px; }
+  .d-search { margin: 0 20px 16px; background: #fff; border: 1.5px solid rgba(14,165,233,0.15); border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+  .d-search .icon { color: #0ea5e9; font-size: 14px; }
+  .d-search span { font-size: 13px; color: #9ca3af; }
+  .d-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 20px 16px; }
+  .d-tile { border-radius: 16px; padding: 14px; border: 1.5px solid transparent; min-height: 84px; display: flex; flex-direction: column; justify-content: space-between; }
+  .d-tile.t1 { background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-color: rgba(14,165,233,0.2); }
+  .d-tile.t2 { background: linear-gradient(135deg, #f0f9ff, #dbeafe); border-color: rgba(14,165,233,0.15); }
+  .d-tile.t3 { background: linear-gradient(135deg, #fffbf0, #fef3c7); border-color: rgba(217,119,6,0.25); }
+  .d-tile.t4 { background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-color: rgba(0,0,0,0.07); }
+  .d-tile .tile-icon { font-size: 20px; }
+  .d-tile .tile-title { font-size: 12px; font-weight: 700; color: #0c1a2e; }
+  .d-tile .tile-sub { font-size: 10px; }
+  .d-tile.t1 .tile-sub { color: #0369a1; }
+  .d-tile.t2 .tile-sub { color: #0369a1; }
+  .d-tile.t3 .tile-sub { color: #d97706; }
+  .d-tile.t4 .tile-sub { color: #6b7280; }
+  .d-section-hd { display: flex; justify-content: space-between; align-items: center; padding: 0 20px 10px; }
+  .d-section-hd span { font-size: 14px; font-weight: 700; color: #0c1a2e; }
+  .d-section-hd a { font-size: 12px; color: #0ea5e9; font-weight: 600; }
+  .d-stamp-card {
+    margin: 0 20px; background: #fff; border-radius: 16px; padding: 14px;
+    border: 1.5px solid rgba(14,165,233,0.12);
+    box-shadow: 0 2px 8px rgba(14,165,233,0.08), 0 4px 16px rgba(0,0,0,0.03);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .d-card-logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #0369a1, #0ea5e9); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .d-card-badge { margin-left: auto; background: rgba(14,165,233,0.1); color: #0369a1; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+  .d-stamp { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+  .d-stamp.filled { background: rgba(217,119,6,0.15); border: 1.5px solid #d97706; }
+  .d-stamp.empty { background: transparent; border: 1.5px dashed rgba(14,165,233,0.25); }
+  .d-stamp.reward { background: rgba(14,165,233,0.1); border: 1.5px solid rgba(14,165,233,0.4); }
+  .d-progress { height: 4px; background: rgba(14,165,233,0.1); border-radius: 999px; overflow: hidden; }
+  .d-progress-fill { height: 100%; width: 55%; background: linear-gradient(90deg, #d97706, #f59e0b); border-radius: 999px; }
+  .d-nav {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,255,255,0.94); backdrop-filter: blur(20px);
+    border: 1px solid rgba(14,165,233,0.15); border-radius: 999px;
+    padding: 10px 20px; display: flex; gap: 4px;
+    box-shadow: 0 4px 24px rgba(14,165,233,0.12);
+  }
+  .d-nav .nav-tab.active { color: #0ea5e9; }
+  .d-nav .nav-tab.scan { background: linear-gradient(135deg, #0369a1, #0ea5e9); color: #fff !important; }
+
+  .d-scan {
+    background: linear-gradient(160deg, #0c1a2e 0%, #0369a1 55%, #0ea5e9 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; padding: 40px 24px; position: relative; overflow: hidden;
+  }
+  .d-scan::before {
+    content: ''; position: absolute;
+    width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(56,189,248,0.2) 0%, transparent 70%);
+    top: 20%; left: 50%; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .d-back { align-self: flex-start; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; position: relative; z-index: 2; }
+  .d-scan h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 22px; font-weight: 700; color: #fff; text-align: center; position: relative; z-index: 2; }
+  .d-scan p { font-size: 13px; color: rgba(255,255,255,0.65); text-align: center; position: relative; z-index: 2; }
+  .d-qr-card {
+    background: #fff; border-radius: 28px; padding: 24px;
+    box-shadow: 0 8px 40px rgba(3,105,161,0.4), 0 2px 8px rgba(0,0,0,0.15);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    position: relative; z-index: 2;
+  }
+  .d-brand-row { display: flex; align-items: center; gap: 6px; }
+  .d-brand-row span { font-size: 12px; font-weight: 700; color: #0369a1; }
+  .d-addr { font-family: 'Inter', monospace; font-size: 10px; color: #9ca3af; }
+  .d-scan-nav {
+    position: relative; z-index: 2;
+    background: rgba(12,26,46,0.6); backdrop-filter: blur(20px);
+    border: 1px solid rgba(14,165,233,0.2); border-radius: 999px;
+    padding: 10px 20px; display: flex; gap: 4px;
+  }
+  .d-scan-nav .nav-tab { color: rgba(255,255,255,0.4); }
+  .d-scan-nav .nav-tab.active { color: #38bdf8; }
+  .d-scan-nav .nav-tab.scan { background: rgba(14,165,233,0.25); color: rgba(255,255,255,0.8) !important; }
+
+  .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 48px 0; }
+
+  .scroll-hint { text-align: center; font-size: 11px; color: rgba(255,255,255,0.2); font-family: 'Inter',sans-serif; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+<div class="presentation">
+
+  <!-- Header -->
+  <div class="presentation-header">
+    <h1>Suiki V2 — Design Directions <span class="badge">3 Proposals</span></h1>
+    <p>Each direction shows: Landing Page · Customer Dashboard · QR Scan Page</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       DIRECTION A — Refined Current
+  ═══════════════════════════════════════ -->
+  <div class="direction-section dir-a">
+    <div class="direction-label">
+      <div class="direction-letter">A</div>
+      <div class="direction-info">
+        <h2>Refined Current — "White Minimal+"</h2>
+        <p>Same palette, massively better execution. Clean, familiar, fast.</p>
+      </div>
+    </div>
+    <div class="screens-row">
+      <!-- A: Home -->
+      <div class="screen-wrapper">
+        <div class="screen-label">Landing Page</div>
+        <div class="phone-frame">
+          <div class="phone-screen a-home">
+            <div class="hero-band">
+              <div class="logo-icon">🍃</div>
+              <div class="app-name">Suiki</div>
+              <div class="tagline">Digital loyalty stamps on the SUI blockchain</div>
+            </div>
+            <div class="cta-stack">
+              <div class="cta-card">
+                <div class="cta-icon merchant">🏪</div>
+                <div class="cta-text"><div class="title">I'm a Merchant</div><div class="sub">Create loyalty programs</div></div>
+                <div class="arrow">→</div>
+              </div>
+              <div class="cta-card">
+                <div class="cta-icon customer">⭐</div>
+                <div class="cta-text"><div class="title">I'm a Customer</div><div class="sub">Collect stamps &amp; rewards</div></div>
+                <div class="arrow" style="color:#d97706">→</div>
+              </div>
+            </div>
+            <div class="props">
+              <div class="prop"><div class="prop-dot">✓</div>No punch cards to lose</div>
+              <div class="prop"><div class="prop-dot">✓</div>Stamps are NFTs you own</div>
+              <div class="prop"><div class="prop-dot">✓</div>Zero fees for customers</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- A: Dashboard -->
+      <div class="screen-wrapper">
+        <div class="screen-label">Customer Dashboard</div>
+        <div class="phone-frame">
+          <div class="phone-screen a-dash">
+            <div class="a-header">
+              <div class="brand"><div class="brand-dot">🍃</div>Suiki</div>
+              <div class="right"><div class="avatar">👤</div></div>
+            </div>
+            <div class="a-greeting">
+              <h1>Hey, <span>Glenny!</span></h1>
+              <p>Let's earn more stamps today</p>
+            </div>
+            <div class="a-search"><span>🔍</span><span>Search your cards...</span></div>
+            <div class="a-grid">
+              <div class="a-tile t1"><div class="tile-icon">🎯</div><div><div class="tile-title">Earn Stamps</div><div class="tile-sub" style="color:#6b7280">Scan at any store</div></div></div>
+              <div class="a-tile t2"><div class="tile-icon">💳</div><div><div class="tile-title">My Cards</div><div class="tile-sub" style="color:#6b7280">View all progress</div></div></div>
+              <div class="a-tile t3"><div class="tile-icon">🎁</div><div><div class="tile-title">Rewards</div><div class="tile-sub" style="color:#d97706">Redeem stamps</div></div></div>
+              <div class="a-tile t4"><div class="tile-icon">✨</div><div><div class="tile-title">Lucky Draw</div><div class="tile-sub" style="color:#6b7280">Stamp holders</div></div></div>
+            </div>
+            <div class="a-section-hd"><span>My Cards</span><a>View all →</a></div>
+            <div class="a-empty"><div class="ei">🏪</div><p>No stamp cards yet</p><small>Visit a merchant to start</small></div>
+            <div class="a-nav-a">
+              <div class="nav-tab active">🏠</div>
+              <div class="nav-tab">💳</div>
+              <div class="nav-tab">🔍</div>
+              <div class="nav-tab scan">⬛</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- A: Scan -->
+      <div class="screen-wrapper">
+        <div class="screen-label">QR Scan Page</div>
+        <div class="phone-frame">
+          <div class="phone-screen a-scan">
+            <div class="a-back">←</div>
+            <h1>Show QR Code</h1>
+            <p>Please show this to the cashier</p>
+            <div class="a-qr-card"><div class="qr-placeholder"></div></div>
+            <div class="a-addr">0xa81e724214...22c87097</div>
+            <div class="a-nav-a" style="position:relative;bottom:auto;left:auto;transform:none;margin-top:auto">
+              <div class="nav-tab">🏠</div>
+              <div class="nav-tab">💳</div>
+              <div class="nav-tab">🔍</div>
+              <div class="nav-tab scan">⬛</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════
+       DIRECTION B — Suiki Forest ⭐
+  ═══════════════════════════════════════ -->
+  <div class="direction-section dir-b">
+    <div class="direction-label">
+      <div class="direction-letter">B ⭐</div>
+      <div class="direction-info">
+        <h2>Suiki Forest — "Brand Identity"</h2>
+        <p>White base + forest green brand + amber gold loyalty. Premium, recognizable, unique.</p>
+      </div>
+    </div>
+    <div class="screens-row">
+      <!-- B: Home -->
+      <div class="screen-wrapper">
+        <div class="screen-label">Landing Page</div>
+        <div class="phone-frame">
+          <div class="phone-screen b-home">
+            <div class="hero-band">
+              <div class="logo-icon">🍃</div>
+              <div class="app-name">Suiki</div>
+              <div class="tagline">Digital loyalty stamps on the SUI blockchain</div>
+            </div>
+            <div class="cta-stack" style="margin-top:-12px">
+              <div class="cta-card">
+                <div class="cta-icon merchant">🏪</div>
+                <div class="cta-text"><div class="title">I'm a Merchant</div><div class="sub">Create loyalty programs</div></div>
+                <div class="arrow">→</div>
+              </div>
+              <div class="cta-card">
+                <div class="cta-icon customer">⭐</div>
+                <div class="cta-text"><div class="title">I'm a Customer</div><div class="sub">Collect stamps &amp; rewards</div></div>
+                <div class="arrow">→</div>
+              </div>
+            </div>
+            <div class="props">
+              <div class="prop"><div class="prop-dot">✓</div>No punch cards to lose</div>
+              <div class="prop"><div class="prop-dot">✓</div>Stamps are NFTs you own</div>
+              <div class="prop"><div class="prop-dot">✓</div>Zero fees for customers</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- B: Dashboard -->
+      <div class="screen-wrapper">
+        <div class="screen-label">Customer Dashboard</div>
+        <div class="phone-frame">
+          <div class="phone-screen b-dash">
+            <div class="b-header">
+              <div class="brand"><div class="brand-dot">🍃</div>Suiki</div>
+              <div class="avatar">G</div>
+            </div>
+            <div class="b-greeting">
+              <h1>Hey, <span>Glenny!</span></h1>
+              <p>Let's earn more stamps today</p>
+            </div>
+            <div class="b-search"><span class="icon">🔍</span><span>Search your cards...</span></div>
+            <div class="b-grid">
+              <div class="b-tile t1"><div class="tile-icon">🎯</div><div><div class="tile-title">Earn Stamps</div><div class="tile-sub">Scan at store</div></div></div>
+              <div class="b-tile t2"><div class="tile-icon">💳</div><div><div class="tile-title">My Cards</div><div class="tile-sub">View progress</div></div></div>
+              <div class="b-tile t3"><div class="tile-icon">🎁</div><div><div class="tile-title">Rewards</div><div class="tile-sub">Redeem stamps</div></div></div>
+              <div class="b-tile t4"><div class="tile-icon">✨</div><div><div class="tile-title">Lucky Draw</div><div class="tile-sub">Stamp holders</div></div></div>
+            </div>
+            <div class="b-section-hd"><span>My Cards</span><a>View all →</a></div>
+            <div class="b-stamp-card">
+              <div class="b-card-header">
+                <div class="b-card-logo">☕</div>
+                <div><div class="b-card-name">Bean & Brew</div><div class="b-card-cat">Coffee · Café</div></div>
+                <div class="b-card-badge">5/9</div>
+              </div>
+              <div class="b-stamps">
+                <div class="b-stamp filled">☕</div><div class="b-stamp filled">☕</div><div class="b-stamp filled">☕</div>
+                <div class="b-stamp filled">☕</div><div class="b-stamp filled">☕</div>
+                <div class="b-stamp empty"></div><div class="b-stamp empty"></div><div class="b-stamp empty"></div>
+                <div class="b-stamp reward">🎁</div>
+              </div>
+              <div class="b-progress"><div class="b-progress-fill"></div></div>
+            </div>
+            <div class="b-nav">
+              <div class="nav-tab active">🏠</div>
+              <div class="nav-tab">💳</div>
+              <div class="nav-tab">🔍</div>
+              <div class="nav-tab scan" style="color:#fff">📷</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- B: Scan -->
+      <div class="screen-wrapper">
+        <div class="screen-label">QR Scan Page</div>
+        <div class="phone-frame">
+          <div class="phone-screen b-scan">
+            <div class="b-back">←</div>
+            <h1>Show QR Code</h1>
+            <p>Please show this to the cashier</p>
+            <div class="b-qr-card">
+              <div class="b-leaf-badge"><span>🍃</span><span>Suiki</span></div>
+              <div class="qr-placeholder" style="width:160px;height:160px"></div>
+              <div class="b-addr">0xa81e724214...22c87097</div>
+            </div>
+            <div class="b-scan-nav">
+              <div class="nav-tab">🏠</div>
+              <div class="nav-tab">💳</div>
+              <div class="nav-tab">🔍</div>
+              <div class="nav-tab scan active" style="color:rgba(255,255,255,0.8)">📷</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════
+       DIRECTION C — Warm Cream
+  ═══════════════════════════════════════ -->
+  <div class="direction-section dir-c">
+    <div class="direction-label">
+      <div class="direction-letter">C</div>
+      <div class="direction-info">
+        <h2>Warm Cream — "Premium Amber"</h2>
+        <p>Parchment base, amber as hero color, dark scan page. Warm &amp; luxurious.</p>
+      </div>
+    </div>
+    <div class="screens-row">
+      <!-- C: Home -->
+      <div class="screen-wrapper">
+        <div class="screen-label">Landing Page</div>
+        <div class="phone-frame">
+          <div class="phone-screen c-home">
+            <div class="hero-band">
+              <div class="logo-icon">🍃</div>
+              <div class="app-name">Suiki</div>
+              <div class="tagline">Digital loyalty stamps on the SUI blockchain</div>
+            </div>
+            <div class="cta-stack">
+              <div class="cta-card">
+                <div class="cta-icon merchant">🏪</div>
+                <div class="cta-text"><div class="title">I'm a Merchant</div><div class="sub">Create loyalty programs</div></div>
+                <div class="arrow">→</div>
+              </div>
+              <div class="cta-card">
+                <div class="cta-icon customer">⭐</div>
+                <div class="cta-text"><div class="title">I'm a Customer</div><div class="sub">Collect stamps &amp; rewards</div></div>
+                <div class="arrow">→</div>
+              </div>
+            </div>
+            <div class="props">
+              <div class="prop"><div class="prop-dot">✓</div>No punch cards to lose</div>
+              <div class="prop"><div class="prop-dot">✓</div>Stamps are NFTs you own</div>
+              <div class="prop"><div class="prop-dot">✓</div>Zero fees for customers</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- C: Dashboard -->
+      <div class="screen-wrapper">
+        <div class="screen-label">Customer Dashboard</div>
+        <div class="phone-frame">
+          <div class="phone-screen c-dash">
+            <div class="c-header">
+              <div class="brand"><div class="brand-dot">🍃</div>Suiki</div>
+              <div class="avatar">G</div>
+            </div>
+            <div class="c-greeting">
+              <h1>Hey, <span>Glenny!</span></h1>
+              <p>Let's earn more stamps today</p>
+            </div>
+            <div class="c-search"><span class="icon">🔍</span><span>Search your cards...</span></div>
+            <div class="c-grid">
+              <div class="c-tile t1"><div class="tile-icon">🎯</div><div><div class="tile-title">Earn Stamps</div><div class="tile-sub">Scan at store</div></div></div>
+              <div class="c-tile t2"><div class="tile-icon">💳</div><div><div class="tile-title">My Cards</div><div class="tile-sub">View progress</div></div></div>
+              <div class="c-tile t3"><div class="tile-icon">🎁</div><div><div class="tile-title">Rewards</div><div class="tile-sub">Redeem stamps</div></div></div>
+              <div class="c-tile t4"><div class="tile-icon">✨</div><div><div class="tile-title">Lucky Draw</div><div class="tile-sub">Stamp holders</div></div></div>
+            </div>
+            <div class="c-section-hd"><span>My Cards</span><a>View all →</a></div>
+            <div class="c-stamp-card">
+              <div class="b-card-header">
+                <div class="c-card-logo">☕</div>
+                <div><div class="b-card-name">Bean & Brew</div><div class="b-card-cat">Coffee · Café</div></div>
+                <div class="b-card-badge" style="background:rgba(217,119,6,0.1);color:#d97706">5/9</div>
+              </div>
+              <div class="b-stamps">
+                <div class="c-stamp filled">☕</div><div class="c-stamp filled">☕</div><div class="c-stamp filled">☕</div>
+                <div class="c-stamp filled">☕</div><div class="c-stamp filled">☕</div>
+                <div class="c-stamp empty"></div><div class="c-stamp empty"></div><div class="c-stamp empty"></div>
+                <div class="c-stamp reward">🎁</div>
+              </div>
+              <div class="c-progress"><div class="c-progress-fill"></div></div>
+            </div>
+            <div class="c-nav">
+              <div class="nav-tab active">🏠</div>
+              <div class="nav-tab">💳</div>
+              <div class="nav-tab">🔍</div>
+              <div class="nav-tab scan" style="color:#fff">📷</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- C: Scan -->
+      <div class="screen-wrapper">
+        <div class="screen-label">QR Scan Page</div>
+        <div class="phone-frame">
+          <div class="phone-screen c-scan" style="position:relative">
+            <div class="c-amber-glow"></div>
+            <div class="c-back" style="position:relative;z-index:2">←</div>
+            <h1 style="position:relative;z-index:2">Show QR Code</h1>
+            <p style="position:relative;z-index:2">Please show this to the cashier</p>
+            <div class="c-qr-card" style="position:relative;z-index:2">
+              <div class="b-leaf-badge"><span>🍃</span><span style="color:#d97706">Suiki</span></div>
+              <div class="qr-placeholder" style="width:160px;height:160px"></div>
+              <div class="b-addr">0xa81e724214...22c87097</div>
+            </div>
+            <div class="c-scan-nav" style="position:relative;z-index:2">
+              <div class="nav-tab">🏠</div>
+              <div class="nav-tab">💳</div>
+              <div class="nav-tab">🔍</div>
+              <div class="nav-tab scan active">📷</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════
+       DIRECTION D — SUI Water Blue
+  ═══════════════════════════════════════ -->
+  <div class="direction-section dir-d">
+    <div class="direction-label">
+      <div class="direction-letter">D 💧</div>
+      <div class="direction-info">
+        <h2>SUI Water — "水 (Mizu)"</h2>
+        <p>SUI means water in Japanese. Ocean blue hero + amber gold loyalty. Clean, trustworthy, tech-forward.</p>
+      </div>
+    </div>
+    <div class="screens-row">
+      <!-- D: Home -->
+      <div class="screen-wrapper">
+        <div class="screen-label">Landing Page</div>
+        <div class="phone-frame">
+          <div class="phone-screen d-home">
+            <div class="hero-band">
+              <div class="logo-icon">💧</div>
+              <div class="app-name">Suiki</div>
+              <div class="tagline">Digital loyalty stamps on the SUI blockchain</div>
+              <div class="sub-tagline">水 · SUI = Water</div>
+            </div>
+            <div class="cta-stack" style="margin-top:-12px">
+              <div class="cta-card">
+                <div class="cta-icon merchant">🏪</div>
+                <div class="cta-text"><div class="title">I'm a Merchant</div><div class="sub">Create loyalty programs</div></div>
+                <div class="arrow">→</div>
+              </div>
+              <div class="cta-card">
+                <div class="cta-icon customer">⭐</div>
+                <div class="cta-text"><div class="title">I'm a Customer</div><div class="sub">Collect stamps &amp; rewards</div></div>
+                <div class="arrow">→</div>
+              </div>
+            </div>
+            <div class="props">
+              <div class="prop"><div class="prop-dot">✓</div>No punch cards to lose</div>
+              <div class="prop"><div class="prop-dot">✓</div>Stamps are NFTs you own</div>
+              <div class="prop"><div class="prop-dot">✓</div>Zero fees for customers</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- D: Dashboard -->
+      <div class="screen-wrapper">
+        <div class="screen-label">Customer Dashboard</div>
+        <div class="phone-frame">
+          <div class="phone-screen d-dash">
+            <div class="d-header">
+              <div class="brand"><div class="brand-dot">💧</div>Suiki</div>
+              <div class="avatar">G</div>
+            </div>
+            <div class="d-greeting">
+              <h1>Hey, <span>Glenny!</span></h1>
+              <p>Let's earn more stamps today</p>
+            </div>
+            <div class="d-search"><span class="icon">🔍</span><span>Search your cards...</span></div>
+            <div class="d-grid">
+              <div class="d-tile t1"><div class="tile-icon">🎯</div><div><div class="tile-title">Earn Stamps</div><div class="tile-sub">Scan at store</div></div></div>
+              <div class="d-tile t2"><div class="tile-icon">💳</div><div><div class="tile-title">My Cards</div><div class="tile-sub">View progress</div></div></div>
+              <div class="d-tile t3"><div class="tile-icon">🎁</div><div><div class="tile-title">Rewards</div><div class="tile-sub">Redeem stamps</div></div></div>
+              <div class="d-tile t4"><div class="tile-icon">✨</div><div><div class="tile-title">Lucky Draw</div><div class="tile-sub">Stamp holders</div></div></div>
+            </div>
+            <div class="d-section-hd"><span>My Cards</span><a>View all →</a></div>
+            <div class="d-stamp-card">
+              <div class="b-card-header">
+                <div class="d-card-logo">☕</div>
+                <div><div class="b-card-name">Bean &amp; Brew</div><div class="b-card-cat">Coffee · Café</div></div>
+                <div class="d-card-badge">5/9</div>
+              </div>
+              <div class="b-stamps">
+                <div class="d-stamp filled">☕</div><div class="d-stamp filled">☕</div><div class="d-stamp filled">☕</div>
+                <div class="d-stamp filled">☕</div><div class="d-stamp filled">☕</div>
+                <div class="d-stamp empty"></div><div class="d-stamp empty"></div><div class="d-stamp empty"></div>
+                <div class="d-stamp reward">🎁</div>
+              </div>
+              <div class="d-progress"><div class="d-progress-fill"></div></div>
+            </div>
+            <div class="d-nav">
+              <div class="nav-tab active">🏠</div>
+              <div class="nav-tab">💳</div>
+              <div class="nav-tab">🔍</div>
+              <div class="nav-tab scan">📷</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- D: Scan -->
+      <div class="screen-wrapper">
+        <div class="screen-label">QR Scan Page</div>
+        <div class="phone-frame">
+          <div class="phone-screen d-scan">
+            <div class="d-back">←</div>
+            <h1>Show QR Code</h1>
+            <p>Please show this to the cashier</p>
+            <div class="d-qr-card">
+              <div class="d-brand-row"><span>💧</span><span>Suiki</span></div>
+              <div class="qr-placeholder" style="width:160px;height:160px"></div>
+              <div class="d-addr">0xa81e724214...22c87097</div>
+            </div>
+            <div class="d-scan-nav">
+              <div class="nav-tab">🏠</div>
+              <div class="nav-tab">💳</div>
+              <div class="nav-tab">🔍</div>
+              <div class="nav-tab scan active">📷</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ COMPARISON TABLE ═══ -->
+  <div class="divider"></div>
+  <div class="compare-bar" style="grid-template-columns: repeat(4,1fr)">
+    <div class="compare-block">
+      <div class="compare-label">Direction A — Refined Current</div>
+      <div class="compare-row"><span class="compare-trait">Brand Identity</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Casual User Appeal</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Design-Savvy Appeal</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Uniqueness</span><div class="stars"><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Implementation Risk</span><div class="stars"><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+    </div>
+    <div class="compare-block">
+      <div class="compare-label">Direction B ⭐ — Suiki Forest</div>
+      <div class="compare-row"><span class="compare-trait">Brand Identity</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Casual User Appeal</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Design-Savvy Appeal</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Uniqueness</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Implementation Risk</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+    </div>
+    <div class="compare-block">
+      <div class="compare-label">Direction C — Warm Cream</div>
+      <div class="compare-row"><span class="compare-trait">Brand Identity</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Casual User Appeal</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Design-Savvy Appeal</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Uniqueness</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Implementation Risk</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+    </div>
+    <div class="compare-block">
+      <div class="compare-label">Direction D 💧 — SUI Water</div>
+      <div class="compare-row"><span class="compare-trait">Brand Identity</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Casual User Appeal</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Design-Savvy Appeal</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Uniqueness</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span><span class="star on">★</span></div></div>
+      <div class="compare-row"><span class="compare-trait">Implementation Risk</span><div class="stars"><span class="star on">★</span><span class="star on">★</span><span class="star off">★</span><span class="star off">★</span><span class="star off">★</span></div></div>
+    </div>
+    <div class="rec-banner" style="grid-column:1/-1">
+      <div class="rec-icon">⭐</div>
+      <div class="rec-text">
+        <strong>Recommendations: B (Forest) or D (Water Blue) — both are strong</strong>
+        <span>Direction B: Leaf logo = green is earned, not forced. Starbucks pairing proven globally. Direction D: SUI literally means water (水) in Japanese — a unique, defensible brand story no other loyalty app has. Both beat A and C for identity. Pick your story.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
