@@ -1,133 +1,108 @@
 "use client";
 
-import { Gift } from "lucide-react";
+import { Check } from "lucide-react";
 import { motion } from "framer-motion";
 
+/** Props for the StampGrid component. */
 interface StampGridProps {
-  /** Total number of stamp slots (including the reward slot). */
-  totalSlots: number;
-  /** How many slots are filled. */
-  filledSlots: number;
-  /** Emoji shown inside filled slots. Defaults to a star. */
-  stampEmoji?: string;
-  /** Visual size -- affects slot dimensions. */
+  /** Number of stamps already earned. */
+  earned: number;
+  /** Total stamps required to complete the card. */
+  total: number;
+  /** Size variant — controls circle diameter and gap. @default "md" */
   size?: "sm" | "md" | "lg";
+  /**
+   * When true, the most recently earned stamp (index `earned - 1`)
+   * plays a spring bounce entry animation.
+   * @default false
+   */
+  animateNewStamp?: boolean;
   className?: string;
 }
 
+/** Circle size and gap per variant. */
 const SIZE_MAP = {
-  sm: { slot: 36, icon: 14, text: "text-base" },
-  md: { slot: 44, icon: 16, text: "text-xl" },
-  lg: { slot: 52, icon: 18, text: "text-2xl" },
-};
+  sm: { px: 10, gap: 4, checkSize: 6 },
+  md: { px: 18, gap: 6, checkSize: 10 },
+  lg: { px: 26, gap: 8, checkSize: 14 },
+} as const;
 
 /**
- * StampGrid -- circular bordered stamp slots.
+ * Horizontal-wrapping grid of stamp circles.
  *
- * Slot types:
- *   Filled  -- amber border + background, merchant emoji inside
- *   Empty   -- dashed green border, transparent background
- *   Reward  -- last slot always; green border + Gift icon (Lucide)
+ * Earned slots: solid `--color-loyalty` fill + white checkmark.
+ * Unearned slots: transparent with `--color-border` 1.5px border.
+ * Wraps at 5 items per row (flex-wrap).
  *
- * The reward slot is always the last slot regardless of fill state.
- * Stamps animate in with a spring scale when first rendered.
- *
- * Layout: 5 columns, wraps to next row automatically.
- *
- * Colors use inline styles (slot colors are visualization data, not design tokens).
+ * @example
+ * <StampGrid earned={5} total={8} size="md" animateNewStamp />
  */
 export function StampGrid({
-  totalSlots,
-  filledSlots,
-  stampEmoji = "⭐",
+  earned,
+  total,
   size = "md",
+  animateNewStamp = false,
   className = "",
 }: StampGridProps) {
-  const { slot, icon, text } = SIZE_MAP[size];
-  const rewardIndex = totalSlots - 1;
+  const { px, gap, checkSize } = SIZE_MAP[size];
+  const clampedEarned = Math.min(Math.max(0, earned), total);
+  // The "new" stamp is the most recently earned (last filled slot)
+  const newStampIndex = clampedEarned - 1;
 
   return (
     <div
-      className={["grid gap-2", className].filter(Boolean).join(" ")}
-      style={{ gridTemplateColumns: "repeat(5, 1fr)" }}
-      role="status"
-      aria-label={`${filledSlots} of ${totalSlots} stamps collected`}
+      role="list"
+      aria-label={`${clampedEarned} of ${total} stamps earned`}
+      className={["flex flex-wrap", className].filter(Boolean).join(" ")}
+      style={{ gap }}
     >
-      {Array.from({ length: totalSlots }, (_, i) => {
-        const isReward = i === rewardIndex;
-        const isFilled = i < filledSlots && !isReward;
+      {Array.from({ length: total }, (_, i) => {
+        const isEarned = i < clampedEarned;
+        const isNew = animateNewStamp && i === newStampIndex;
 
-        if (isReward) {
-          return (
-            <motion.div
-              key={i}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{
-                delay: i * 0.04,
-                type: "spring",
-                stiffness: 400,
-                damping: 25,
-              }}
-              className="flex items-center justify-center rounded-full"
-              style={{
-                width: slot,
-                height: slot,
-                border: "1.5px solid rgba(74,222,128,0.4)",
-                background: "rgba(74,222,128,0.08)",
-              }}
-              aria-label="Reward slot"
-            >
-              <Gift
-                size={icon}
-                style={{ color: "var(--color-primary)" }}
-                strokeWidth={1.8}
-                aria-hidden={true}
+        const circle = (
+          <div
+            className="flex items-center justify-center rounded-full"
+            style={{
+              width: px,
+              height: px,
+              background: isEarned ? "var(--color-loyalty)" : "transparent",
+              border: isEarned ? "none" : "1.5px solid var(--color-border)",
+            }}
+          >
+            {isEarned && (
+              <Check
+                size={checkSize}
+                strokeWidth={2.5}
+                style={{ color: "white" }}
+                aria-hidden="true"
               />
-            </motion.div>
-          );
-        }
-
-        if (isFilled) {
-          return (
-            <motion.div
-              key={i}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{
-                delay: i * 0.04,
-                type: "spring",
-                stiffness: 500,
-                damping: 28,
-              }}
-              className={["flex items-center justify-center rounded-full", text].join(
-                " ",
-              )}
-              style={{
-                width: slot,
-                height: slot,
-                border: "1.5px solid rgba(245,158,11,0.5)",
-                background: "rgba(245,158,11,0.12)",
-              }}
-              aria-label={`Stamp ${i + 1} collected`}
-            >
-              {stampEmoji}
-            </motion.div>
-          );
-        }
+            )}
+          </div>
+        );
 
         return (
           <div
             key={i}
-            className="rounded-full"
-            style={{
-              width: slot,
-              height: slot,
-              border: "1.5px dashed rgba(74,222,128,0.2)",
-              background: "transparent",
-            }}
-            aria-label={`Stamp slot ${i + 1} empty`}
-          />
+            role="listitem"
+            aria-label={
+              i === total - 1
+                ? "Reward slot"
+                : `Stamp ${i + 1} of ${total}: ${isEarned ? "earned" : "empty"}`
+            }
+          >
+            {isNew ? (
+              <motion.div
+                initial={{ scale: 0.3, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              >
+                {circle}
+              </motion.div>
+            ) : (
+              circle
+            )}
+          </div>
         );
       })}
     </div>

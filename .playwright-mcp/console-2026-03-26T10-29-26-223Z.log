@@ -1,0 +1,2 @@
+[     369ms] [WARNING] [expo-av]: Expo AV has been deprecated and will be removed in SDK 54. Use the `expo-audio` and `expo-video` packages to replace the required functionality. @ chrome-extension://opcgpfmipidbgpenhmajoajpbobppdil/expo/static/js/web/index-c46b2b21d43e1d8707211629b4e9c9ad.js:2973
+[    2035ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://localhost:3000/customer/scan&size=256:0

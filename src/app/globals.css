@@ -91,11 +91,11 @@
 
   /* --- Shadows --- */
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sheet: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sheet: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.08);
 
   /* --- Typography --- */
 
@@ -173,11 +173,74 @@
 
   /** Shadow for floating nav surfaces. */
   --liquid-shadow: var(--shadow-float);
+
+  /* --- Semantic aliases — map legacy token names to SUI Water values --- */
+
+  /** Primary action color — sky-500. Used by buttons, active states, filled stamps. */
+  --color-primary: var(--color-brand);
+
+  /** Lighter primary — sky-100. Hover glow, tinted surfaces. */
+  --color-primary-light: var(--color-brand-subtle);
+
+  /** Loyalty/stamp accent — amber-600. */
+  --color-accent-loyalty: var(--color-loyalty);
+
+  /** Muted loyalty — amber-100. Empty stamp slots. */
+  --color-accent-loyalty-muted: var(--color-loyalty-subtle);
+
+  /** Card/modal surface alias. */
+  --color-bg-surface: var(--color-surface);
+
+  /** Slightly elevated surface — slate-100. Slot backgrounds, elevated cards. */
+  --color-bg-elevated: #f1f5f9;
+
+  /** Standard border alias. */
+  --color-border-subtle: var(--color-border);
+
+  /** Strong border alias — slate-300. Focus rings, dividers. */
+  --color-border-strong: var(--color-border-strong-val, #cbd5e1);
+
+  /** Inactive icon color — slate-400. */
+  --color-icon-inactive: var(--color-text-muted);
+
+  /** Icon on solid brand button — white. */
+  --color-scan-icon: var(--color-text-on-brand);
+
+  /** Soft primary glow — for active nav icons. */
+  --glow-primary-soft: rgba(14, 165, 233, 0.25);
+
+  /** Strong primary glow. */
+  --glow-primary-strong: rgba(14, 165, 233, 0.45);
+
+  /** Bottom nav background alias. */
+  --nav-bg: var(--liquid-bg);
+
+  /* --- Semantic radius shortcuts --- */
+
+  /** Button corner radius. */
+  --radius-button: var(--radius-md);
+
+  /** Card corner radius. */
+  --radius-card: var(--radius-lg);
+
+  /** Input / search bar radius. */
+  --radius-input: var(--radius-md);
+
+  /** Pill / badge radius. */
+  --radius-pill: var(--radius-full);
+
+  /* --- Semantic spacing shortcuts --- */
+
+  /** Page horizontal padding. */
+  --spacing-page-x: 16px;
+
+  /** Card internal padding. */
+  --spacing-card-padding: 16px;
 }
 
 /**
  * Expose V2 tokens to Tailwind v4 so they work as utility classes
- * (e.g. bg-[--color-brand], text-[--color-text-secondary]).
+ * (e.g. bg-(--color-brand), text-(--color-text-secondary)) — parentheses, not brackets.
  */
 @theme inline {
   --color-background: var(--color-bg-base);
@@ -254,6 +317,25 @@ a,
   -webkit-tap-highlight-color: transparent;
 }
 
+/**
+ * Glass card surface — white card with subtle border and shadow.
+ * Performance budget: NO backdrop-filter. Only BottomNav and modals may blur.
+ */
+.glass-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.glass-card:hover {
+  border-color: var(--color-border-strong, #cbd5e1);
+}
+
+/** Full-screen page background. */
+.page-gradient {
+  background: var(--color-bg-base);
+}
+
 /** Bottom nav safe-area padding — clears floating nav. */
 .pb-nav {
   padding-bottom: calc(var(--nav-height) + max(env(safe-area-inset-bottom), 16px));
@@ -287,4 +369,18 @@ a,
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ================================================================
+ * dapp-kit web component overrides
+ * CSS custom properties pierce shadow DOM; ::part() targets
+ * the exported trigger button inside the web component.
+ * ================================================================ */
+
+/** Full-width connect button with proper tap target height. */
+mysten-dapp-kit-connect-button::part(trigger) {
+  width: 100%;
+  height: 52px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
 }

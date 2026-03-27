@@ -1,0 +1,31 @@
+[     210ms] [ERROR] Connecting to 'https://api.slush.app/api/wallet/metadata' violates the following Content Security Policy directive: "connect-src 'self' https://fullnode.testnet.sui.io https://fullnode.mainnet.sui.io https://fullnode.devnet.sui.io wss://fullnode.testnet.sui.io https://*.trycloudflare.com wss://*.trycloudflare.com". The action has been blocked. @ http://localhost:3000/_next/static/chunks/node_modules_0y9-3y2._.js:7822
+[     210ms] [ERROR] Fetch API cannot load https://api.slush.app/api/wallet/metadata. Refused to connect because it violates the document's Content Security Policy. @ http://localhost:3000/_next/static/chunks/node_modules_0y9-3y2._.js:7822
+[     211ms] [ERROR] Error fetching metadata TypeError: Failed to fetch
+    at fetchMetadata (http://localhost:3000/_next/static/chunks/node_modules_0y9-3y2._.js:7823:28)
+    at registerSlushWallet (http://localhost:3000/_next/static/chunks/node_modules_0y9-3y2._.js:7840:5)
+    at Object.initialize (http://localhost:3000/_next/static/chunks/node_modules_0tp_zf3._.js:676:232)
+    at http://localhost:3000/_next/static/chunks/node_modules_0tp_zf3._.js:704:39
+    at Array.map (<anonymous>)
+    at registerAdditionalWallets (http://localhost:3000/_next/static/chunks/node_modules_0tp_zf3._.js:701:7)
+    at createDAppKit (http://localhost:3000/_next/static/chunks/node_modules_0tp_zf3._.js:857:5)
+    at module evaluation (http://localhost:3000/_next/static/chunks/src_app_providers_tsx_0qwrp.~._.js:31:203)
+    at http://localhost:3000/_next/static/chunks/turbopack-_0s7p.q2._.js:1307:27
+    at runModuleExecutionHooks (http://localhost:3000/_next/static/chunks/turbopack-_0s7p.q2._.js:1636:13)
+    at instantiateModuleShared (http://localhost:3000/_next/static/chunks/turbopack-_0s7p.q2._.js:1305:9)
+    at instantiateModule (http://localhost:3000/_next/static/chunks/turbopack-_0s7p.q2._.js:1621:12)
+    at getOrInstantiateModuleFromParent (http://localhost:3000/_next/static/chunks/turbopack-_0s7p.q2._.js:1604:12)
+    at DevContext.commonJsRequire [as r] (http://localhost:3000/_next/static/chunks/turbopack-_0s7p.q2._.js:299:12)
+    at requireModule (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-server-dom-turbopack_06nmcla._.js:95:84)
+    at initializeModuleChunk (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-server-dom-turbopack_06nmcla._.js:1110:25)
+    at readChunk (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-server-dom-turbopack_06nmcla._.js:846:17)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-dom_02ci42l._.js:15101:20)
+    at resolveLazy (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-dom_02ci42l._.js:3866:20)
+    at beginWork (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-dom_02ci42l._.js:6665:77)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-dom_02ci42l._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-dom_02ci42l._.js:9555:97)
+    at workLoopConcurrentByScheduler (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-dom_02ci42l._.js:9551:58)
+    at renderRootConcurrent (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-dom_02ci42l._.js:9534:71)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-dom_02ci42l._.js:9061:150)
+    at performWorkOnRootViaSchedulerTask (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_react-dom_02ci42l._.js:10255:9)
+    at MessagePort.performWorkUntilDeadline (http://localhost:3000/_next/static/chunks/11y7_next_dist_compiled_03xgjy_._.js:2647:64) @ http://localhost:3000/_next/static/chunks/11y7_next_dist_0bi0ewc._.js:3272
+[    6359ms] [WARNING] Error while trying to use the following icon from the Manifest: http://localhost:3000/icons/icon-192.png (Download error or resource isn't a valid image) @ http://localhost:3000/:0

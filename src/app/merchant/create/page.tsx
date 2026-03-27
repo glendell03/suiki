@@ -1,309 +1,577 @@
-'use client';
+// src/app/merchant/create/page.tsx
+"use client";
 
-import { useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useForm } from '@tanstack/react-form';
-import { z } from 'zod';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
-import { WalletGuard } from '@/components/wallet-guard';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useSponsoredTx } from '@/hooks/use-sponsored-tx';
-import { buildCreateProgram } from '@/lib/transactions';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Loader2, Minus, Plus, ImageOff } from "lucide-react";
+import { StampCard } from "@/components/stamp-card";
+import { useAccount } from "@/hooks/use-account";
+import { AnimatePresence, motion } from "framer-motion";
+import { WalletGuard } from "@/components/wallet-guard";
+import { PageHeader } from "@/components/page-header";
+import { StepIndicator } from "@/components/step-indicator";
+import { useSponsoredTx } from "@/hooks/use-sponsored-tx";
+import { buildCreateProgram } from "@/lib/transactions";
 
-// ---------------------------------------------------------------------------
-// Validation schema
-// ---------------------------------------------------------------------------
+/** Labels shown in PageHeader for each step. */
+const STEP_LABELS = ["Program Name", "Logo", "Stamp Goal", "Reward", "Review"] as const;
 
-const schema = z.object({
-  name: z.string().min(2).max(50),
-  logoUrl: z.string().url().optional().or(z.literal('')),
-  stampsRequired: z.number().int().min(1).max(100),
-  rewardDescription: z.string().min(5).max(200),
-});
+/** Shared input class string used across text-input steps. */
+const INPUT_CLASS = [
+  "w-full bg-(--color-surface) border border-(--color-border)",
+  "rounded-(--radius-xl) px-4 py-4 text-[17px] text-(--color-text-primary)",
+  "placeholder:text-(--color-text-muted) outline-none",
+  "focus:border-(--color-brand) focus:shadow-[0_0_0_3px_var(--color-brand-subtle)]",
+  "transition-[border-color,box-shadow] duration-150",
+].join(" ");
 
-// ---------------------------------------------------------------------------
-// Form field error helper
-// ---------------------------------------------------------------------------
-
-/**
- * Extracts the first validation error string from a tanstack-form field state.
- * Returns undefined when there are no errors so callers can omit the prop
- * entirely — required for exactOptionalPropertyTypes compatibility.
- */
-function firstFieldError(errors: unknown[]): string | undefined {
-  if (errors.length === 0) return undefined;
-  const first = errors[0];
-  return typeof first === 'string' ? first : undefined;
-}
-
-// ---------------------------------------------------------------------------
-// Create Program form — rendered after wallet check passes
-// ---------------------------------------------------------------------------
+/** Framer Motion variants for step transitions. */
+const stepVariants = {
+  enter: { opacity: 0, x: 40 },
+  center: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -40 },
+};
 
 /**
- * Inner form rendered inside WalletGuard once the account is available.
- * Uses @tanstack/react-form with Zod field-level validation and the
- * gas-sponsored transaction flow from useSponsoredTx.
+ * Step 1 -- Program name input.
  */
-function CreateProgramForm() {
-  const account = useCurrentAccount();
-  const router = useRouter();
-  const { executeSponsoredTx, isPending, error: txError, digest } = useSponsoredTx();
-
-  // Redirect to dashboard once the transaction confirms on-chain.
-  useEffect(() => {
-    if (digest) {
-      router.push('/merchant');
-    }
-  }, [digest, router]);
-
-  // Type is inferred from defaultValues — do not pass explicit type args to
-  // useForm in @tanstack/react-form v1 (type arity changed from earlier betas).
-  const form = useForm({
-    defaultValues: {
-      name: '',
-      logoUrl: '',
-      stampsRequired: 5,
-      rewardDescription: '',
-    },
-    onSubmit: async ({ value }) => {
-      if (!account) return;
-
-      const parsed = schema.safeParse(value);
-      if (!parsed.success) return;
-
-      const { name, logoUrl, stampsRequired, rewardDescription } = parsed.data;
-      const tx = buildCreateProgram(
-        account.address,
-        name,
-        logoUrl ?? '',
-        stampsRequired,
-        rewardDescription,
-      );
-
-      await executeSponsoredTx(tx);
-    },
-  });
+function StepName({
+  value,
+  onChange,
+  onNext,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onNext: () => void;
+}) {
+  const valid = value.trim().length >= 2;
 
   return (
-    <div className="mx-auto w-full max-w-lg px-4 py-8">
-      {/* Back navigation */}
-      <Link
-        href="/merchant"
-        className="mb-6 inline-flex items-center gap-1 text-sm text-[--color-text-secondary] hover:text-[--color-text-primary]"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className="h-4 w-4"
-          aria-hidden="true"
-        >
-          <path
-            fillRule="evenodd"
-            d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-            clipRule="evenodd"
-          />
-        </svg>
-        Back to Dashboard
-      </Link>
-
-      <h1 className="mb-8 text-xl font-bold text-[--color-text-primary]">
-        Create Loyalty Program
-      </h1>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
+    <div className="flex flex-col gap-4">
+      <h2
+        className="text-(--color-text-primary)"
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 700,
+          fontSize: 22,
         }}
-        className="flex flex-col gap-6"
-        aria-label="Create loyalty program form"
       >
-        {/* Program name */}
-        <form.Field
-          name="name"
-          validators={{
-            onChange: ({ value }) => {
-              const r = z.string().min(2, 'At least 2 characters').max(50, 'Max 50 characters').safeParse(value);
-              return r.success ? undefined : r.error.issues[0]?.message;
-            },
-          }}
-        >
-          {(field) => {
-            const err = firstFieldError(field.state.meta.errors);
-            return (
-              <Input
-                label="Program Name"
-                placeholder="e.g. Cafe Tagalog Stamps"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-                disabled={isPending}
-                maxLength={50}
-                // Only pass error when defined — required by exactOptionalPropertyTypes
-                {...(err !== undefined ? { error: err } : {})}
-              />
-            );
-          }}
-        </form.Field>
+        What&apos;s your program called?
+      </h2>
 
-        {/* Logo URL */}
-        <form.Field
-          name="logoUrl"
-          validators={{
-            onChange: ({ value }) => {
-              if (!value || value === '') return undefined;
-              const r = z.string().url('Must be a valid URL').safeParse(value);
-              return r.success ? undefined : r.error.issues[0]?.message;
-            },
-          }}
-        >
-          {(field) => {
-            const err = firstFieldError(field.state.meta.errors);
-            return (
-              <Input
-                label="Logo URL (optional)"
-                type="url"
-                placeholder="https://example.com/logo.png"
-                value={field.state.value ?? ''}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-                disabled={isPending}
-                {...(err !== undefined ? { error: err } : {})}
-              />
-            );
-          }}
-        </form.Field>
+      <input
+        type="text"
+        className={INPUT_CLASS}
+        placeholder="e.g. Coffee Bean Loyalty Stamps"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && valid) onNext();
+        }}
+        maxLength={50}
+        autoFocus
+      />
 
-        {/* Stamps required */}
-        <form.Field
-          name="stampsRequired"
-          validators={{
-            onChange: ({ value }) => {
-              const r = z.number().int('Must be a whole number').min(1, 'At least 1').max(100, 'Max 100').safeParse(value);
-              return r.success ? undefined : r.error.issues[0]?.message;
-            },
-          }}
-        >
-          {(field) => {
-            const err = firstFieldError(field.state.meta.errors);
-            return (
-              <Input
-                label="Stamps Required for Reward"
-                type="number"
-                min={1}
-                max={100}
-                value={String(field.state.value)}
-                onChange={(e) => field.handleChange(Number(e.target.value))}
-                onBlur={field.handleBlur}
-                disabled={isPending}
-                {...(err !== undefined ? { error: err } : {})}
-              />
-            );
-          }}
-        </form.Field>
+      <p className="text-[13px] text-(--color-text-muted)">
+        Required, at least 2 characters
+      </p>
 
-        {/* Reward description — native textarea (not covered by Input) */}
-        <form.Field
-          name="rewardDescription"
-          validators={{
-            onChange: ({ value }) => {
-              const r = z.string().min(5, 'At least 5 characters').max(200, 'Max 200 characters').safeParse(value);
-              return r.success ? undefined : r.error.issues[0]?.message;
-            },
-          }}
-        >
-          {(field) => {
-            const err = firstFieldError(field.state.meta.errors);
-            return (
-              <div className="flex flex-col gap-1">
-                <label
-                  className="text-sm font-medium text-[--color-text-primary]"
-                  htmlFor="reward-description"
-                >
-                  Reward Description
-                </label>
-                <textarea
-                  id="reward-description"
-                  placeholder="e.g. Free coffee after 10 stamps"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  disabled={isPending}
-                  maxLength={200}
-                  rows={3}
-                  aria-invalid={err !== undefined ? 'true' : undefined}
-                  className={[
-                    'rounded-lg border border-[--color-border] bg-[--color-bg-surface] px-4 py-2.5',
-                    'text-sm text-[--color-text-primary] placeholder:text-[--color-text-muted]',
-                    'transition-colors duration-150 resize-none',
-                    'focus:outline-none focus:ring-2 focus:ring-[--color-primary] focus:border-transparent',
-                    'disabled:pointer-events-none disabled:opacity-50',
-                    err ? 'border-[--color-error] focus:ring-[--color-error]' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                />
-                {err && (
-                  <p className="text-xs text-[--color-error]" role="alert">
-                    {err}
-                  </p>
-                )}
-              </div>
-            );
-          }}
-        </form.Field>
-
-        {/* Transaction error */}
-        {txError && (
-          <div
-            className="rounded-lg border border-[--color-error] bg-[--color-bg-surface] px-4 py-3 text-sm text-[--color-error]"
-            role="alert"
-          >
-            {txError.message}
-          </div>
-        )}
-
-        {/* Submit */}
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={isPending}
-          className="w-full"
-        >
-          {isPending ? (
-            <>
-              <svg
-                className="h-4 w-4 animate-spin"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Creating Program…
-            </>
-          ) : (
-            'Create Program'
-          )}
-        </Button>
-      </form>
+      <div className="mt-8">
+        <NextButton disabled={!valid} onClick={onNext} />
+      </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Page export
-// ---------------------------------------------------------------------------
+/**
+ * Step 2 -- Optional logo URL with live StampCard preview.
+ */
+function StepLogo({
+  value,
+  onChange,
+  onNext,
+  programName,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onNext: () => void;
+  programName: string;
+}) {
+  // 'idle' | 'loading' | 'ok' | 'error'
+  const [imgState, setImgState] = useState<"idle" | "loading" | "ok" | "error">("idle");
+
+  const isValidUrl = (url: string) => {
+    if (!url.trim()) return false; // required
+    try { new URL(url); return true; } catch { return false; }
+  };
+
+  const showPreview = imgState === "ok";
+  const showError = value.trim() && imgState === "error";
+  const canProceed = isValidUrl(value) && imgState !== "loading";
+
+  // Reset image state whenever URL changes
+  useEffect(() => {
+    if (!value.trim()) { setImgState("idle"); return; }
+    if (!isValidUrl(value)) { setImgState("error"); return; }
+    setImgState("loading");
+    const img = new Image();
+    img.onload = () => setImgState("ok");
+    img.onerror = () => setImgState("error");
+    img.src = value;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h2
+          className="text-(--color-text-primary)"
+          style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 22 }}
+        >
+          Add a logo
+        </h2>
+        <p className="text-[13px] text-(--color-text-muted)">
+          Paste a public image URL to brand your stamp card.
+        </p>
+      </div>
+
+      <input
+        type="url"
+        className={INPUT_CLASS}
+        placeholder="https://example.com/logo.png"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter" && canProceed) onNext(); }}
+        autoFocus
+      />
+
+      {/* URL error */}
+      {showError && (
+        <div className="flex items-center gap-2 text-[13px]" style={{ color: "var(--color-error)" }}>
+          <ImageOff size={14} />
+          <span>Couldn&apos;t load image from this URL.</span>
+        </div>
+      )}
+
+      {/* Loading shimmer */}
+      {imgState === "loading" && (
+        <div className="h-4 w-32 animate-pulse rounded-full bg-(--color-border)" />
+      )}
+
+      {/* Live StampCard preview */}
+      {showPreview && (
+        <div className="flex flex-col gap-2">
+          <p
+            className="text-[12px] font-semibold uppercase tracking-wider text-(--color-text-muted)"
+            style={{ letterSpacing: "0.06em" }}
+          >
+            Preview
+          </p>
+          <StampCard
+            programId="preview"
+            merchantName={programName || "Your Program"}
+            programName="Loyalty Program"
+            logoUrl={value}
+            stampCount={3}
+            totalStamps={10}
+            rewardDescription="Your reward"
+            variant="featured"
+          />
+        </div>
+      )}
+
+      <div className="mt-4">
+        <NextButton disabled={!canProceed} onClick={onNext} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Step 3 -- Stamp goal with increment/decrement stepper.
+ */
+function StepStampGoal({
+  value,
+  onChange,
+  onNext,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  onNext: () => void;
+}) {
+  const MIN = 2;
+  const MAX = 50;
+
+  function decrement() {
+    onChange(Math.max(MIN, value - 1));
+  }
+
+  function increment() {
+    onChange(Math.min(MAX, value + 1));
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h2
+        className="text-(--color-text-primary)"
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 700,
+          fontSize: 22,
+        }}
+      >
+        How many stamps to earn a reward?
+      </h2>
+
+      {/* Stepper */}
+      <div className="flex items-center justify-center gap-6 py-6">
+        <button
+          type="button"
+          onClick={decrement}
+          disabled={value <= MIN}
+          aria-label="Decrease stamps"
+          className="tap-target flex items-center justify-center rounded-full bg-(--color-surface) border border-(--color-border) disabled:opacity-30 transition-opacity"
+          style={{ width: 48, height: 48 }}
+        >
+          <Minus size={20} className="text-(--color-text-primary)" />
+        </button>
+
+        <span
+          className="text-(--color-text-primary) tabular-nums"
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 800,
+            fontSize: 48,
+            minWidth: "3ch",
+            textAlign: "center",
+          }}
+        >
+          {value}
+        </span>
+
+        <button
+          type="button"
+          onClick={increment}
+          disabled={value >= MAX}
+          aria-label="Increase stamps"
+          className="tap-target flex items-center justify-center rounded-full bg-(--color-surface) border border-(--color-border) disabled:opacity-30 transition-opacity"
+          style={{ width: 48, height: 48 }}
+        >
+          <Plus size={20} className="text-(--color-text-primary)" />
+        </button>
+      </div>
+
+      <p className="text-[13px] text-(--color-text-muted) text-center">
+        Customers will stamp on each visit
+      </p>
+
+      <div className="mt-8">
+        <NextButton disabled={false} onClick={onNext} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Step 3 -- Reward description input.
+ */
+function StepReward({
+  value,
+  onChange,
+  onNext,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onNext: () => void;
+}) {
+  const valid = value.trim().length >= 5;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h2
+        className="text-(--color-text-primary)"
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 700,
+          fontSize: 22,
+        }}
+      >
+        What do customers earn?
+      </h2>
+
+      <input
+        type="text"
+        className={INPUT_CLASS}
+        placeholder="e.g. One free coffee"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && valid) onNext();
+        }}
+        maxLength={200}
+        autoFocus
+      />
+
+      <p className="text-[13px] text-(--color-text-muted)">
+        Required, at least 5 characters
+      </p>
+
+      <div className="mt-8">
+        <NextButton disabled={!valid} onClick={onNext} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Step 4 -- Review and submit.
+ */
+function StepReview({
+  form,
+  isSubmitting,
+  error,
+  onSubmit,
+}: {
+  form: { name: string; logoUrl: string; stampsRequired: number; rewardDescription: string };
+  isSubmitting: boolean;
+  error: string | null;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      <h2
+        className="text-(--color-text-primary)"
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 700,
+          fontSize: 22,
+        }}
+      >
+        Review your program
+      </h2>
+
+      {/* Live StampCard preview */}
+      <StampCard
+        programId="preview"
+        merchantName={form.name}
+        programName="Loyalty Program"
+        logoUrl={form.logoUrl || undefined}
+        stampCount={0}
+        totalStamps={form.stampsRequired}
+        rewardDescription={form.rewardDescription}
+        variant="featured"
+      />
+
+      {/* Error */}
+      {error && (
+        <div
+          className="rounded-(--radius-xl) border border-red-300 bg-red-50 px-4 py-3 text-[14px] text-red-700"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Submit CTA */}
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={isSubmitting}
+        className="tap-target w-full flex items-center justify-center gap-2 text-white font-semibold disabled:opacity-60 transition-opacity"
+        style={{
+          background: "var(--color-brand)",
+          borderRadius: "var(--radius-full)",
+          padding: "14px 0",
+          fontSize: 17,
+          fontFamily: "var(--font-display)",
+        }}
+      >
+        {isSubmitting ? (
+          <>
+            <Loader2 size={18} className="animate-spin" />
+            Creating...
+          </>
+        ) : (
+          "Create Program"
+        )}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Reusable "Next" button used at the bottom of steps 1-3.
+ */
+function NextButton({
+  disabled,
+  onClick,
+}: {
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="tap-target w-full text-white font-semibold disabled:opacity-30 transition-opacity"
+      style={{
+        background: "var(--color-brand)",
+        borderRadius: "var(--radius-full)",
+        padding: "14px 0",
+        fontSize: 17,
+        fontFamily: "var(--font-display)",
+      }}
+    >
+      Next &rarr;
+    </button>
+  );
+}
+
+/**
+ * Multi-step create-program form. Manages step navigation, validation,
+ * and submission via the sponsored transaction hook.
+ */
+function CreateProgramForm() {
+  const router = useRouter();
+  const account = useAccount();
+  const { executeSponsoredTx } = useSponsoredTx();
+
+  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({
+    name: "",
+    logoUrl: "",
+    stampsRequired: 10,
+    rewardDescription: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  /** Navigate back -- if step 1, go to merchant dashboard. */
+  function handleBack() {
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      router.back();
+    }
+  }
+
+  /** Submit the create-program transaction on-chain. */
+  async function handleCreate() {
+    if (!account) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const tx = buildCreateProgram(
+        account.address,
+        form.name,
+        form.logoUrl,
+        form.stampsRequired,
+        form.rewardDescription,
+      );
+      await executeSponsoredTx(tx);
+      router.push("/merchant");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Transaction failed");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="min-h-dvh bg-(--color-bg-base) flex flex-col">
+      {/* Fixed header */}
+      <PageHeader
+        title={STEP_LABELS[step - 1] ?? "Create"}
+        leftAction={
+          <button
+            type="button"
+            onClick={handleBack}
+            aria-label="Go back"
+            className="tap-target flex items-center justify-center"
+            style={{ width: 40, height: 40 }}
+          >
+            <ChevronLeft
+              size={24}
+              className="text-(--color-text-primary)"
+            />
+          </button>
+        }
+      />
+
+      {/* Content -- offset below fixed header */}
+      <div className="mx-auto w-full max-w-[430px] flex flex-col px-5 gap-6 pt-[calc(56px+env(safe-area-inset-top)+2rem)] pb-12">
+        {/* Step indicator */}
+        <div className="flex justify-center">
+          <StepIndicator steps={5} current={step} />
+        </div>
+
+        {/* Step content with animated transitions */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="flex flex-col"
+          >
+            {step === 1 && (
+              <StepName
+                value={form.name}
+                onChange={(name) => setForm((f) => ({ ...f, name }))}
+                onNext={() => setStep(2)}
+              />
+            )}
+
+            {step === 2 && (
+              <StepLogo
+                value={form.logoUrl}
+                onChange={(logoUrl) => setForm((f) => ({ ...f, logoUrl }))}
+                onNext={() => setStep(3)}
+                programName={form.name}
+              />
+            )}
+
+            {step === 3 && (
+              <StepStampGoal
+                value={form.stampsRequired}
+                onChange={(stampsRequired) =>
+                  setForm((f) => ({ ...f, stampsRequired }))
+                }
+                onNext={() => setStep(4)}
+              />
+            )}
+
+            {step === 4 && (
+              <StepReward
+                value={form.rewardDescription}
+                onChange={(rewardDescription) =>
+                  setForm((f) => ({ ...f, rewardDescription }))
+                }
+                onNext={() => setStep(5)}
+              />
+            )}
+
+            {step === 5 && (
+              <StepReview
+                form={form}
+                isSubmitting={isSubmitting}
+                error={error}
+                onSubmit={() => void handleCreate()}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Create loyalty program page.
- * Guarded by WalletGuard — prompts wallet connection when no account is present.
+ * Guarded by WalletGuard -- prompts wallet connection when no account is present.
  */
 export default function CreateProgramPage() {
   return (

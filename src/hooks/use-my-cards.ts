@@ -1,22 +1,26 @@
 'use client';
 
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import { useQuery } from '@tanstack/react-query';
 import { getCardsByCustomer } from '@/lib/queries';
+import { useAccount } from '@/hooks/use-account';
+import { MOCK_CARDS, MOCK_WALLET_ADDRESS } from '@/lib/mock-data';
 import type { StampCard } from '@/types/sui';
+
+const IS_MOCK = !!MOCK_WALLET_ADDRESS && process.env.NODE_ENV !== 'production';
 
 /**
  * Returns all StampCards owned by the currently connected customer wallet.
  *
- * The query is disabled when no wallet is connected (account === null) to
- * prevent spurious fetches and empty-state flicker on page load.
+ * In dev mock mode (NEXT_PUBLIC_MOCK_WALLET set), returns static fixture data
+ * with no network calls so every customer page renders with realistic content.
  */
 export function useMyCards() {
-  const account = useCurrentAccount();
+  const account = useAccount();
 
   return useQuery<StampCard[], Error>({
     queryKey: ['cards', account?.address],
-    queryFn: () => getCardsByCustomer(account!.address),
+    queryFn: IS_MOCK ? () => Promise.resolve(MOCK_CARDS) : () => getCardsByCustomer(account!.address),
     enabled: !!account,
+    ...(IS_MOCK ? { initialData: MOCK_CARDS } : {}),
   });
 }

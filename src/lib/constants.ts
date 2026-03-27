@@ -32,6 +32,10 @@ export const TARGETS = {
   issueStamp: `${PACKAGE_ID}::${MODULE_NAME}::issue_stamp`,
   redeem: `${PACKAGE_ID}::${MODULE_NAME}::redeem`,
   updateProgram: `${PACKAGE_ID}::${MODULE_NAME}::update_program`,
+  // SEC-10: these two were missing from TARGETS but present in the sponsor API allowlist.
+  // Always define targets here so PACKAGE_ID changes propagate automatically.
+  syncCardMetadata: `${PACKAGE_ID}::${MODULE_NAME}::sync_card_metadata`,
+  transferMerchant: `${PACKAGE_ID}::${MODULE_NAME}::transfer_merchant`,
 } as const;
 
 // ---------------------------------------------------------------------------

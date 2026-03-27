@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Leaf } from "lucide-react";
+import { Bell } from "lucide-react";
 import { motion } from "framer-motion";
 import { WalletDropdown } from "@/components/wallet-dropdown";
 
@@ -17,10 +17,21 @@ export function SiteHeader() {
       <Link
         href="/"
         aria-label="Suiki home"
-        className="flex items-center gap-1.5 text-[--color-primary] transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary] rounded"
+        className="flex items-center gap-1.5 text-(--color-primary) transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) rounded"
       >
-        <Leaf size={22} strokeWidth={2} />
-        <span className="text-base font-bold text-[--color-text-primary]">
+        <span
+          aria-hidden="true"
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 22,
+            fontWeight: 700,
+            color: "var(--color-brand)",
+            lineHeight: 1,
+          }}
+        >
+          水
+        </span>
+        <span className="text-base font-bold text-(--color-text-primary)">
           Suiki
         </span>
       </Link>
@@ -32,7 +43,7 @@ export function SiteHeader() {
           aria-label="Notifications"
           disabled
           aria-disabled="true"
-          className="flex items-center justify-center rounded-full text-[--color-text-secondary] transition-colors hover:text-[--color-text-primary] disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center justify-center rounded-full text-(--color-text-secondary) transition-colors hover:text-(--color-text-primary) disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Bell size={20} />
         </motion.button>

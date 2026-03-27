@@ -2,31 +2,33 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, CreditCard, Search, QrCode } from "lucide-react";
+import { House, CreditCard, ScanLine, Compass } from "lucide-react";
 import { motion } from "framer-motion";
 import type { ComponentType } from "react";
 
 type NavTab = {
   href: string;
-  icon: ComponentType<{ size?: number; className?: string; strokeWidth?: number; style?: React.CSSProperties }>;
+  icon: ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
   label: string;
+  ariaLabel: string;
   exactMatch?: boolean;
 };
 
 const NAV_TABS: NavTab[] = [
-  { href: "/customer", icon: Home, label: "Home", exactMatch: true },
-  { href: "/customer/cards", icon: CreditCard, label: "Cards" },
-  { href: "/customer/search", icon: Search, label: "Search" },
-  { href: "/customer/scan", icon: QrCode, label: "Scan" },
+  { href: "/customer",        icon: House,       label: "Home",    ariaLabel: "Home",                exactMatch: true },
+  { href: "/customer/cards",  icon: CreditCard,  label: "Cards",   ariaLabel: "My stamp cards" },
+  { href: "/customer/scan",   icon: ScanLine,    label: "Scan",    ariaLabel: "Show my QR code" },
+  { href: "/customer/search", icon: Compass,     label: "Explore", ariaLabel: "Search merchants" },
 ];
 
 /**
- * Floating liquid-glass bottom navigation — icons only, no labels.
- * Scan tab is rendered as a solid green pill (primary CTA).
- * Active non-scan tabs: icon turns green with a glow.
+ * Fixed bottom navigation bar for the customer section.
  *
- * Positioning: fixed, centered horizontally, 16px above the safe-area bottom.
- * Does NOT span the full width — it's a compact floating pill.
+ * Four tabs: Home · Cards · Scan · Explore.
+ * The Scan tab always renders with a solid `--color-brand` pill background —
+ * it is the primary repeating action and must always stand out.
+ * Active non-scan tabs: icon + label in `--color-brand-dark`.
+ * Inactive: `--color-text-muted`.
  */
 export function BottomNav() {
   const pathname = usePathname();
@@ -34,76 +36,87 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed z-50"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50
+                 flex items-stretch justify-around
+                 bg-(--color-surface) border-t border-(--color-border)"
       style={{
-        bottom: "max(calc(16px + env(safe-area-inset-bottom)), 28px)",
-        left: "50%",
-        transform: "translateX(-50%)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+        boxShadow: "var(--shadow-float)",
       }}
     >
-      <div
-        className="liquid-surface flex items-center gap-1 px-4 py-2.5"
-        style={{ borderRadius: "999px" }}
-      >
-        {NAV_TABS.map(({ href, icon: Icon, label, exactMatch }) => {
-          const isActive = exactMatch
-            ? pathname === href
-            : pathname.startsWith(href);
-          const isScan = href === "/customer/scan";
+      {NAV_TABS.map(({ href, icon: Icon, label, ariaLabel, exactMatch }) => {
+        const isActive = exactMatch ? pathname === href : pathname.startsWith(href);
+        const isScan = href === "/customer/scan";
 
-          if (isScan) {
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={isActive ? "page" : undefined}
-                aria-label={label}
-              >
-                <motion.div
-                  whileTap={{ scale: 0.93 }}
-                  className="flex items-center justify-center"
-                  style={{
-                    background: "var(--color-primary)",
-                    borderRadius: "14px",
-                    width: "46px",
-                    height: "36px",
-                    boxShadow: "0 2px 12px var(--glow-primary-soft), 0 1px 0 rgba(255,255,255,0.3) inset",
-                  }}
-                >
-                  <Icon size={18} strokeWidth={2.2} style={{ color: "var(--color-scan-icon)" }} />
-                </motion.div>
-              </Link>
-            );
-          }
-
+        if (isScan) {
           return (
             <Link
               key={href}
               href={href}
+              aria-label={ariaLabel}
               aria-current={isActive ? "page" : undefined}
-              aria-label={label}
+              className="flex-1 flex flex-col items-center justify-center min-h-[64px] tap-target"
             >
               <motion.div
-                whileTap={{ scale: 0.9 }}
-                className="flex items-center justify-center"
-                style={{ width: "44px", height: "36px" }}
+                whileTap={{ scale: 0.90 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full"
+                style={{ background: "var(--color-brand)" }}
               >
                 <Icon
                   size={20}
-                  strokeWidth={isActive ? 2.2 : 1.8}
-                  style={{
-                    color: isActive ? "var(--color-primary)" : "var(--color-icon-inactive)",
-                    filter: isActive
-                      ? "drop-shadow(0 0 6px var(--glow-primary-strong))"
-                      : "none",
-                    transition: "color 200ms ease, filter 200ms ease",
-                  }}
+                  strokeWidth={2}
+                  style={{ color: "var(--color-text-on-brand)" }}
                 />
+                <span
+                  className="text-[10px] font-semibold tracking-wide"
+                  style={{ color: "var(--color-text-on-brand)" }}
+                >
+                  {label}
+                </span>
               </motion.div>
             </Link>
           );
-        })}
-      </div>
+        }
+
+        const color = isActive ? "var(--color-brand-dark)" : "var(--color-text-muted)";
+        const weight = isActive ? 600 : 400;
+
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-label={ariaLabel}
+            aria-current={isActive ? "page" : undefined}
+            className="flex-1 flex flex-col items-center justify-center min-h-[64px] tap-target"
+          >
+            <motion.div
+              whileTap={{ scale: 0.90 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5"
+            >
+              <Icon
+                size={20}
+                strokeWidth={isActive ? 2.2 : 1.8}
+                style={{
+                  color,
+                  transition: "color 150ms ease",
+                }}
+              />
+              <span
+                className="text-[10px] tracking-wide"
+                style={{
+                  color,
+                  fontWeight: weight,
+                  transition: "color 150ms ease, font-weight 150ms ease",
+                }}
+              >
+                {label}
+              </span>
+            </motion.div>
+          </Link>
+        );
+      })}
     </nav>
   );
 }

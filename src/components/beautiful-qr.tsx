@@ -33,8 +33,8 @@ function clearElement(el: HTMLElement): void {
  * legitimate DOM-mutation side effect (not data fetching), which is the
  * correct use of useEffect in React 19.
  *
- * Colors: green dots (#4ade80) on a dark background (#0a1a14) for premium
- * look. Falls back to a skeleton placeholder while the SVG is rendering.
+ * Colors: black dots (#111111) on white (#ffffff). Falls back to a skeleton
+ * placeholder while the SVG is rendering.
  *
  * @example
  * <BeautifulQR value="0xabc123" label="Scan to earn stamps" size={220} />
@@ -69,8 +69,8 @@ export function BeautifulQR({
       mode: "Byte",
       radius: 0.6,
       padding: 0,
-      foregroundColor: fgColor ?? "#4ade80",
-      backgroundColor: bgColor ?? "#0a1a14",
+      foregroundColor: fgColor ?? "#111111",
+      backgroundColor: bgColor ?? "#ffffff",
       hasLogo: false,
     });
 
@@ -90,7 +90,7 @@ export function BeautifulQR({
         <div
           aria-hidden="true"
           style={{ width: size, height: size }}
-          className="animate-pulse rounded-xl bg-[--color-bg-elevated]"
+          className="animate-pulse rounded-xl bg-(--color-bg-elevated)"
         />
       )}
 
@@ -98,7 +98,7 @@ export function BeautifulQR({
         <div
           role="alert"
           style={{ width: size, height: size }}
-          className="flex items-center justify-center rounded-xl bg-[--color-bg-elevated] text-xs text-[--color-text-secondary]"
+          className="flex items-center justify-center rounded-xl bg-(--color-bg-elevated) text-xs text-(--color-text-secondary)"
         >
           {error}
         </div>
@@ -117,7 +117,7 @@ export function BeautifulQR({
       />
 
       {label && (
-        <p className="text-sm text-[--color-text-secondary]">{label}</p>
+        <p className="text-sm text-(--color-text-secondary)">{label}</p>
       )}
     </div>
   );

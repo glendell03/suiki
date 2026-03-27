@@ -1,94 +1,160 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
-import { ConnectWallet } from './connect-wallet';
+import dynamic from 'next/dynamic';
+import { Layers, Shield, Gift } from 'lucide-react';
+
+// Dynamic import with ssr: false — @mysten/dapp-kit-react/ui accesses `window`
+// at module evaluation time, which crashes Next.js SSR.
+const ConnectButton = dynamic(
+  () => import('@mysten/dapp-kit-react/ui').then((m) => m.ConnectButton),
+  { ssr: false },
+);
+import { useAccount } from '@/hooks/use-account';
 
 interface WalletGuardProps {
-  /** Content to render when a wallet is connected. */
   children: ReactNode;
-  /**
-   * Optional heading shown in the connect prompt.
-   * Defaults to a generic Filipino prompt.
-   */
   heading?: string;
-  /**
-   * Optional supporting copy shown below the heading.
-   * Defaults to a brief Filipino trust message.
-   */
   description?: string;
 }
 
-/**
- * WalletGuard — renders children only when a wallet is connected.
- *
- * When no account is detected it shows a centered connect prompt using
- * the ConnectWallet component. All surfaces use the Suiki dark-first
- * design tokens from globals.css; no colors are hardcoded.
- *
- * Usage:
- *   <WalletGuard>
- *     <MerchantDashboard />
- *   </WalletGuard>
- */
+const FEATURES = [
+  { icon: Layers, label: 'Stamp cards' },
+  { icon: Shield, label: 'On-chain' },
+  { icon: Gift, label: 'Earn rewards' },
+] as const;
+
 export function WalletGuard({
   children,
-  heading = 'Ikonekta ang inyong Wallet',
-  description = 'Kailangan ang wallet para magpatuloy. Ligtas at mabilis.',
+  heading = 'Connect your wallet',
+  description = 'Sign in to continue',
 }: WalletGuardProps) {
-  const account = useCurrentAccount();
+  const account = useAccount();
 
-  if (account) {
-    return <>{children}</>;
-  }
+  if (account) return <>{children}</>;
 
   return (
-    /* Full-viewport centered layout — works from 375 px upward.
-     * min-h-[100dvh] is the PWA-safe viewport unit used in globals.css. */
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-12">
-      <div className="flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-[--color-border] bg-[--color-bg-surface] px-6 py-10 shadow-lg">
-
-        {/* Brand mark / wallet icon */}
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[--color-primary]"
+    <div
+      className="min-h-dvh flex flex-col"
+      style={{ background: 'var(--color-brand)' }}
+    >
+      {/* ── Hero ─────────────────────────────────────────────────── */}
+      <div
+        className="flex-1 relative flex flex-col items-center justify-center px-8 overflow-hidden"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        {/* Background watermark */}
+        <span
           aria-hidden="true"
+          className="absolute pointer-events-none select-none"
+          style={{
+            right: -20,
+            bottom: -30,
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: 220,
+            color: 'rgba(255,255,255,0.06)',
+            lineHeight: 1,
+          }}
         >
-          {/* Wallet icon — inline SVG keeps the bundle small, no icon lib needed */}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.75}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-8 w-8 text-white"
-            aria-label="Wallet icon"
+          水
+        </span>
+
+        {/* Wordmark */}
+        <div className="flex items-center gap-2.5 mb-7">
+          <span
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: 38,
+              color: 'rgba(255,255,255,0.92)',
+              lineHeight: 1,
+            }}
           >
-            <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-            <line x1="1" y1="10" x2="23" y2="10" />
-            <circle cx="18" cy="15" r="1.5" fill="currentColor" stroke="none" />
-          </svg>
+            水
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: 30,
+              color: 'white',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Suiki
+          </span>
         </div>
 
-        {/* Copy */}
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h2 className="text-xl font-semibold text-[--color-text-primary]">
-            {heading}
-          </h2>
-          <p className="text-sm leading-relaxed text-[--color-text-secondary]">
-            {description}
-          </p>
+        {/* Heading */}
+        <h1
+          className="text-white text-center"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: 28,
+            lineHeight: 1.2,
+          }}
+        >
+          {heading}
+        </h1>
+
+        {/* Description */}
+        <p
+          className="mt-3 text-center"
+          style={{ fontSize: 15, color: 'rgba(255,255,255,0.68)', lineHeight: 1.5 }}
+        >
+          {description}
+        </p>
+
+        {/* Feature pills */}
+        <div className="flex gap-2 mt-8 flex-wrap justify-center">
+          {FEATURES.map(({ icon: Icon, label }) => (
+            <div
+              key={label}
+              className="flex items-center gap-1.5 px-3 py-1.5"
+              style={{
+                background: 'rgba(255,255,255,0.12)',
+                borderRadius: 999,
+                border: '1px solid rgba(255,255,255,0.18)',
+              }}
+            >
+              <Icon size={13} color="rgba(255,255,255,0.85)" />
+              <span
+                style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}
+              >
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── CTA ──────────────────────────────────────────────────── */}
+      <div
+        className="mx-auto w-full max-w-[430px] px-5 flex flex-col gap-3"
+        style={{ paddingBottom: 'max(28px, env(safe-area-inset-bottom))' }}
+      >
+        {/*
+         * Theme the dapp-kit ConnectButton white via CSS custom properties.
+         * --primary / --primary-foreground pierce the web component's shadow DOM.
+         * ::part(trigger) in globals.css sets width: 100% and height: 52px.
+         */}
+        <div
+          style={{
+            '--primary': 'white',
+            '--primary-foreground': 'var(--color-brand)',
+            '--radius': '16px',
+          } as React.CSSProperties}
+        >
+          <ConnectButton className="block w-full" />
         </div>
 
-        {/* CTA — full-width on all viewport sizes */}
-        <div className="w-full">
-          <ConnectWallet />
-        </div>
-
-        {/* Trust footer */}
-        <p className="text-center text-xs text-[--color-text-muted]">
-          Ang inyong mga stamps ay nasa SUI blockchain — safe at hindi mawawala.
+        <p
+          className="text-center"
+          style={{ fontSize: 12, color: 'rgba(255,255,255,0.50)', lineHeight: 1.6 }}
+        >
+          Your stamps live on the SUI blockchain — safe and always yours.
         </p>
       </div>
     </div>

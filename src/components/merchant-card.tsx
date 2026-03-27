@@ -71,7 +71,7 @@ export function MerchantCard({
         {/* Merchant logo: raw <img> with emoji fallback */}
         <div
           aria-hidden="true"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[--color-bg-elevated] overflow-hidden"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--color-bg-elevated) overflow-hidden"
         >
           {logoUrl && !imgError ? (
             <img
@@ -91,17 +91,17 @@ export function MerchantCard({
 
         {/* Merchant info */}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-semibold text-[--color-text-primary]">
+          <p className="truncate text-base font-semibold text-(--color-text-primary)">
             {merchantName}
           </p>
-          <p className="truncate text-sm text-[--color-text-secondary]">
+          <p className="truncate text-sm text-(--color-text-secondary)">
             {category}
           </p>
         </div>
 
         {/* Stamp count badge (collapsed only) */}
         {!isExpanded && (
-          <span className="shrink-0 text-sm font-semibold text-[--color-accent-loyalty]">
+          <span className="shrink-0 text-sm font-semibold text-(--color-accent-loyalty)">
             {filledStamps}/{totalStamps}
           </span>
         )}
@@ -111,7 +111,7 @@ export function MerchantCard({
           <motion.div
             animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="shrink-0 text-[--color-text-secondary]"
+            className="shrink-0 text-(--color-text-secondary)"
           >
             <ChevronDown size={20} />
           </motion.div>
@@ -132,9 +132,8 @@ export function MerchantCard({
           >
             <div className="flex flex-col gap-3 px-4 pb-4">
               <StampGrid
-                totalSlots={totalStamps}
-                filledSlots={filledStamps}
-                stampEmoji={stampEmoji}
+                total={totalStamps}
+                earned={filledStamps}
                 size="sm"
               />
 

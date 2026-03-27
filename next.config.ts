@@ -21,12 +21,14 @@ const scriptSrc = isDev
 // Chrome and Firefox fall back to child-src which may block SW registration in
 // future browser versions as worker-src gains wider support.
 //
+// 'blob:' is required by qr-scanner v1.4+: the library uses import.meta.url to
+// derive the worker URL which Turbopack resolves to a blob: URL at runtime.
+// Without blob:, the worker is blocked by CSP and QR decoding silently fails.
+//
 // QR-SEC-01: 'manifest-src self' explicitly permits the browser to fetch
 // /manifest.json. Without this, some strict CSP configurations (especially
 // on Firefox) block manifest loading and prevent PWA installation prompts.
-//
-// Neither directive introduces new attack surface — both are restricted to 'self'.
-const workerSrc = "worker-src 'self'";
+const workerSrc = "worker-src 'self' blob:";
 const manifestSrc = "manifest-src 'self'";
 
 const securityHeaders = [

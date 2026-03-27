@@ -14,9 +14,8 @@ interface QrCodeProps {
 /**
  * QrCode — renders a centered QR code with an optional text label.
  *
- * Uses white-on-transparent rendering so the code is legible over the
- * Suiki dark background without needing a white card behind it.
- * The fgColor matches --color-text-primary from globals.css.
+ * Uses dark-on-white rendering for maximum scanner contrast. Wrap in a
+ * white-background container (e.g. `bg-white p-3 rounded-xl`) for best results.
  */
 export default function QrCode({ data, size = 200, label }: QrCodeProps) {
   return (
@@ -24,13 +23,13 @@ export default function QrCode({ data, size = 200, label }: QrCodeProps) {
       <QRCodeSVG
         value={data}
         size={size}
-        fgColor="#f1f5f9"
-        bgColor="transparent"
+        fgColor="#0f172a"
+        bgColor="#ffffff"
         aria-label={label ?? 'QR code'}
       />
 
       {label && (
-        <p className="text-sm text-[--color-text-muted] text-center">
+        <p className="text-sm text-(--color-text-muted) text-center">
           {label}
         </p>
       )}

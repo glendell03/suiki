@@ -8,16 +8,22 @@
  *                       not just the first one.
  *   FIND-02 (High):     Rate limits per sender address AND per IP (in-memory stub;
  *                       replace with Redis before mainnet — see TODO below).
+ *   SEC-01 (High):      Validates sender is a well-formed Sui address before any processing.
+ *   SEC-02 (High):      Enforces a maximum size on txKindBytes before decoding.
+ *   SEC-03 (High):      In-memory rate-limit store is periodically evicted to prevent OOM.
+ *   SEC-04 (Medium):    Rate-limit counters are incremented only after validation succeeds.
+ *   SEC-08 (Medium):    Fetches up to 10 gas coins to handle a split sponsor wallet.
+ *   SEC-12 (Low):       Maximum PTB command count enforced in validateAllCommands.
  *
  * The server NEVER signs a transaction that contains calls to unauthorized modules
  * or non-MoveCall commands (TransferObjects, SplitCoins, etc.).
  *
- * Request:  POST { txKindBytes: string (base64), sender: string }
+ * Request:  POST { txKindBytes: string (base64 TransactionKind bytes from tx.build({ onlyTransactionKind: true })), sender: string }
  * Response: { transactionBytes: string, sponsorSignature: string }
  *           or { error: string } with an appropriate HTTP status code.
  *
  * Environment variables required:
- *   SPONSOR_PRIVATE_KEY         — Ed25519 secret key, base64-encoded (server-only, never NEXT_PUBLIC_)
+ *   SPONSOR_PRIVATE_KEY         — Ed25519 bech32 secret key (suiprivkey1...) — server-only, never NEXT_PUBLIC_
  *   NEXT_PUBLIC_PACKAGE_ID      — Deployed package ID (0x-prefixed)
  *   NEXT_PUBLIC_SUI_NETWORK     — "testnet" | "mainnet" (default: "testnet")
  */
@@ -30,6 +36,23 @@ import { suiClient } from '@/lib/sui-client';
 import { PACKAGE_ID, MODULE_NAME } from '@/lib/constants';
 import { env } from '@/env';
 import type { SponsoredTxRequest, SponsoredTxResponse } from '@/types/sui';
+
+// ---------------------------------------------------------------------------
+// Input validation constants (SEC-01, SEC-02)
+// ---------------------------------------------------------------------------
+
+/**
+ * Regex for a canonical Sui address: 0x followed by exactly 64 hex characters.
+ * Rejects any string that is not a well-formed Sui address (SEC-01).
+ */
+const SUI_ADDRESS_RE = /^0x[0-9a-fA-F]{64}$/;
+
+/**
+ * Maximum allowed length for the base64-encoded txKindBytes field (SEC-02).
+ * A legitimate PTB with 10 Move calls is well under 10 KB of BCS, which
+ * base64-encodes to ~13.4 KB. 16 KB provides comfortable headroom.
+ */
+const MAX_TX_KIND_BYTES_BASE64_LEN = 16_384;
 
 // ---------------------------------------------------------------------------
 // Move function allowlist
@@ -55,6 +78,14 @@ const ALLOWED_FUNCTIONS = new Set<string>([
 /** Fully-qualified module path that every MoveCall target must start with. */
 const ALLOWED_MODULE = `${PACKAGE_ID}::${MODULE_NAME}` as const;
 
+/**
+ * Maximum number of commands allowed in a single sponsored PTB (SEC-12).
+ * A legitimate Suiki transaction needs at most a handful of Move calls.
+ * Capping at 10 prevents abuse via high-command-count PTBs that exceed
+ * the gas budget after signing.
+ */
+const MAX_COMMANDS = 10;
+
 // ---------------------------------------------------------------------------
 // In-memory rate limiter
 // ---------------------------------------------------------------------------
@@ -79,27 +110,56 @@ const RATE_LIMIT_MAX = 50;
 /** Duration of a rate-limit window in milliseconds (24 hours). */
 const WINDOW_MS = 86_400_000;
 
+// ---------------------------------------------------------------------------
+// Rate-limit store eviction (SEC-03)
+// ---------------------------------------------------------------------------
+
 /**
- * Checks and increments the rate-limit counter for a given key.
+ * Lazy eviction counter. Every SWEEP_INTERVAL requests we scan the store and
+ * remove entries whose window has expired. This prevents the Map from growing
+ * without bound when the server receives many unique keys.
  *
- * @param key - Arbitrary string key (e.g. sender address or `ip:<addr>`).
- * @returns `true` if the request is within the limit; `false` if it should be rejected.
+ * SEC-03: Without eviction the store grows unboundedly and can exhaust process
+ * memory, forcing an OOM restart that also resets all in-flight rate limits.
  */
-function checkRateLimit(key: string): boolean {
+let _sweepCounter = 0;
+const SWEEP_INTERVAL = 500;
+
+function maybeSweepExpiredEntries(): void {
+  _sweepCounter++;
+  if (_sweepCounter % SWEEP_INTERVAL !== 0) return;
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore) {
+    if (now > entry.resetAt) rateLimitStore.delete(key);
+  }
+}
+
+/**
+ * Peeks at the rate-limit counter for a given key without modifying it.
+ *
+ * @returns `true` if a new request from this key would be allowed; `false` if blocked.
+ */
+function peekRateLimit(key: string): boolean {
   const now = Date.now();
   const entry = rateLimitStore.get(key);
+  if (!entry || now > entry.resetAt) return true;
+  return entry.count < RATE_LIMIT_MAX;
+}
 
+/**
+ * Increments the rate-limit counter for a given key, creating a new window if needed.
+ * Call only after peekRateLimit() has confirmed the request is allowed.
+ *
+ * @param key - Arbitrary string key (e.g. sender address or `ip:<addr>`).
+ */
+function consumeRateLimit(key: string): void {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key);
   if (!entry || now > entry.resetAt) {
     rateLimitStore.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
+  } else {
+    entry.count += 1;
   }
-
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-
-  entry.count += 1;
-  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,8 +174,8 @@ interface ValidationResult {
 /**
  * Validates every command in a deserialized Transaction.
  *
- * Rules enforced (FIND-01 + FIND-16):
- *  1. The PTB must contain at least one command.
+ * Rules enforced (FIND-01 + FIND-16 + SEC-12):
+ *  1. The PTB must contain at least one command and at most MAX_COMMANDS.
  *  2. EVERY command must be a MoveCall — no TransferObjects, SplitCoins, etc.
  *  3. EVERY MoveCall must target `{PACKAGE_ID}::suiki` (the authorized module).
  *  4. EVERY function name must be in ALLOWED_FUNCTIONS.
@@ -128,6 +188,14 @@ function validateAllCommands(tx: Transaction): ValidationResult {
 
   if (!data.commands || data.commands.length === 0) {
     return { valid: false, reason: 'Transaction has no commands' };
+  }
+
+  // SEC-12: cap command count to prevent high-cost PTBs from exceeding the gas budget.
+  if (data.commands.length > MAX_COMMANDS) {
+    return {
+      valid: false,
+      reason: `Too many commands: ${data.commands.length} (max ${MAX_COMMANDS})`,
+    };
   }
 
   // Iterate every command — FIND-16: reject if ANY command fails, not just the first.
@@ -172,6 +240,9 @@ function validateAllCommands(tx: Transaction): ValidationResult {
  * returns the signed bytes + sponsor signature for the client to counter-sign.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // Run periodic store eviction to prevent unbounded memory growth (SEC-03).
+  maybeSweepExpiredEntries();
+
   // --- Parse request body ---------------------------------------------------
   let body: Partial<SponsoredTxRequest>;
   try {
@@ -185,8 +256,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!txKindBytes || typeof txKindBytes !== 'string') {
     return NextResponse.json({ error: 'Missing or invalid txKindBytes' }, { status: 400 });
   }
+
+  // SEC-02: reject oversized payloads before attempting any decoding or deserialization.
+  if (txKindBytes.length > MAX_TX_KIND_BYTES_BASE64_LEN) {
+    return NextResponse.json(
+      { error: 'txKindBytes exceeds maximum allowed size' },
+      { status: 400 },
+    );
+  }
+
   if (!sender || typeof sender !== 'string') {
     return NextResponse.json({ error: 'Missing or invalid sender address' }, { status: 400 });
+  }
+
+  // SEC-01: validate sender is a well-formed Sui address before using it as a rate-limit
+  // key or passing it to the transaction. Rejects spoofed, empty, or malformed values.
+  if (!SUI_ADDRESS_RE.test(sender)) {
+    return NextResponse.json({ error: 'Invalid sender address format' }, { status: 400 });
   }
 
   // --- Environment guard ----------------------------------------------------
@@ -198,39 +284,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // --- Rate limiting (FIND-02) ----------------------------------------------
-  // Apply limits per sender address AND per originating IP address.
+  // --- Extract IP for rate limiting -----------------------------------------
+  // SEC-07: x-forwarded-for is trusted only because Vercel's CDN sets and overwrites
+  // it before the request reaches this function. If self-hosting, ensure your reverse
+  // proxy performs the same overwrite, or replace this with a platform-specific header.
   const ip =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
     req.headers.get('x-real-ip') ??
-    'unknown';
-
-  // Check sender first — if blocked return immediately (no side effect on IP counter)
-  if (!checkRateLimit(sender)) {
-    return NextResponse.json(
-      { error: 'Rate limit exceeded. Maximum 50 sponsored transactions per day.' },
-      { status: 429 },
-    );
-  }
-  // Check IP — if blocked, roll back the sender increment to avoid draining quota
-  if (!checkRateLimit(`ip:${ip}`)) {
-    const entry = rateLimitStore.get(sender);
-    if (entry && entry.count > 0) entry.count -= 1;
-    return NextResponse.json(
-      { error: 'Rate limit exceeded. Maximum 50 sponsored transactions per day.' },
-      { status: 429 },
-    );
-  }
+    'no-ip'; // use a fixed key so all no-IP requests share one bucket, not 'unknown'
 
   // --- Deserialize transaction (FIND-01) ------------------------------------
+  // The client sends TransactionKind bytes (built with onlyTransactionKind:true),
+  // not full TransactionData bytes. Use fromKind() to reconstruct the Transaction.
   let tx: Transaction;
   try {
-    tx = Transaction.from(Buffer.from(txKindBytes, 'base64'));
+    tx = Transaction.fromKind(Buffer.from(txKindBytes, 'base64'));
   } catch {
     return NextResponse.json({ error: 'Invalid transaction bytes' }, { status: 400 });
   }
 
-  // --- Validate ALL commands (FIND-01 + FIND-16) ----------------------------
+  // --- Validate ALL commands (FIND-01 + FIND-16 + SEC-12) -------------------
   const validation = validateAllCommands(tx);
   if (!validation.valid) {
     return NextResponse.json(
@@ -239,10 +312,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // --- Rate limiting (FIND-02 + SEC-04) -------------------------------------
+  // Applied AFTER deserialization and validation so that quota is only consumed
+  // for requests that would have been signed (SEC-04). Peek-then-consume avoids
+  // the rollback race condition in the previous implementation.
+  if (!peekRateLimit(sender)) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Maximum 50 sponsored transactions per day.' },
+      { status: 429 },
+    );
+  }
+  if (!peekRateLimit(`ip:${ip}`)) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Maximum 50 sponsored transactions per day.' },
+      { status: 429 },
+    );
+  }
+  // Both checks passed — commit the increments.
+  consumeRateLimit(sender);
+  consumeRateLimit(`ip:${ip}`);
+
   // --- Load sponsor keypair -------------------------------------------------
   let sponsorKeypair: Ed25519Keypair;
   try {
-    sponsorKeypair = Ed25519Keypair.fromSecretKey(Buffer.from(env.SPONSOR_PRIVATE_KEY, 'base64'));
+    // SPONSOR_PRIVATE_KEY is a bech32-encoded key (suiprivkey1...) as output by
+    // `new Ed25519Keypair().getSecretKey()` in @mysten/sui v2+.
+    sponsorKeypair = Ed25519Keypair.fromSecretKey(env.SPONSOR_PRIVATE_KEY);
   } catch {
     return NextResponse.json({ error: 'Invalid sponsor keypair configuration' }, { status: 503 });
   }
@@ -260,14 +355,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     tx.setGasOwner(sponsorAddress);
 
     // Fetch sponsor's SUI coins to use as gas payment.
-    // listCoins defaults to 0x2::sui::SUI and returns Coin objects with their
-    // objectId, version, and digest — exactly what setGasPayment requires.
-    const gasCoins = await suiClient.listCoins({
+    // SEC-08: fetch up to 10 coins so setGasPayment can merge multiple small coins.
+    // A sponsor wallet split into many small coins will still work correctly.
+    // SuiGrpcClient v2: coin queries are on client.core — not the top-level client.
+    const gasCoinsResult = await suiClient.core.listCoins({
       owner: sponsorAddress,
-      limit: 1,
+      limit: 10,
     });
 
-    const gasPayment = gasCoins.objects.map((coin) => ({
+    const gasPayment = gasCoinsResult.objects.map((coin) => ({
       objectId: coin.objectId,
       version: coin.version,
       digest: coin.digest,

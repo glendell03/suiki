@@ -1,0 +1,174 @@
+<style>
+  body { background: #0a1a14; color: #f1f5f9; font-family: -apple-system, 'Inter', sans-serif; }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; max-width: 900px; margin: 0 auto; }
+  .card { cursor: pointer; border-radius: 16px; border: 2px solid rgba(74,222,128,0.1); background: rgba(10,26,20,0.8); overflow: hidden; transition: border-color 0.2s; }
+  .card:hover { border-color: rgba(74,222,128,0.35); }
+  .card.selected { border-color: #4ade80; }
+  .card-label { padding: 10px 14px; border-top: 1px solid rgba(74,222,128,0.08); }
+  .card-label h3 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: #f1f5f9; }
+  .card-label p { margin: 0; font-size: 11px; color: #7fb891; line-height: 1.4; }
+
+  .stamp-demo {
+    padding: 16px;
+    background: rgba(19,42,31,0.6);
+    margin: 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(74,222,128,0.1);
+  }
+
+  /* A: Circular bordered stamps */
+  .grid-a { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .stamp-a-filled {
+    width: 100%; aspect-ratio: 1;
+    border-radius: 50%;
+    background: rgba(245,158,11,0.15);
+    border: 1.5px solid rgba(245,158,11,0.5);
+    display: flex; align-items:center; justify-content:center;
+    font-size: 16px;
+  }
+  .stamp-a-empty {
+    width: 100%; aspect-ratio: 1;
+    border-radius: 50%;
+    background: rgba(20,60,40,0.3);
+    border: 1.5px dashed rgba(74,222,128,0.15);
+    display: flex; align-items:center; justify-content:center;
+  }
+  .stamp-a-reward {
+    width: 100%; aspect-ratio: 1;
+    border-radius: 50%;
+    background: rgba(74,222,128,0.1);
+    border: 1.5px solid rgba(74,222,128,0.3);
+    display: flex; align-items:center; justify-content:center;
+    font-size: 16px;
+  }
+
+  /* B: Flat emoji on dark surface, last = gift */
+  .grid-b { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .stamp-b-filled {
+    width: 100%; aspect-ratio: 1;
+    border-radius: 10px;
+    background: rgba(245,158,11,0.12);
+    display: flex; align-items:center; justify-content:center;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(245,158,11,0.1);
+  }
+  .stamp-b-empty {
+    width: 100%; aspect-ratio: 1;
+    border-radius: 10px;
+    background: rgba(20,60,40,0.4);
+    display: flex; align-items:center; justify-content:center;
+  }
+  .stamp-b-empty-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(74,222,128,0.15);
+  }
+  .stamp-b-reward {
+    width: 100%; aspect-ratio: 1;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(74,222,128,0.2), rgba(34,197,94,0.1));
+    border: 1px solid rgba(74,222,128,0.3);
+    display: flex; align-items:center; justify-content:center;
+    font-size: 18px;
+  }
+
+  /* C: Progress bar only */
+  .progress-c { display: flex; flex-direction: column; gap: 10px; }
+  .progress-bar-track {
+    height: 8px;
+    background: rgba(20,60,40,0.5);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    width: 62%;
+    background: linear-gradient(90deg, #4ade80, #22c55e);
+    border-radius: 999px;
+    box-shadow: 0 0 8px rgba(74,222,128,0.4);
+  }
+  .progress-segments { display: flex; gap: 3px; }
+  .seg-filled { flex: 1; height: 4px; border-radius: 2px; background: #4ade80; }
+  .seg-empty { flex: 1; height: 4px; border-radius: 2px; background: rgba(74,222,128,0.12); }
+  .progress-label { display: flex; justify-content: space-between; align-items: center; }
+  .progress-label span { font-size: 11px; color: #7fb891; }
+  .progress-label strong { font-size: 13px; color: #4ade80; font-weight: 700; }
+  .stamp-count-display { display: flex; align-items: baseline; gap: 4px; }
+  .stamp-count-display .big { font-size: 32px; font-weight: 800; color: #f1f5f9; line-height: 1; }
+  .stamp-count-display .slash { font-size: 18px; color: #475569; }
+  .stamp-count-display .total { font-size: 18px; color: #7fb891; }
+</style>
+
+<h2>Stamp Display Style</h2>
+<p class="subtitle">How should stamps look inside the expanded loyalty card?</p>
+
+<div class="cards">
+
+  <!-- A: Circular bordered -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="stamp-demo">
+      <div class="grid-a">
+        <div class="stamp-a-filled">☕</div>
+        <div class="stamp-a-filled">☕</div>
+        <div class="stamp-a-filled">☕</div>
+        <div class="stamp-a-filled">☕</div>
+        <div class="stamp-a-filled">☕</div>
+        <div class="stamp-a-filled">☕</div>
+        <div class="stamp-a-empty"></div>
+        <div class="stamp-a-empty"></div>
+        <div class="stamp-a-reward">🎁</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>A — Circular Stamps</h3>
+      <p>Round bordered slots, emoji inside. Last slot = gift. Feels like a real stamp card.</p>
+    </div>
+  </div>
+
+  <!-- B: Rounded square flat -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="stamp-demo">
+      <div class="grid-b">
+        <div class="stamp-b-filled">☕</div>
+        <div class="stamp-b-filled">☕</div>
+        <div class="stamp-b-filled">☕</div>
+        <div class="stamp-b-filled">☕</div>
+        <div class="stamp-b-filled">☕</div>
+        <div class="stamp-b-filled">☕</div>
+        <div class="stamp-b-empty"><div class="stamp-b-empty-dot"></div></div>
+        <div class="stamp-b-empty"><div class="stamp-b-empty-dot"></div></div>
+        <div class="stamp-b-reward">🎁</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>B — Rounded Square</h3>
+      <p>Flat rounded tiles, empty = subtle dot. Cleaner, more app-like. Gift icon at the reward slot.</p>
+    </div>
+  </div>
+
+  <!-- C: Big count + bar -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="stamp-demo">
+      <div class="progress-c">
+        <div class="stamp-count-display">
+          <span class="big">6</span>
+          <span class="slash">/</span>
+          <span class="total">9</span>
+          <span style="font-size:11px;color:#7fb891;margin-left:6px;">stamps</span>
+        </div>
+        <div class="progress-segments">
+          <div class="seg-filled"></div><div class="seg-filled"></div><div class="seg-filled"></div>
+          <div class="seg-filled"></div><div class="seg-filled"></div><div class="seg-filled"></div>
+          <div class="seg-empty"></div><div class="seg-empty"></div><div class="seg-empty"></div>
+        </div>
+        <div style="font-size:10px;color:#7fb891;margin-top:2px;">3 more stamps for your reward 🎁</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>C — Big Count + Bar</h3>
+      <p>Large numeric progress + segmented bar. More abstract but instantly readable at a glance.</p>
+    </div>
+  </div>
+
+</div>

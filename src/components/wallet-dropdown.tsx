@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { UserRound, Copy, LogOut, Check } from "lucide-react";
+import { UserRound, Copy, LogOut, Check, Wallet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import {
   useCurrentAccount,
+  useCurrentClient,
   useDAppKit,
 } from "@mysten/dapp-kit-react";
 
@@ -14,17 +16,33 @@ export function truncateAddress(address: string): string {
   return `${address.slice(0, 6)}\u2026${address.slice(-4)}`;
 }
 
+/** Format MIST to SUI with up to 4 decimal places, trimming trailing zeros. */
+function formatSui(mist: string): string {
+  const sui = Number(mist) / 1_000_000_000;
+  return sui.toLocaleString("en-US", { maximumFractionDigits: 4 });
+}
+
+interface WalletDropdownProps {
+  /**
+   * "light" — white avatar for placement on brand-blue backgrounds.
+   * "default" — brand-colored avatar for placement on white/light backgrounds.
+   */
+  variant?: "default" | "light";
+}
+
 /**
- * WalletDropdown -- circular glass avatar button with animated dropdown.
+ * WalletDropdown — circular avatar button that opens a wallet panel.
  *
- * Shows a UserRound icon. On tap, slides down a panel with:
- *   - Full wallet address (truncated, copy button)
+ * Panel shows:
+ *   - SUI balance
+ *   - Truncated address with copy button
  *   - Disconnect button
  *
  * Closes on outside click or Escape key.
  */
-export function WalletDropdown() {
+export function WalletDropdown({ variant = "default" }: WalletDropdownProps) {
   const account = useCurrentAccount();
+  const client = useCurrentClient();
   const { disconnectWallet } = useDAppKit();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -32,6 +50,16 @@ export function WalletDropdown() {
 
   const address = account?.address ?? "";
   const shortAddress = address ? truncateAddress(address) : null;
+
+  const { data: balanceData } = useQuery({
+    queryKey: ["sui-balance", address],
+    queryFn: () =>
+      client.getBalance({ owner: address, coinType: "0x2::sui::SUI" }),
+    enabled: !!address && open,
+    staleTime: 30_000,
+  });
+
+  const suiBalance = balanceData ? formatSui(balanceData.balance.balance) : "—";
 
   /* Close on outside click */
   useEffect(() => {
@@ -53,26 +81,19 @@ export function WalletDropdown() {
     return () => document.removeEventListener("keydown", handleKey);
   }, [open]);
 
-  /** Copy the full address to clipboard and flash a check icon. */
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(address);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Clipboard API unavailable (non-secure context or permission denied)
+      // Clipboard API unavailable
     }
   }
 
-  /* Disconnected state -- show empty circle placeholder */
-  if (!account) {
-    return (
-      <div
-        className="h-8 w-8 rounded-full bg-[--color-bg-elevated] border border-[--color-border]"
-        aria-label="Wallet not connected"
-      />
-    );
-  }
+  if (!account) return null;
+
+  const isLight = variant === "light";
 
   return (
     <div ref={ref} className="relative">
@@ -83,60 +104,100 @@ export function WalletDropdown() {
         aria-label="Wallet menu"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-[--color-primary]/30 bg-[--color-primary]/15"
+        className="tap-target flex items-center justify-center rounded-full"
+        style={{
+          width: 36,
+          height: 36,
+          background: isLight ? "rgba(255,255,255,0.20)" : "var(--color-brand-subtle)",
+          border: isLight ? "1.5px solid rgba(255,255,255,0.35)" : "1.5px solid var(--color-brand)",
+        }}
       >
         <UserRound
-          size={16}
-          className="text-[--color-primary]"
+          size={18}
           strokeWidth={2}
+          style={{ color: isLight ? "white" : "var(--color-brand)" }}
         />
       </motion.button>
 
-      {/* Dropdown */}
+      {/* Dropdown panel */}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+            initial={{ opacity: 0, y: -6, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="liquid-surface absolute right-0 top-10 z-50 w-64 rounded-2xl p-3"
-            style={{ transformOrigin: "top right" }}
+            exit={{ opacity: 0, y: -6, scale: 0.96 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            role="menu"
+            className="absolute right-0 top-11 z-50 w-64 flex flex-col gap-1"
+            style={{
+              background: "var(--color-surface)",
+              borderRadius: "var(--radius-xl)",
+              boxShadow: "var(--shadow-float)",
+              border: "1px solid var(--color-border)",
+              transformOrigin: "top right",
+              padding: "10px",
+            }}
           >
+            {/* Balance row */}
+            <div
+              className="flex items-center gap-3 px-3 py-3"
+              style={{
+                background: "var(--color-brand-subtle)",
+                borderRadius: "var(--radius-lg)",
+              }}
+            >
+              <Wallet size={16} style={{ color: "var(--color-brand)", flexShrink: 0 }} />
+              <div className="flex flex-col min-w-0">
+                <span
+                  className="text-(--color-text-muted)"
+                  style={{ fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}
+                >
+                  Balance
+                </span>
+                <span
+                  className="text-(--color-text-primary) tabular-nums"
+                  style={{ fontSize: 15, fontWeight: 700, fontFamily: "var(--font-display)" }}
+                >
+                  {suiBalance} SUI
+                </span>
+              </div>
+            </div>
+
             {/* Address row */}
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-[--color-bg-elevated]/60 px-3 py-2.5">
-              <span className="font-address truncate text-[--color-text-secondary]">
+            <button
+              onClick={handleCopy}
+              aria-label="Copy wallet address"
+              className="flex items-center justify-between gap-2 px-3 py-2.5 w-full text-left transition-colors"
+              style={{ borderRadius: "var(--radius-lg)" }}
+            >
+              <span
+                className="truncate text-(--color-text-secondary)"
+                style={{ fontSize: 13, fontFamily: "var(--font-mono-stack)" }}
+              >
                 {shortAddress}
               </span>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={handleCopy}
-                aria-label="Copy wallet address"
-                className="flex-shrink-0 text-[--color-text-muted] transition-colors hover:text-[--color-text-primary]"
-              >
+              <span className="shrink-0 text-(--color-text-muted)">
                 {copied ? (
-                  <Check size={14} className="text-[--color-primary]" />
+                  <Check size={14} style={{ color: "var(--color-brand)" }} />
                 ) : (
                   <Copy size={14} />
                 )}
-              </motion.button>
-            </div>
+              </span>
+            </button>
 
             {/* Divider */}
-            <div className="my-2 h-px bg-[--color-border-subtle]" />
+            <div className="h-px mx-1" style={{ background: "var(--color-border)" }} />
 
             {/* Disconnect */}
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => {
-                disconnectWallet();
-                setOpen(false);
-              }}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[--color-error] transition-colors hover:bg-[--color-error]/10"
+            <button
+              onClick={() => { disconnectWallet(); setOpen(false); }}
+              role="menuitem"
+              className="flex items-center gap-2.5 px-3 py-2.5 w-full text-left transition-colors"
+              style={{ borderRadius: "var(--radius-lg)", color: "var(--color-error, #dc2626)", fontSize: 14 }}
             >
               <LogOut size={15} strokeWidth={2} />
-              Disconnect wallet
-            </motion.button>
+              <span style={{ fontWeight: 500 }}>Disconnect wallet</span>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

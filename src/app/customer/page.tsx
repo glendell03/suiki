@@ -1,23 +1,20 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCurrentAccount } from "@mysten/dapp-kit-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Store } from "lucide-react";
+import { useAccount } from "@/hooks/use-account";
+import { ScanLine, CreditCard, Compass } from "lucide-react";
 import { motion } from "framer-motion";
 import { WalletGuard } from "@/components/wallet-guard";
 import { BottomNav } from "@/components/bottom-nav";
-import { MerchantCard } from "@/components/merchant-card";
-import { SearchBar } from "@/components/search-bar";
+import { PageHeader } from "@/components/page-header";
+import { WalletDropdown } from "@/components/wallet-dropdown";
+import { StampCard } from "@/components/stamp-card";
+import { QuickAction } from "@/components/quick-action";
+import { SectionHeader } from "@/components/section-header";
 import { EmptyState } from "@/components/empty-state";
-import { FeatureGrid } from "@/components/feature-grid";
-import { SiteHeader } from "@/app/site-header";
+import { Skeleton } from "@/components/skeleton";
 import { useMyCards } from "@/hooks/use-my-cards";
-import { useSponsoredTx } from "@/hooks/use-sponsored-tx";
-import { buildRedeem } from "@/lib/transactions";
-import type { StampCard } from "@/types/sui";
+import type { StampCard as StampCardType } from "@/types/sui";
 
 export default function CustomerPage() {
   return (
@@ -46,174 +43,183 @@ const itemVariants = {
   },
 };
 
-function CustomerDashboard() {
-  const router = useRouter();
-  const account = useCurrentAccount();
-  const queryClient = useQueryClient();
-  const { data: cards, isLoading, error } = useMyCards();
-  const { executeSponsoredTx, error: redeemError } = useSponsoredTx();
-
-  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const isRedeemingRef = useRef(false);
-
-  const handleRedeem = async (card: StampCard) => {
-    if (!account || isRedeemingRef.current) return;
-    isRedeemingRef.current = true;
-    try {
-      await executeSponsoredTx(
-        buildRedeem(account.address, card.programId, card.objectId),
-      );
-      await queryClient.invalidateQueries({
-        queryKey: ["cards", account.address],
-      });
-    } finally {
-      isRedeemingRef.current = false;
-    }
-  };
-
-  const handleToggle = (cardId: string) => {
-    setExpandedCardId((prev) => (prev === cardId ? null : cardId));
-  };
-
-  /* Sort by progress descending, then filter by search query. */
-  const sortedCards = [...(cards ?? [])].sort((a, b) => {
-    const aProgress =
-      (a.currentStamps ?? 0) / Math.max(a.stampsRequired ?? 1, 1);
-    const bProgress =
-      (b.currentStamps ?? 0) / Math.max(b.stampsRequired ?? 1, 1);
-    return bProgress - aProgress;
+/**
+ * Sort cards by stamp progress (descending), with most-recently-stamped
+ * as tiebreaker. Returns the featured card and remaining cards separately.
+ */
+function splitFeaturedCard(cards: StampCardType[]) {
+  const sorted = [...cards].sort((a, b) => {
+    const pA = a.currentStamps / Math.max(a.stampsRequired, 1);
+    const pB = b.currentStamps / Math.max(b.stampsRequired, 1);
+    if (pB !== pA) return pB - pA;
+    return b.lastStamped - a.lastStamped;
   });
 
-  const filteredCards = searchQuery
-    ? sortedCards.filter((c) =>
-        c.merchantName.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : sortedCards;
+  return {
+    featured: sorted[0] ?? null,
+    others: sorted.slice(1),
+  };
+}
 
-  /* Derive short display name from wallet address. */
-  const shortName = account?.address ? account.address.slice(0, 6) : "there";
+/** Suiki brand logo mark shown in the PageHeader left slot. */
+function SuikiBrand() {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        aria-hidden="true"
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 700,
+          fontSize: 20,
+          color: "var(--color-brand)",
+          lineHeight: 1,
+        }}
+      >
+        水
+      </span>
+      <span
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 700,
+          fontSize: 17,
+          color: "var(--color-text-primary)",
+        }}
+      >
+        Suiki
+      </span>
+    </div>
+  );
+}
+
+/** Customer home dashboard — cards, quick actions, and more programs. */
+function CustomerDashboard() {
+  const router = useRouter();
+  const account = useAccount();
+  const { data: cards, isLoading, error } = useMyCards();
+
+  const hasCards = !isLoading && !error && cards && cards.length > 0;
+  const isEmpty = !isLoading && !error && cards?.length === 0;
+  const { featured, others } = hasCards
+    ? splitFeaturedCard(cards)
+    : { featured: null, others: [] };
 
   return (
-    <div className="page-gradient flex min-h-dvh flex-col">
-      <SiteHeader />
+    <div className="bg-(--color-bg-base) min-h-dvh">
+      <PageHeader
+        title=""
+        leftAction={<SuikiBrand />}
+        rightAction={account ? <WalletDropdown /> : null}
+      />
 
-      <div className="flex-1 overflow-y-auto pb-nav px-5 pt-1">
-        {/* Greeting -- Plus Jakarta Sans via --font-display */}
-        <section className="mb-5">
-          <h1
-            className="text-[28px] font-extrabold tracking-tight text-[--color-text-primary] leading-tight"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Hey,{" "}
-            <span className="text-[--color-primary]">{shortName}!</span>
-          </h1>
-          <p className="mt-1 text-sm text-[--color-text-secondary]">
-            Let&apos;s earn more stamps today
-          </p>
+      <div className="mx-auto w-full max-w-[430px] pt-14 pb-nav px-4 flex flex-col gap-6 py-5">
+        {/* Your Cards section */}
+        <section>
+          <SectionHeader
+            title="Your Cards"
+            action={{ label: "See all \u2192", href: "/customer/cards" }}
+          />
+
+          {/* Loading state */}
+          {isLoading && (
+            <div
+              className="flex flex-col gap-3"
+              aria-busy="true"
+              aria-label="Loading stamp cards"
+            >
+              <Skeleton variant="card" />
+              <Skeleton variant="card" />
+            </div>
+          )}
+
+          {/* Error state */}
+          {!isLoading && error && (
+            <p className="text-center text-sm text-(--color-text-secondary)">
+              {error.message}
+            </p>
+          )}
+
+          {/* Empty state */}
+          {isEmpty && (
+            <EmptyState
+              icon={ScanLine}
+              title="No loyalty cards yet"
+              description="Scan a QR code at a Suiki merchant to start collecting stamps."
+              action={{ label: "Scan QR Code", href: "/customer/scan" }}
+            />
+          )}
+
+          {/* Featured card */}
+          {featured && (
+            <StampCard
+              programId={String(featured.programId)}
+              merchantName={featured.merchantName}
+              programName="Loyalty Program"
+              logoUrl={featured.merchantLogo}
+              stampCount={featured.currentStamps}
+              totalStamps={featured.stampsRequired}
+              rewardDescription="Reward"
+              variant="featured"
+              onTap={() =>
+                router.push(`/customer/cards/${String(featured.objectId)}`)
+              }
+            />
+          )}
         </section>
 
-        {/* Search */}
-        <div className="mb-5">
-          <SearchBar
-            placeholder="Search your cards..."
-            value={searchQuery}
-            onChange={setSearchQuery}
-          />
-        </div>
-
-        {/* 2x2 Feature grid */}
-        <div className="mb-6">
-          <FeatureGrid />
-        </div>
-
-        {/* Redeem error */}
-        {redeemError && (
-          <div className="mb-4 rounded-xl border border-[--color-error]/30 bg-[--color-error]/10 px-4 py-3">
-            <p className="text-sm text-[--color-error]">
-              {redeemError.message}
-            </p>
+        {/* Quick Actions section */}
+        <section>
+          <SectionHeader title="Quick Actions" />
+          <div className="flex gap-3 overflow-x-auto scrollbar-none">
+            <QuickAction
+              icon={ScanLine}
+              label="Scan QR"
+              href="/customer/scan"
+              variant="primary"
+            />
+            <QuickAction
+              icon={CreditCard}
+              label="All Cards"
+              href="/customer/cards"
+            />
+            <QuickAction
+              icon={Compass}
+              label="Explore"
+              href="/customer/search"
+            />
           </div>
-        )}
+        </section>
 
-        {/* My Cards section header with "View all" link */}
-        <div className="mb-3 flex items-center justify-between">
-          <h2
-            className="text-base font-bold text-[--color-text-primary]"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            My Cards
-          </h2>
-          <Link
-            href="/customer/cards"
-            className="text-xs font-medium text-[--color-primary] hover:opacity-80"
-          >
-            View all &rarr;
-          </Link>
-        </div>
-
-        {/* Loading skeletons */}
-        {isLoading && (
-          <ul
-            className="flex flex-col gap-3"
-            aria-busy="true"
-            aria-label="Loading stamp cards"
-          >
-            {[0, 1, 2].map((i) => (
-              <li
-                key={i}
-                className="h-[72px] animate-pulse rounded-2xl border border-[--color-border] bg-[--color-bg-surface]"
-                aria-hidden="true"
-              />
-            ))}
-          </ul>
-        )}
-
-        {/* Fetch error */}
-        {!isLoading && error && (
-          <p className="text-center text-sm text-[--color-error]">
-            {error.message}
-          </p>
-        )}
-
-        {/* Empty state */}
-        {!isLoading && !error && cards?.length === 0 && (
-          <EmptyState
-            icon={Store}
-            title="No stamp cards yet"
-            description="Visit a merchant and scan their QR code to start collecting stamps."
-            action={{
-              label: "Scan a merchant QR",
-              onClick: () => router.push("/customer/scan"),
-            }}
-          />
-        )}
-
-        {/* Card list with staggered Framer Motion entrance */}
-        {!isLoading && !error && filteredCards.length > 0 && (
-          <motion.ul
-            variants={listVariants}
-            initial="hidden"
-            animate="visible"
-            className="flex flex-col gap-3"
-          >
-            {filteredCards.map((card) => (
-              <motion.li key={card.objectId} variants={itemVariants}>
-                <MerchantCard
-                  merchantName={card.merchantName}
-                  category="Loyalty Card"
-                  logoUrl={card.merchantLogo}
-                  filledStamps={card.currentStamps ?? 0}
-                  totalStamps={card.stampsRequired ?? 9}
-                  isExpanded={expandedCardId === card.objectId}
-                  onToggle={() => handleToggle(card.objectId)}
-                  onShowQR={() => {
-                    if (account) void handleRedeem(card);
-                  }}
-                />
-              </motion.li>
-            ))}
-          </motion.ul>
+        {/* More Programs section — remaining cards as compact tiles */}
+        {others.length > 0 && (
+          <section>
+            <SectionHeader title="More Programs" />
+            <motion.div
+              variants={listVariants}
+              initial="hidden"
+              animate="visible"
+              className="flex flex-col gap-3"
+            >
+              {others.map((card) => (
+                <motion.div key={String(card.objectId)} variants={itemVariants}>
+                  <StampCard
+                    programId={String(card.programId)}
+                    merchantName={card.merchantName}
+                    programName="Loyalty Program"
+                    logoUrl={card.merchantLogo}
+                    stampCount={card.currentStamps}
+                    totalStamps={card.stampsRequired}
+                    rewardDescription="Reward"
+                    variant="compact"
+                    onTap={() =>
+                      router.push(
+                        `/customer/cards/${String(card.objectId)}`,
+                      )
+                    }
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </section>
         )}
       </div>
 

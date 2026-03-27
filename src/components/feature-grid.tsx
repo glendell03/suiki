@@ -27,9 +27,8 @@ type FeatureTile = {
 /**
  * Feature tile definitions for the customer home page grid.
  *
- * Colour values are per-tile accent data (teal, green, amber, rose) rather
- * than design tokens -- each tile has its own unique gradient identity that
- * does not map to a single CSS variable.
+ * B&W theme: tiles use light gray gradients with near-black accents.
+ * Rewards keeps amber as the loyalty accent.
  */
 const FEATURES: FeatureTile[] = [
   {
@@ -38,10 +37,10 @@ const FEATURES: FeatureTile[] = [
     icon: Stamp,
     title: "Earn Stamps",
     subtitle: "Scan at any store",
-    fromColor: "rgba(17,94,89,0.9)",
-    toColor: "rgba(6,78,59,0.9)",
-    borderColor: "rgba(45,212,191,0.25)",
-    accentColor: "#2dd4bf",
+    fromColor: "rgba(245,245,245,1)",
+    toColor: "rgba(232,232,232,1)",
+    borderColor: "rgba(0,0,0,0.1)",
+    accentColor: "#111111",
   },
   {
     id: "cards",
@@ -49,10 +48,10 @@ const FEATURES: FeatureTile[] = [
     icon: CreditCard,
     title: "My Cards",
     subtitle: "View all progress",
-    fromColor: "rgba(26,61,42,0.9)",
-    toColor: "rgba(19,42,31,0.9)",
-    borderColor: "rgba(74,222,128,0.2)",
-    accentColor: "#4ade80",
+    fromColor: "rgba(248,248,248,1)",
+    toColor: "rgba(236,236,236,1)",
+    borderColor: "rgba(0,0,0,0.1)",
+    accentColor: "#374151",
   },
   {
     id: "rewards",
@@ -60,10 +59,10 @@ const FEATURES: FeatureTile[] = [
     icon: Gift,
     title: "Rewards",
     subtitle: "Redeem your stamps",
-    fromColor: "rgba(120,53,15,0.85)",
-    toColor: "rgba(69,26,3,0.85)",
-    borderColor: "rgba(245,158,11,0.25)",
-    accentColor: "#f59e0b",
+    fromColor: "rgba(255,251,243,1)",
+    toColor: "rgba(254,243,199,1)",
+    borderColor: "rgba(217,119,6,0.2)",
+    accentColor: "#d97706",
   },
   {
     id: "lucky",
@@ -71,10 +70,10 @@ const FEATURES: FeatureTile[] = [
     icon: Sparkles,
     title: "Lucky Draw",
     subtitle: "Stamp holders only",
-    fromColor: "rgba(136,19,55,0.85)",
-    toColor: "rgba(80,7,36,0.85)",
-    borderColor: "rgba(244,63,94,0.25)",
-    accentColor: "#f43f5e",
+    fromColor: "rgba(243,243,243,1)",
+    toColor: "rgba(228,228,228,1)",
+    borderColor: "rgba(0,0,0,0.12)",
+    accentColor: "#000000",
   },
 ];
 
@@ -123,7 +122,7 @@ export function FeatureGrid() {
 
               {/* Text */}
               <div className="mt-3">
-                <p className="text-sm font-bold leading-tight text-white">
+                <p className="text-sm font-bold leading-tight text-(--color-text-primary)">
                   {f.title}
                 </p>
                 <p

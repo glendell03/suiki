@@ -22,7 +22,7 @@
 import { use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
+import { useAccount } from '@/hooks/use-account';
 import { WalletGuard } from '@/components/wallet-guard';
 import { useMyCards } from '@/hooks/use-my-cards';
 import { encodeRewardClaimQR } from '@/lib/qr-utils';
@@ -60,7 +60,7 @@ interface RewardClaimViewProps {
 
 function RewardClaimView({ cardId }: RewardClaimViewProps) {
   const router = useRouter();
-  const account = useCurrentAccount();
+  const account = useAccount();
   const { data: cards, isLoading, error } = useMyCards();
 
   const card = cards?.find((c) => String(c.objectId) === cardId) ?? null;
@@ -103,11 +103,11 @@ function RewardClaimView({ cardId }: RewardClaimViewProps) {
       {!isLoading && !error && card && !isCardComplete && (
         <div className="flex flex-col items-center gap-4 py-16 text-center">
           <div
-            className="h-10 w-10 rounded-full border-2 border-[--color-primary] border-t-transparent animate-spin"
+            className="h-10 w-10 rounded-full border-2 border-(--color-primary) border-t-transparent animate-spin"
             aria-label="Redirecting…"
             role="status"
           />
-          <p className="text-sm text-[--color-text-secondary]">Redirecting…</p>
+          <p className="text-sm text-(--color-text-secondary)">Redirecting…</p>
         </div>
       )}
 
@@ -162,35 +162,35 @@ function CongratulationsScreen({
       <div className="text-center flex flex-col items-center gap-3">
         <span className="text-6xl" aria-hidden="true">🎉</span>
 
-        <h1 className="text-3xl font-bold text-[--color-success]">
+        <h1 className="text-3xl font-bold text-(--color-success)">
           Congratulations!
         </h1>
 
-        <p className="text-lg font-semibold text-[--color-text-primary] leading-snug">
+        <p className="text-lg font-semibold text-(--color-text-primary) leading-snug">
           You earned a free reward at {merchantName || 'the merchant'}!
         </p>
       </div>
 
       {/* Reward details card */}
-      <div className="rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-5 flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-[--color-text-muted] uppercase tracking-wide">
+      <div className="rounded-2xl border border-(--color-border) bg-(--color-bg-surface) p-5 flex flex-col gap-3">
+        <h2 className="text-sm font-semibold text-(--color-text-muted) uppercase tracking-wide">
           Your Reward
         </h2>
 
-        <p className="text-base font-medium text-[--color-text-primary]">
+        <p className="text-base font-medium text-(--color-text-primary)">
           {`Free reward after ${stampsRequired} stamps collected`}
         </p>
 
         {totalEarned > 1 && (
-          <p className="text-xs text-[--color-text-muted]">
+          <p className="text-xs text-(--color-text-muted)">
             This is your {totalEarned}{ordinalSuffix(totalEarned)} reward from {merchantName}
           </p>
         )}
       </div>
 
       {/* QR code for merchant to scan */}
-      <div className="rounded-2xl border border-[--color-border] bg-[--color-bg-surface] p-6">
-        <p className="text-sm font-medium text-[--color-text-secondary] text-center mb-4">
+      <div className="rounded-2xl border border-(--color-border) bg-(--color-bg-surface) p-6">
+        <p className="text-sm font-medium text-(--color-text-secondary) text-center mb-4">
           Ask the merchant to scan this QR to confirm your reward
         </p>
 
@@ -203,7 +203,7 @@ function CongratulationsScreen({
           />
         </div>
 
-        <p className="mt-3 text-center text-xs text-[--color-text-muted]">
+        <p className="mt-3 text-center text-xs text-(--color-text-muted)">
           Reward claim QR for card {cardId.slice(0, 8)}…{cardId.slice(-6)}
         </p>
       </div>
@@ -213,11 +213,11 @@ function CongratulationsScreen({
         href="/customer/cards"
         className={[
           'w-full inline-flex items-center justify-center rounded-xl px-4 py-3',
-          'bg-[--color-primary] text-white text-sm font-semibold',
+          'bg-(--color-primary) text-white text-sm font-semibold',
           'transition-opacity hover:opacity-90 active:opacity-75',
           'focus-visible:outline-none focus-visible:ring-2',
-          'focus-visible:ring-[--color-primary] focus-visible:ring-offset-2',
-          'focus-visible:ring-offset-[--color-bg-base]',
+          'focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
+          'focus-visible:ring-offset-(--color-bg-base)',
         ].join(' ')}
       >
         Continue
@@ -248,12 +248,12 @@ function RewardSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading reward">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-16 w-16 rounded-full bg-[--color-bg-surface] animate-pulse" />
-        <div className="h-8 w-48 rounded bg-[--color-bg-surface] animate-pulse" />
-        <div className="h-5 w-64 rounded bg-[--color-bg-surface] animate-pulse" />
+        <div className="h-16 w-16 rounded-full bg-(--color-bg-surface) animate-pulse" />
+        <div className="h-8 w-48 rounded bg-(--color-bg-surface) animate-pulse" />
+        <div className="h-5 w-64 rounded bg-(--color-bg-surface) animate-pulse" />
       </div>
-      <div className="h-24 rounded-2xl bg-[--color-bg-surface] animate-pulse" />
-      <div className="h-80 rounded-2xl bg-[--color-bg-surface] animate-pulse" />
+      <div className="h-24 rounded-2xl bg-(--color-bg-surface) animate-pulse" />
+      <div className="h-80 rounded-2xl bg-(--color-bg-surface) animate-pulse" />
     </div>
   );
 }
@@ -264,15 +264,15 @@ interface ErrorStateProps {
 
 function ErrorState({ message }: ErrorStateProps) {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-2xl border border-[--color-error]/30 bg-[--color-error]/10 p-6 text-center">
-      <p className="text-sm text-[--color-error]">{message}</p>
+    <div className="flex flex-col items-center gap-4 rounded-2xl border border-(--color-error)/30 bg-(--color-error)/10 p-6 text-center">
+      <p className="text-sm text-(--color-error)">{message}</p>
       <Link
         href="/customer/cards"
         className={[
           'rounded-xl px-5 py-2.5 text-sm font-semibold',
-          'border border-[--color-border] bg-[--color-bg-surface]',
-          'text-[--color-text-primary]',
-          'transition-colors hover:bg-[--color-bg-elevated]',
+          'border border-(--color-border) bg-(--color-bg-surface)',
+          'text-(--color-text-primary)',
+          'transition-colors hover:bg-(--color-bg-elevated)',
         ].join(' ')}
       >
         Back to Cards
@@ -286,8 +286,8 @@ function NotFoundState() {
     <div className="flex flex-col items-center gap-5 py-12 text-center">
       <span className="text-5xl" aria-hidden="true">🔍</span>
       <div className="flex flex-col gap-1">
-        <p className="font-semibold text-[--color-text-primary]">Card not found</p>
-        <p className="text-sm text-[--color-text-secondary]">
+        <p className="font-semibold text-(--color-text-primary)">Card not found</p>
+        <p className="text-sm text-(--color-text-secondary)">
           This loyalty card doesn&apos;t exist in your wallet.
         </p>
       </div>
@@ -295,11 +295,11 @@ function NotFoundState() {
         href="/customer/cards"
         className={[
           'inline-flex items-center justify-center rounded-xl px-6 py-3',
-          'bg-[--color-primary] text-white text-sm font-semibold',
+          'bg-(--color-primary) text-white text-sm font-semibold',
           'transition-opacity hover:opacity-90 active:opacity-75',
           'focus-visible:outline-none focus-visible:ring-2',
-          'focus-visible:ring-[--color-primary] focus-visible:ring-offset-2',
-          'focus-visible:ring-offset-[--color-bg-base]',
+          'focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
+          'focus-visible:ring-offset-(--color-bg-base)',
         ].join(' ')}
       >
         Back to Cards

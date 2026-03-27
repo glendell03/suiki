@@ -1,204 +1,200 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { ChevronDown, ChevronUp, Store } from 'lucide-react';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
-import { WalletGuard } from '@/components/wallet-guard';
-import { BottomNav } from '@/components/bottom-nav';
-import { GlassCard } from '@/components/glass-card';
-import { ProgressBarStamps } from '@/components/progress-bar-stamps';
-import { StampGrid } from '@/components/stamp-grid';
-import { Button } from '@/components/ui/button';
-import { SiteHeader } from '@/app/site-header';
-import { useMyCards } from '@/hooks/use-my-cards';
-import type { StampCard } from '@/types/sui';
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { ChevronLeft, CreditCard } from "lucide-react";
 
-export default function CardsProgressPage() {
+import { WalletGuard } from "@/components/wallet-guard";
+import { PageHeader } from "@/components/page-header";
+import { BottomNav } from "@/components/bottom-nav";
+import { FilterChips } from "@/components/filter-chips";
+import { StampCard } from "@/components/stamp-card";
+import { EmptyState } from "@/components/empty-state";
+import { Skeleton } from "@/components/skeleton";
+import { useMyCards } from "@/hooks/use-my-cards";
+import type { StampCard as StampCardType } from "@/types/sui";
+
+/** Filter chip options for the cards list. */
+const FILTER_OPTIONS = [
+  { label: "All", value: "all" },
+  { label: "Active", value: "active" },
+  { label: "Near Reward", value: "near" },
+  { label: "Done", value: "done" },
+];
+
+/** Stagger animation for the card list container. */
+const containerVariants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.06, delayChildren: 0.08 },
+  },
+};
+
+/** Spring entrance animation for each card item. */
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 380, damping: 28 },
+  },
+};
+
+/**
+ * Filter cards by their stamp progress status.
+ *
+ * - "active": has at least 1 stamp but not yet complete
+ * - "near": 80%+ progress but not yet complete
+ * - "done": current stamps >= required stamps
+ * - "all" (default): no filter applied
+ */
+function filterCards(cards: StampCardType[], filter: string): StampCardType[] {
+  switch (filter) {
+    case "active":
+      return cards.filter(
+        (c) => c.currentStamps > 0 && c.currentStamps < c.stampsRequired,
+      );
+    case "near":
+      return cards.filter(
+        (c) =>
+          c.stampsRequired > 0 &&
+          c.currentStamps / c.stampsRequired >= 0.8 &&
+          c.currentStamps < c.stampsRequired,
+      );
+    case "done":
+      return cards.filter((c) => c.currentStamps >= c.stampsRequired);
+    default:
+      return cards;
+  }
+}
+
+/** Back button rendered in the PageHeader left slot. */
+const backButton = (
+  <Link
+    href="/customer"
+    aria-label="Back to home"
+    className="flex items-center justify-center w-10 h-10 tap-target rounded-full"
+    style={{ color: "var(--color-text-primary)" }}
+  >
+    <ChevronLeft size={20} strokeWidth={2} />
+  </Link>
+);
+
+export default function CardsPage() {
   return (
     <WalletGuard
       heading="Connect your wallet"
       description="To see your loyalty cards"
     >
-      <CardsProgressDashboard />
+      <CardsContent />
     </WalletGuard>
   );
 }
 
-function CardsProgressDashboard() {
-  const { data: cards, isLoading, error } = useMyCards();
+function CardsContent() {
+  const [filter, setFilter] = useState("all");
+  const router = useRouter();
+  const { data: cards, isLoading } = useMyCards();
 
-  const sortedCards = cards
-    ? [...cards].sort((a, b) => {
-        const ratioA = a.currentStamps / Math.max(a.stampsRequired, 1);
-        const ratioB = b.currentStamps / Math.max(b.stampsRequired, 1);
-        return ratioB - ratioA;
-      })
-    : [];
+  /** Sort by progress ratio descending, then filter by selected chip. */
+  const filteredCards = useMemo(() => {
+    if (!cards) return [];
+
+    const sorted = [...cards].sort((a, b) => {
+      const ratioA = a.currentStamps / Math.max(a.stampsRequired, 1);
+      const ratioB = b.currentStamps / Math.max(b.stampsRequired, 1);
+      return ratioB - ratioA;
+    });
+
+    return filterCards(sorted, filter);
+  }, [cards, filter]);
+
+  const hasNoCardsAtAll = !isLoading && (!cards || cards.length === 0);
+  const hasNoFilterResults =
+    !isLoading && cards && cards.length > 0 && filteredCards.length === 0;
 
   return (
-    <div className="page-gradient flex min-h-dvh flex-col">
-      <SiteHeader />
+    <div className="min-h-dvh bg-(--color-bg-base) pt-14">
+      <PageHeader title="My Cards" leftAction={backButton} />
 
-      <div className="flex-1 overflow-y-auto pb-nav px-5 pt-2">
-        <h1 className="mb-5 text-2xl font-extrabold tracking-tight text-[--color-text-primary]">
-          My Cards
-        </h1>
+      {/* Filter chips — sticky below the fixed header */}
+      <div className="sticky top-14 bg-(--color-bg-base) z-30 border-b border-(--color-border) max-w-[430px] mx-auto w-full">
+        <FilterChips
+          id="cards-filter"
+          options={FILTER_OPTIONS}
+          value={filter}
+          onChange={setFilter}
+        />
+      </div>
 
+      {/* Scrollable card list */}
+      <div className="mx-auto w-full max-w-[430px] pb-nav px-4 pt-4 flex flex-col gap-3">
+        {/* Loading skeletons */}
         {isLoading && (
-          <ul className="flex flex-col gap-3" aria-busy="true">
-            {[0, 1, 2].map((i) => (
-              <li
-                key={i}
-                className="h-[72px] animate-pulse rounded-2xl border border-[--color-border] bg-[--color-bg-surface]"
-                aria-hidden="true"
-              />
-            ))}
-          </ul>
-        )}
-
-        {!isLoading && error && (
-          <p className="text-center text-sm text-[--color-error]">{error.message}</p>
-        )}
-
-        {!isLoading && !error && sortedCards.length === 0 && (
-          <div className="flex flex-col items-center gap-5 py-16 text-center">
-            <span className="text-5xl" aria-hidden="true">🃏</span>
-            <div className="flex flex-col gap-1">
-              <p className="font-semibold text-[--color-text-primary]">No loyalty cards yet</p>
-              <p className="text-sm text-[--color-text-secondary]">
-                Visit a merchant and scan their QR code to start.
-              </p>
-            </div>
-            <Link href="/customer/scan">
-              <Button variant="primary">Scan a Merchant QR</Button>
-            </Link>
+          <div className="flex flex-col gap-3" aria-busy="true">
+            <Skeleton variant="card" />
+            <Skeleton variant="card" />
+            <Skeleton variant="card" />
           </div>
         )}
 
-        {!isLoading && !error && sortedCards.length > 0 && (
-          <ul className="flex flex-col gap-3" aria-label="Loyalty cards">
-            {sortedCards.map((card) => (
-              <li key={card.objectId}>
-                <CardAccordionRow card={card} />
-              </li>
+        {/* Empty state: no cards at all */}
+        {hasNoCardsAtAll && (
+          <EmptyState
+            icon={CreditCard}
+            title="No loyalty cards yet"
+            description="Scan a QR code at a Suiki merchant to start collecting stamps."
+            action={{ label: "Find Merchants", href: "/customer/search" }}
+          />
+        )}
+
+        {/* Empty state: filter yields no results */}
+        {hasNoFilterResults && (
+          <EmptyState
+            icon={CreditCard}
+            title="No cards match"
+            description="Try a different filter."
+          />
+        )}
+
+        {/* Card list with stagger animation */}
+        {!isLoading && filteredCards.length > 0 && (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="flex flex-col gap-3"
+            role="list"
+            aria-label="Loyalty cards"
+          >
+            {filteredCards.map((card) => (
+              <motion.div
+                key={String(card.objectId)}
+                variants={itemVariants}
+                role="listitem"
+              >
+                <StampCard
+                  programId={String(card.objectId)}
+                  merchantName={card.merchantName}
+                  programName={`${card.merchantName} Rewards`}
+                  logoUrl={card.merchantLogo}
+                  stampCount={card.currentStamps}
+                  totalStamps={card.stampsRequired}
+                  rewardDescription=""
+                  variant="compact"
+                  onTap={() =>
+                    router.push(`/customer/cards/${String(card.objectId)}`)
+                  }
+                />
+              </motion.div>
             ))}
-          </ul>
+          </motion.div>
         )}
       </div>
 
       <BottomNav />
     </div>
-  );
-}
-
-function CardAccordionRow({ card }: { card: StampCard }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const isComplete = card.currentStamps >= card.stampsRequired;
-  const cardId = String(card.objectId);
-
-  return (
-    <GlassCard padding="none" className="overflow-hidden">
-      {/* Collapsed header */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        aria-expanded={isExpanded}
-        aria-controls={`card-body-${cardId}`}
-        className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[--color-bg-elevated]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--color-primary] focus-visible:ring-inset"
-      >
-        {/* Merchant avatar */}
-        <div
-          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-[--color-bg-elevated] overflow-hidden"
-          aria-hidden="true"
-        >
-          {card.merchantLogo ? (
-            <img
-              src={card.merchantLogo}
-              alt={card.merchantName}
-              className="h-11 w-11 rounded-2xl object-cover"
-            />
-          ) : (
-            <Store size={20} className="text-[--color-text-muted]" />
-          )}
-        </div>
-
-        {/* Name + count */}
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-[--color-text-primary] truncate">
-            {card.merchantName || 'Unknown Merchant'}
-          </p>
-          <p className="text-xs text-[--color-text-secondary]">
-            {card.currentStamps}/{card.stampsRequired} stamps
-            {isComplete && (
-              <span className="ml-1.5 text-[--color-accent-loyalty] font-semibold">
-                · Ready to redeem!
-              </span>
-            )}
-          </p>
-        </div>
-
-        {/* Progress % pill */}
-        <span
-          className={[
-            'flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full',
-            isComplete
-              ? 'bg-[--color-accent-loyalty] text-[--color-bg-base]'
-              : 'bg-[--color-bg-elevated] text-[--color-text-secondary]',
-          ].join(' ')}
-        >
-          {Math.min(Math.round((card.currentStamps / Math.max(card.stampsRequired, 1)) * 100), 100)}%
-        </span>
-
-        {/* Chevron */}
-        {isExpanded ? (
-          <ChevronUp size={16} className="flex-shrink-0 text-[--color-text-muted]" />
-        ) : (
-          <ChevronDown size={16} className="flex-shrink-0 text-[--color-text-muted]" />
-        )}
-      </button>
-
-      {/* Expanded body */}
-      <div
-        id={`card-body-${cardId}`}
-        style={{
-          gridTemplateRows: isExpanded ? '1fr' : '0fr',
-          transition: 'grid-template-rows 250ms ease',
-        }}
-        className="grid"
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-col gap-4 border-t border-[--glass-border] px-4 pb-4 pt-4">
-            <StampGrid
-              totalSlots={card.stampsRequired}
-              filledSlots={card.currentStamps}
-              size="sm"
-            />
-
-            <ProgressBarStamps
-              total={card.stampsRequired}
-              filled={card.currentStamps}
-              showLabel
-            />
-
-            <div className="flex gap-3">
-              <Link href={`/customer/cards/${cardId}`} className="flex-1">
-                <Button variant="primary" className="w-full rounded-full text-sm">
-                  Show QR
-                </Button>
-              </Link>
-
-              {isComplete && (
-                <Link href={`/customer/cards/${cardId}/reward`} className="flex-1">
-                  <Button variant="loyalty" className="w-full rounded-full text-sm">
-                    Claim Reward
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </GlassCard>
   );
 }
