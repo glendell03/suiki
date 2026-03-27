@@ -14,7 +14,8 @@
 3. **Long-term extensibility via dynamic fields.** Move struct fields are frozen at deploy. We use `sui::dynamic_field` for every attribute we might need to add in a future upgrade cycle — without breaking the upgrade policy.
 4. **Compatible upgrade policy only.** All packages are published with `compatible` upgrade policy. No field removals, no capability drops post-deploy.
 5. **PDPA compliance by design.** PII (name, email, phone, address) lives only in Neon Postgres with proper encryption at rest and a deletion path. Nothing irreversible is stored on-chain that could contain PII.
-6. **`db_id` is the universal cross-system key.** Every on-chain Sui object embeds a `db_id: vector<u8>` (32-byte UUID as raw bytes). Every Postgres row embeds the Sui `object_id`. These two fields link the systems bidirectionally.
+6. **Sui object ID is the universal cross-system key.** Every Sui object already has a globally unique `id: UID`. Postgres rows store `sui_object_id TEXT` pointing to it. No separate `db_id` field is needed on the contract — the chain event emits the object ID immediately on creation, and the indexer uses it to create the Postgres row. This is the pattern used by Gods Unchained, loyalty-chain, and all production Sui/EVM apps.
+7. **Version guard on all shared objects.** Every shared object carries a `version: u64` field matched against a `VERSION` package constant. All mutating functions assert `version == VERSION`. An `AdminCap`-gated `migrate` entry fun bumps the version after upgrades, preventing old package versions from operating on shared objects.
 
 ---
 
@@ -28,7 +29,6 @@
 | is_active / lifecycle state | ✅ | mirror | Gate issuing logic on-chain |
 | theme_id | ✅ | mirror | Needed by Display NFT generation |
 | total_issued counter | ✅ | derived | On-chain counter; Postgres derives from event stream |
-| db_id (UUID pointer) | ✅ | — | Cross-system FK |
 | logo_url | ❌ | ✅ | Mutable, long, not needed for auth |
 | reward_description | ❌ | ✅ | Long text, mutable |
 | business address / opening hours | ❌ | ✅ | PII-adjacent operational data |
@@ -41,7 +41,6 @@
 | Merchant name snapshot on card | ❌ (moved to dynamic field) | ✅ | Was causing stale data — now served from Postgres |
 | Merchant logo snapshot on card | ❌ | ✅ | Off-chain only |
 | MerchantProfile unlocked_themes | ✅ | mirror | Premium theme entitlement is a paid asset |
-| MerchantProfile db_id | ✅ | — | Cross-system FK |
 | Merchant email / phone | ❌ | ✅ | PII — Postgres only |
 | StafferCap (multi-location) | ✅ | mirror | Delegation object is an on-chain capability |
 | Analytics / visit counts | ❌ | ✅ | Derived from event stream |
@@ -54,10 +53,10 @@
 ### 3.1 Package Constants
 
 ```move
+const VERSION: u64 = 1;                         // bump on every upgrade; shared objects assert this
 const FREE_THEME_COUNT: u8 = 6;
 const MAX_THEME_ID: u8 = 63;
 const MAX_NAME_LEN: u64 = 64;
-const DB_ID_LEN: u64 = 32;                      // UUID as raw bytes
 const PREMIUM_THEME_PRICE_MIST: u64 = 1_000_000_000;
 const TREASURY: address = @0x...;               // rotate before mainnet
 ```
@@ -80,6 +79,7 @@ const EInsufficientPayment: u64 = 11;
 const EInvalidDbId: u64 = 12;
 const EProgramInactive: u64 = 13;
 const ENotStaffer: u64 = 14;
+const EWrongVersion: u64 = 15;
 ```
 
 ### 3.3 Object Structs
@@ -88,33 +88,33 @@ const ENotStaffer: u64 = 14;
 ```move
 public struct StampProgram has key {
     id: UID,
+    version: u64,            // must equal VERSION; all mutating fns assert this
     merchant: address,
     name: String,            // ≤64 chars; snapshot for event identification
     stamps_required: u64,
     is_active: bool,         // lifecycle gate; replaces delete
     total_issued: u64,       // cards created (via create_card_and_stamp)
     theme_id: u8,
-    db_id: vector<u8>,       // 32-byte UUID pointing to Postgres programs row
 }
 ```
 
-**Removed from V2:** `logo_url`, `reward_description` — both now live in Postgres only.
+**Removed from V2:** `logo_url`, `reward_description` (now Postgres only). No `db_id` — the Sui object ID itself (`object::id(program)`) is the FK stored in Postgres.
 
 #### StampCard (shared)
 ```move
 public struct StampCard has key {
     id: UID,
+    version: u64,            // must equal VERSION
     program_id: ID,
     customer: address,
     stamps_required: u64,    // snapshot at card creation; sync via sync_card_stamps_required
     current_stamps: u64,
     total_earned: u64,       // completed redemption cycles
     last_stamped: u64,       // ms timestamp
-    db_id: vector<u8>,       // 32-byte UUID pointing to Postgres stamp_cards row
 }
 ```
 
-**Removed from V2:** `merchant_name`, `merchant_logo` — eliminated stale-data sync problem; served from Postgres via JOIN on program_id.
+**Removed from V2:** `merchant_name`, `merchant_logo` — eliminated stale-data sync problem; served from Postgres via JOIN on program_id. No `db_id` — the card's Sui object ID is the FK in Postgres.
 
 #### MerchantProfile (owned)
 ```move
@@ -122,9 +122,10 @@ public struct MerchantProfile has key {
     id: UID,
     merchant: address,
     unlocked_themes: u64,    // bitmask; bit N = theme N unlocked
-    db_id: vector<u8>,       // 32-byte UUID pointing to Postgres merchant_profiles row
 }
 ```
+
+No `db_id` — `ProfileCreated` event emits `profile_id: ID`; indexer uses it as `sui_object_id` in Postgres.
 
 #### StafferCap (owned — new in V3)
 ```move
@@ -140,15 +141,15 @@ public struct StafferCap has key, store {
 ### 3.4 Events
 
 ```move
-public struct ProgramCreated has copy, drop { program_id: ID, merchant: address, name: String, db_id: vector<u8> }
+public struct ProgramCreated has copy, drop { program_id: ID, merchant: address, name: String }
 public struct ProgramUpdated has copy, drop { program_id: ID, name: String }
 public struct ProgramActivated has copy, drop { program_id: ID }
 public struct ProgramDeactivated has copy, drop { program_id: ID }
-public struct CardCreated has copy, drop { card_id: ID, program_id: ID, customer: address, db_id: vector<u8> }
+public struct CardCreated has copy, drop { card_id: ID, program_id: ID, customer: address }
 public struct StampIssued has copy, drop { card_id: ID, program_id: ID, customer: address, new_count: u64, staffer: address }
 public struct StampRedeemed has copy, drop { card_id: ID, program_id: ID, customer: address, redemption_count: u64 }
 public struct ThemeChanged has copy, drop { program_id: ID, merchant: address, old_theme_id: u8, new_theme_id: u8 }
-public struct ProfileCreated has copy, drop { profile_id: ID, merchant: address, db_id: vector<u8> }
+public struct ProfileCreated has copy, drop { profile_id: ID, merchant: address }
 public struct ThemePurchased has copy, drop { profile_id: ID, merchant: address, theme_id: u8 }
 public struct StafferCapIssued has copy, drop { cap_id: ID, program_id: ID, staffer: address }
 public struct StafferCapRevoked has copy, drop { cap_id: ID, program_id: ID }
@@ -159,19 +160,19 @@ public struct MerchantTransferred has copy, drop { program_id: ID, old_merchant:
 
 #### Program Lifecycle
 ```
-create_program(name, stamps_required, theme_id, db_id, ctx) → shares StampProgram
-update_program(program, name, ctx)                          → updates name
-set_theme(program, theme_id, ctx)                          → free themes only
-set_premium_theme(program, profile, theme_id, ctx)         → premium themes
-deactivate_program(program, ctx)                           → is_active = false; no new cards/stamps
-reactivate_program(program, ctx)                           → is_active = true
+create_program(name, stamps_required, theme_id, ctx)  → shares StampProgram (version = VERSION)
+update_program(program, name, ctx)                    → updates name; asserts version
+set_theme(program, theme_id, ctx)                     → free themes only
+set_premium_theme(program, profile, theme_id, ctx)    → premium themes
+deactivate_program(program, ctx)                      → is_active = false
+reactivate_program(program, ctx)                      → is_active = true
 transfer_merchant(program, new_merchant, ctx)
 ```
 
 #### Stamp Flow
 ```
-create_card_and_stamp(program, customer, clock, db_id, ctx) → creates+shares StampCard with 1 stamp
-issue_stamp(program, card, clock, ctx)                      → merchant stamps (no StafferCap)
+create_card_and_stamp(program, customer, clock, ctx)        → creates+shares StampCard; version = VERSION
+issue_stamp(program, card, clock, ctx)                      → merchant stamps; asserts version on both
 issue_stamp_as_staffer(program, card, cap, clock, ctx)      → staffer stamps
 redeem(program, card, ctx)                                  → customer redeems; carry-forward excess
 ```
@@ -181,6 +182,22 @@ redeem(program, card, ctx)                                  → customer redeems
 issue_staffer_cap(program, staffer, ctx) → transfers StafferCap to staffer
 revoke_staffer_cap(cap, program, ctx)    → merchant burns cap; emits StafferCapRevoked
 ```
+
+#### Upgrade Migration
+```
+// AdminCap held by deployer — used only for migration entry funs
+public struct AdminCap has key { id: UID }
+
+// Called after package upgrade to bump shared object versions
+entry fun migrate_program(program: &mut StampProgram, _: &AdminCap) {
+    assert!(program.version < VERSION, EWrongVersion);
+    // apply any dynamic field migrations here
+    program.version = VERSION;
+}
+entry fun migrate_card(card: &mut StampCard, _: &AdminCap) { ... }
+```
+
+All mutating functions guard with `assert!(program.version == VERSION, EWrongVersion)` so clients using old package versions fail cleanly rather than operating on stale objects.
 
 Note: `revoke_staffer_cap` requires the merchant to hold the cap. For emergency revocation without cap possession (staffer gone rogue), the merchant calls `deactivate_program` to halt all stamping, then reactivates after issuing a fresh cap to correct staffers. This is the simplest safe path without an admin registry.
 
@@ -211,7 +228,31 @@ dynamic_field::add(&mut program.id, b"max_cards", 1u64);
 
 Keys are `vector<u8>` byte strings. We maintain a naming registry in this doc (see Section 6).
 
-### 3.7 Upgrade Policy
+### 3.7 Error Constants — Clever Errors
+
+Use Move 2024's `#[error]` attribute for human-readable abort messages instead of raw `u64` codes:
+
+```move
+#[error]
+const ENotMerchant: vector<u8> = b"Caller is not the program merchant";
+#[error]
+const EWrongVersion: vector<u8> = b"Package upgrade required — call migrate first";
+// ... etc.
+```
+
+This significantly improves debuggability in explorers and client-side error handling at zero semantic cost.
+
+### 3.8 Display V2 Migration Deadline
+
+**Display V1 aborts after July 2026.** Sui v1.68 introduces Display V2. Before that deadline:
+
+1. Add a `migrate_v1_to_v2` entry fun (provided by Mysten Labs in the upgrade framework).
+2. V2 adds: collection access (vectors/maps), dynamic field access in templates, cross-object field references via `{object_field.nested_field}` syntax.
+3. The `image_url` Display template should use `ipfs://` protocol prefix in the URL (not gateway URLs) for content-addressing permanence.
+
+### 3.9 Upgrade Policy
+
+`Move.lock` must be committed to git — do not add it to `.gitignore`.
 
 Published with `{ upgrade_policy: "compatible" }` in `Move.toml`. This allows:
 - Adding new functions ✅
