@@ -1,7 +1,7 @@
 # Suiki Smart Contract V2 — Architecture & Extensibility Design
 
 **Date:** 2026-03-27
-**Status:** Final Draft — Walrus research complete (2026-03-28)
+**Status:** Final — Arweave + Walrus research complete (2026-03-28)
 **Scope:** Move contract redesign for mainnet — metadata extensibility, security hardening, scalability, multi-location support
 **Author:** Brainstorming session (Claude + glendell)
 
@@ -368,32 +368,137 @@ export async function uploadMerchantMetadata(
 }
 ```
 
-### 5.8 Recommended Storage Tiering for Suiki (Final)
+### 5.8 Can You Pay Arweave with SUI? (Research: 2026-03-28)
 
-| Content | Storage | Durability | Notes |
-|---|---|---|---|
-| Stamp counts, access control | Struct | Permanent (Sui) | Core invariants |
-| Program name, reward description, category | Dynamic fields | Permanent (Sui) | Small strings; Display-critical |
-| Logo image, card visuals | Walrus Quilt + auto-renewal | Long-term with ops | Brief unavailability acceptable |
-| Merchant bio, social links, locations | Walrus Quilt + auto-renewal | Long-term with ops | Non-critical if briefly unavailable |
-| Terms & conditions | Walrus + Arweave | Permanent (Arweave) | Legal; must survive forever |
-| Card notes (encrypted, merchant-written) | Walrus + auto-renewal | Long-term with ops | Sensitive; encrypt before upload |
-| Behavioral analytics, visit timestamps | **Supabase only** | Controlled | PDPA; right to erasure required |
+**Short answer: Not directly. But there is a clean practical path.**
 
-### 5.9 Revised Field Allocation
-
-Fields moved from Walrus → Dynamic Fields after confirming no true permanence:
-
-| Field | Revised Plan | Reason |
+| Option | SUI payment? | Notes |
 |---|---|---|
-| `name` | **Dynamic field** | Display-critical; NFT broken if Walrus blob expires |
-| `reward_description` | **Dynamic field** | Shown to customer; must always be available |
-| `category` | **Dynamic field** | Needed for on-chain discovery/indexing |
-| `logo_blob_id` | Walrus (acceptable) | Visual only; placeholder shown if unavailable |
-| `terms_and_conditions` | Walrus + Arweave | Legal requirement; Arweave provides permanence |
-| `locations`, `bio`, `social` | Walrus Quilt | Rich content; non-critical |
+| Irys (formerly Bundlr) | ❌ No | Supports ETH, SOL, MATIC — no SUI |
+| Arweave Turbo (ar.io) | ❌ No | Supports ETH, SOL, USDC, AR, credit card — no SUI |
+| Any Arweave bundler | ❌ No | None of the major bundlers accept SUI |
+| Wormhole / SUI bridge | ❌ No | Arweave is not an EVM chain; no bridge exists |
+| **Credit card via Turbo** | ✅ **Yes — indirect** | Turbo accepts Stripe credit/debit card |
+| **USDC via Turbo** | ✅ **Yes — indirect** | SUI → USDC (on-chain DEX) → USDC on Base → Turbo |
 
-This way, even if the Walrus blob temporarily expires, the core Display fields (`name`, `reward_description`) still render correctly from on-chain dynamic fields.
+**Recommended payment path for Suiki:**
+Use Arweave Turbo SDK paid via **credit card or pre-funded USDC wallet**. The platform holds a small Turbo-funded server wallet. No AR tokens, no SUI-AR bridge needed. Top up with credit card when the balance runs low.
+
+Cost to fund: 1,000 merchants × 10 KB metadata = **~$0.08 total, one-time, permanent.** Reload manually once a year as new merchants join. Trivial operational overhead.
+
+---
+
+### 5.9 Cost Comparison: Arweave vs Walrus (Confirmed Numbers)
+
+Scenario: 1,000 merchants, ~10 KB of metadata JSON each = ~10 MB total.
+
+| Storage | Cost | Duration | Renewal needed? | SUI payment? |
+|---|---|---|---|---|
+| **Arweave (Turbo)** | **~$0.06–$0.08 total** | **Permanent (200+ years)** | Never | Credit card / USDC |
+| Walrus (Quilt batched) | ~$0.01–$0.05 WAL equiv | 2 years (52 epochs) | Every 2 years | WAL token |
+| Walrus (individual blobs) | ~$36+ (64 MB floor × 1,000) | 2 years | Every 2 years | WAL token |
+
+**Arweave wins on every dimension for metadata storage:**
+- Cheaper even before accounting for Walrus renewal cycles
+- No operational overhead — upload once, done
+- Turbo accepts credit card → no crypto complexity
+- Walrus's 64 MB floor per blob makes individual small file uploads 99%+ wasteful
+
+**Where Walrus still wins:** Binary assets (logo images, card visuals) that are large, need to be updatable, and where temporary unavailability is tolerable. Walrus is Sui-native, programmable, and better for mutable content.
+
+---
+
+### 5.10 Final Storage Architecture (Definitive)
+
+Three-tier storage model:
+
+```
+TIER 1: Sui Dynamic Fields (permanent, on-chain)
+  → name, reward_description, category, theme_id, all config fields
+  → Core logic fields checked in every transaction
+  → Can add new fields after mainnet via df::add()
+
+TIER 2: Arweave (permanent, off-chain, immutable)
+  → Merchant metadata JSON (terms, bio, locations, social links)
+  → Card notes (encrypted, merchant-written)
+  → Any content that must survive forever without renewal ops
+  → Paid via Turbo SDK + credit card
+
+TIER 3: Walrus (long-term, off-chain, mutable)
+  → Logo images, card visual assets, cover photos
+  → Binary content that needs updates (merchant rebrands their logo)
+  → Walrus Quilt for any small files; 52-epoch booking
+  → Auto-renewal cron (weekly) from a WAL treasury wallet
+
+TIER 4: Supabase (controlled, off-chain, deletable)
+  → Behavioral analytics (visit timestamps, frequency)
+  → Anything subject to PDPA right to erasure
+  → Never stored on-chain
+```
+
+**What goes on-chain vs off-chain:**
+
+| Field | Tier | On-chain ref |
+|---|---|---|
+| `name` | Dynamic field | Direct (string) |
+| `reward_description` | Dynamic field | Direct (string) |
+| `category` | Dynamic field | Direct (string) |
+| `theme_id`, `cooldown`, `tier_thresholds` | Dynamic field | Direct |
+| `terms_and_conditions`, `bio`, `locations` | Arweave | `arweave_metadata_id: String` df |
+| `logo_url`, card visuals | Walrus | `walrus_logo_blob_id: String` df |
+| Visit timestamps, analytics | Supabase | Never on-chain |
+| Card notes (encrypted) | Arweave | `arweave_note_id: String` df on card |
+
+The on-chain dynamic field `arweave_metadata_id` stores the Arweave TX ID. The wallet or app fetches it via `https://arweave.net/{tx_id}`.
+
+---
+
+### 5.11 Arweave Turbo SDK Integration
+
+```typescript
+// src/lib/arweave-client.ts (server-only)
+import { TurboFactory } from "@ardrive/turbo-sdk";
+
+// Platform-held wallet, funded via credit card at turbo.ar.io dashboard
+// Can use ETH/AR/SOL key — ETH on Base is recommended (cheap gas, USDC top-up)
+const turbo = TurboFactory.authenticated({
+  privateKey: process.env.ARWEAVE_ETH_PRIVATE_KEY,
+  token: "base-eth",
+});
+
+export async function uploadMerchantMetadata(
+  programId: string,
+  metadata: object,
+): Promise<string> {
+  const content = JSON.stringify(metadata);
+  const result = await turbo.uploadFile({
+    file: Buffer.from(content),
+    dataItemOpts: {
+      tags: [
+        { name: "Content-Type", value: "application/json" },
+        { name: "App-Name", value: "Suiki" },
+        { name: "Program-ID", value: programId },
+      ],
+    },
+  });
+  // Returns Arweave TX ID — store this in dynamic field on-chain
+  return result.id;
+}
+```
+
+After getting the Arweave TX ID, write it to the Move contract:
+```typescript
+// In transactions.ts
+tx.moveCall({
+  target: `${PACKAGE_ID}::suiki::set_arweave_metadata`,
+  arguments: [
+    tx.object(programId),
+    tx.pure(bcs.string().serialize(arweaveTxId)),
+  ],
+});
+```
+
+Accessible permanently at: `https://arweave.net/{arweaveTxId}`
 
 ---
 
