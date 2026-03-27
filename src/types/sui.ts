@@ -34,12 +34,13 @@ export type SuiNetwork = "testnet" | "mainnet" | "devnet";
  */
 export interface SuiRawStampProgram {
   id: { id: string };
+  version: string;
   merchant: string;
   name: string;
-  logo_url: string;
   stamps_required: string;
-  reward_description: string;
+  is_active: boolean;
   total_issued: string;
+  theme_id?: string;
 }
 
 /**
@@ -47,10 +48,9 @@ export interface SuiRawStampProgram {
  */
 export interface SuiRawStampCard {
   id: { id: string };
+  version: string;
   program_id: string;
   customer: string;
-  merchant_name: string;
-  merchant_logo: string;
   stamps_required: string;
   current_stamps: string;
   total_earned: string;
@@ -67,12 +67,13 @@ export interface SuiRawStampCard {
  */
 export interface StampProgram {
   objectId: SuiObjectId;
+  version: number;
   merchant: SuiAddress;
   name: string;
-  logoUrl: string;
   stampsRequired: number;
-  rewardDescription: string;
+  isActive: boolean;
   totalIssued: number;
+  themeId: number;
 }
 
 /**
@@ -81,10 +82,9 @@ export interface StampProgram {
  */
 export interface StampCard {
   objectId: SuiObjectId;
+  version: number;
   programId: SuiObjectId;
   customer: SuiAddress;
-  merchantName: string;
-  merchantLogo: string;
   stampsRequired: number;
   currentStamps: number;
   totalEarned: number;
@@ -127,12 +127,31 @@ export interface ProgramUpdatedEvent {
   logo_url: string;
 }
 
+export interface SuiProgramDeactivatedEvent {
+  program_id: string;
+  merchant: string;
+}
+
+export interface SuiProgramReactivatedEvent {
+  program_id: string;
+  merchant: string;
+}
+
+export interface SuiStafferCapCreatedEvent {
+  staffer_cap_id: string;
+  program_id: string;
+  merchant: string;
+}
+
 export type SuikiEvent =
   | ProgramCreatedEvent
   | CardCreatedEvent
   | StampIssuedEvent
   | StampRedeemedEvent
-  | ProgramUpdatedEvent;
+  | ProgramUpdatedEvent
+  | SuiProgramDeactivatedEvent
+  | SuiProgramReactivatedEvent
+  | SuiStafferCapCreatedEvent;
 
 // ---------------------------------------------------------------------------
 // QR code payload types

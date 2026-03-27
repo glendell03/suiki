@@ -36,6 +36,10 @@ export const TARGETS = {
   // Always define targets here so PACKAGE_ID changes propagate automatically.
   syncCardMetadata: `${PACKAGE_ID}::${MODULE_NAME}::sync_card_metadata`,
   transferMerchant: `${PACKAGE_ID}::${MODULE_NAME}::transfer_merchant`,
+  createStafferCap: `${PACKAGE_ID}::${MODULE_NAME}::create_staffer_cap`,
+  issueStampAsStaffer: `${PACKAGE_ID}::${MODULE_NAME}::issue_stamp_as_staffer`,
+  deactivateProgram: `${PACKAGE_ID}::${MODULE_NAME}::deactivate_program`,
+  reactivateProgram: `${PACKAGE_ID}::${MODULE_NAME}::reactivate_program`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -61,4 +65,7 @@ export const EVENT_TYPES = {
   stampIssued: `${PACKAGE_ID}::${MODULE_NAME}::StampIssued`,
   stampRedeemed: `${PACKAGE_ID}::${MODULE_NAME}::StampRedeemed`,
   programUpdated: `${PACKAGE_ID}::${MODULE_NAME}::ProgramUpdated`,
+  programDeactivated: `${PACKAGE_ID}::${MODULE_NAME}::ProgramDeactivated`,
+  programReactivated: `${PACKAGE_ID}::${MODULE_NAME}::ProgramReactivated`,
+  stafferCapCreated: `${PACKAGE_ID}::${MODULE_NAME}::StafferCapCreated`,
 } as const;
