@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Loader2, Minus, Plus, ImageOff } from "lucide-react";
 import { StampCard } from "@/components/stamp-card";
+import { useCurrentClient } from "@mysten/dapp-kit-react";
 import { useAccount } from "@/hooks/use-account";
 import { AnimatePresence, motion } from "framer-motion";
 import { WalletGuard } from "@/components/wallet-guard";
@@ -355,7 +356,7 @@ function StepReview({
         programId="preview"
         merchantName={form.name}
         programName="Loyalty Program"
-        logoUrl={form.logoUrl || undefined}
+        logoUrl={form.logoUrl || ""}
         stampCount={0}
         totalStamps={form.stampsRequired}
         rewardDescription={form.rewardDescription}
@@ -428,6 +429,80 @@ function NextButton({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Post-transaction helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Queries the transaction effects for the created StampProgram object ID.
+ * Looks for a newly created object whose type includes "StampProgram".
+ *
+ * Uses `client.core.getTransaction` because the dapp-kit client type
+ * (`ClientWithCoreApi`) exposes transport methods on the `.core` accessor.
+ */
+async function extractCreatedProgramId(
+  client: ReturnType<typeof useCurrentClient>,
+  digest: string,
+): Promise<string> {
+  const result = await client.core.getTransaction({
+    digest,
+    include: { effects: true, objectTypes: true },
+  });
+
+  const tx = result.Transaction ?? result.FailedTransaction;
+  if (!tx?.effects || !tx.objectTypes) {
+    throw new Error("Could not read transaction effects");
+  }
+
+  const created = tx.effects.changedObjects.find(
+    (obj: { idOperation: string; objectId: string }) => {
+      if (obj.idOperation !== "Created") return false;
+      const objectType = tx.objectTypes![obj.objectId];
+      return objectType?.includes("StampProgram");
+    },
+  );
+
+  if (!created) {
+    throw new Error("StampProgram object not found in transaction effects");
+  }
+
+  return created.objectId;
+}
+
+/** Payload for the off-chain program metadata API. */
+interface ProgramMetadataPayload {
+  programId: string;
+  merchantAddress: string;
+  name: string;
+  logoUrl: string;
+  rewardDescription: string;
+  stampsRequired: number;
+}
+
+/**
+ * POSTs program metadata to the off-chain DB API.
+ * Best-effort: logs errors but does not throw, because the on-chain
+ * record already exists and metadata can be re-posted later.
+ */
+async function postProgramMetadata(payload: ProgramMetadataPayload): Promise<void> {
+  try {
+    const res = await fetch("/api/merchant/programs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error(
+        `[postProgramMetadata] API returned ${res.status}:`,
+        await res.text().catch(() => "unknown"),
+      );
+    }
+  } catch (err) {
+    // Network-level failure — log but don't block UX.
+    console.error("[postProgramMetadata] Failed to POST metadata:", err);
+  }
+}
+
 /**
  * Multi-step create-program form. Manages step navigation, validation,
  * and submission via the sponsored transaction hook.
@@ -435,6 +510,7 @@ function NextButton({
 function CreateProgramForm() {
   const router = useRouter();
   const account = useAccount();
+  const client = useCurrentClient();
   const { executeSponsoredTx } = useSponsoredTx();
 
   const [step, setStep] = useState(1);
@@ -456,20 +532,40 @@ function CreateProgramForm() {
     }
   }
 
-  /** Submit the create-program transaction on-chain. */
+  /**
+   * Two-step submit: (1) on-chain tx, (2) POST off-chain metadata to DB.
+   *
+   * V3 change: logoUrl and rewardDescription are no longer stored on-chain.
+   * After the sponsored tx succeeds, we extract the created StampProgram
+   * object ID from the transaction effects and POST metadata to the DB API.
+   * If the metadata POST fails, we log the error but still navigate away
+   * because the on-chain record exists and metadata can be re-posted later.
+   */
   async function handleCreate() {
     if (!account) return;
     setIsSubmitting(true);
     setError(null);
     try {
-      const tx = buildCreateProgram(
-        account.address,
-        form.name,
-        form.logoUrl,
-        form.stampsRequired,
-        form.rewardDescription,
-      );
-      await executeSponsoredTx(tx);
+      const tx = buildCreateProgram({
+        name: form.name,
+        stampsRequired: form.stampsRequired,
+      });
+      const digest = await executeSponsoredTx(tx);
+      if (!digest) throw new Error("Transaction did not return a digest");
+
+      // Extract the created StampProgram object ID from transaction effects.
+      const programId = await extractCreatedProgramId(client, digest);
+
+      // POST off-chain metadata to the DB API (best-effort).
+      await postProgramMetadata({
+        programId,
+        merchantAddress: account.address,
+        name: form.name,
+        logoUrl: form.logoUrl,
+        rewardDescription: form.rewardDescription,
+        stampsRequired: form.stampsRequired,
+      });
+
       router.push("/merchant");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Transaction failed");

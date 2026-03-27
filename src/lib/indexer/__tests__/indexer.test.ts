@@ -71,7 +71,7 @@ vi.mock('@/lib/constants', () => ({
   },
 }));
 
-/** Stub handlers — Task 7 creates the real ones. */
+/** Stub handlers — individual handlers and the dispatcher. */
 vi.mock('../handlers', () => ({
   handleProgramCreated: vi.fn(),
   handleProgramUpdated: vi.fn(),
@@ -80,7 +80,7 @@ vi.mock('../handlers', () => ({
   handleCardCreated: vi.fn(),
   handleStampIssued: vi.fn(),
   handleStampRedeemed: vi.fn(),
-  handleStafferCapCreated: vi.fn(),
+  dispatchEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Import after mocks are in place
@@ -188,8 +188,8 @@ describe('processTick', () => {
   it('continues processing when a single event handler throws', async () => {
     mockFindFirst.mockResolvedValue(undefined);
 
-    const { handleProgramCreated } = await import('../handlers');
-    (handleProgramCreated as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    const { dispatchEvent } = await import('../handlers');
+    (dispatchEvent as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error('handler boom'),
     );
 

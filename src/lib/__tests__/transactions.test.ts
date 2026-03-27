@@ -34,14 +34,9 @@ describe('TARGETS constants', () => {
     expect(TARGETS.issueStampAsStaffer).toMatch(/::issue_stamp_as_staffer$/);
     expect(TARGETS.redeem).toMatch(/::redeem$/);
     expect(TARGETS.updateProgram).toMatch(/::update_program$/);
-    expect(TARGETS.setTheme).toMatch(/::set_theme$/);
     expect(TARGETS.deactivateProgram).toMatch(/::deactivate_program$/);
     expect(TARGETS.reactivateProgram).toMatch(/::reactivate_program$/);
-    expect(TARGETS.issueStafferCap).toMatch(/::issue_staffer_cap$/);
-    expect(TARGETS.createAndTransferMerchantProfile).toMatch(/::create_and_transfer_merchant_profile$/);
-    expect(TARGETS.createMerchantProfile).toMatch(/::create_merchant_profile$/);
-    expect(TARGETS.purchaseTheme).toMatch(/::purchase_theme$/);
-    expect(TARGETS.setPremiumTheme).toMatch(/::set_premium_theme$/);
+    expect(TARGETS.createStafferCap).toMatch(/::create_staffer_cap$/);
   });
 
   it('CLOCK_ID is the Sui system clock address 0x6', () => {
@@ -51,17 +46,17 @@ describe('TARGETS constants', () => {
 
 describe('buildCreateProgram', () => {
   it('returns a Transaction instance', () => {
-    const tx = buildCreateProgram(SENDER, 'Kape', 10, 0);
+    const tx = buildCreateProgram({ name: 'Kape', stampsRequired: 10 });
     expect(tx).toBeInstanceOf(Transaction);
   });
 
-  it('V3: does not accept logoUrl or rewardDescription params', () => {
-    // Signature is (sender, name, stampsRequired, themeId) — 4 args only
-    expect(buildCreateProgram.length).toBe(4);
+  it('accepts optional themeId', () => {
+    const tx = buildCreateProgram({ name: 'Kape', stampsRequired: 10, themeId: 2 });
+    expect(tx).toBeInstanceOf(Transaction);
   });
 
   it('setSenderIfNotSet is callable on the result', () => {
-    const tx = buildCreateProgram(SENDER, 'Kape', 10, 0);
+    const tx = buildCreateProgram({ name: 'Kape', stampsRequired: 10 });
     expect(() => tx.setSenderIfNotSet(SENDER)).not.toThrow();
   });
 });

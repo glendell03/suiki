@@ -26,25 +26,22 @@ import { TARGETS, CLOCK_ID, PREMIUM_THEME_PRICE_MIST } from './constants';
  * Builds a transaction that calls suiki::suiki::create_program.
  * V3: logo_url and reward_description moved to Postgres — not on-chain.
  *
- * @param sender - Merchant wallet address (0x-prefixed).
- * @param name - Display name of the stamp program.
- * @param stampsRequired - Number of stamps required before a customer can redeem.
- * @param themeId - Visual theme identifier for the stamp card.
+ * @param params.name - Display name of the stamp program.
+ * @param params.stampsRequired - Number of stamps required before a customer can redeem.
+ * @param params.themeId - Optional visual theme identifier for the stamp card (default 0).
  */
-export function buildCreateProgram(
-  sender: string,
-  name: string,
-  stampsRequired: number,
-  themeId: number,
-): Transaction {
+export function buildCreateProgram(params: {
+  name: string;
+  stampsRequired: number;
+  themeId?: number;
+}): Transaction {
   const tx = new Transaction();
-  tx.setSender(sender);
   tx.moveCall({
     target: TARGETS.createProgram,
     arguments: [
-      tx.pure.string(name),
-      tx.pure.u64(stampsRequired),
-      tx.pure.u8(themeId),
+      tx.pure.string(params.name),
+      tx.pure.u64(params.stampsRequired),
+      tx.pure.u8(params.themeId ?? 0),
     ],
   });
   return tx;
@@ -280,8 +277,8 @@ export function buildCreateMerchantProfile(sender: string): Transaction {
 export function buildCreateProfileAndPurchaseTheme(sender: string, themeId: number): Transaction {
   const tx = new Transaction();
   tx.setSender(sender);
-  const [profile] = tx.moveCall({ target: TARGETS.createMerchantProfile });
-  const [payment] = tx.splitCoins(tx.gas, [tx.pure.u64(PREMIUM_THEME_PRICE_MIST)]);
+  const profile = tx.moveCall({ target: TARGETS.createMerchantProfile })[0]!;
+  const payment = tx.splitCoins(tx.gas, [tx.pure.u64(PREMIUM_THEME_PRICE_MIST)])[0]!;
   tx.moveCall({
     target: TARGETS.purchaseTheme,
     arguments: [profile, tx.pure.u8(themeId), payment],

@@ -1,12 +1,12 @@
 'use client';
 
-import type { StampCard } from '@/types/sui';
+import type { CardWithProgram } from '@/types/db';
 import { StampProgress } from '@/components/stamp-progress';
 import { GlassCard } from '@/components/glass-card';
 
 interface StampCardDisplayProps {
-  /** The customer's stamp card to render. */
-  card: StampCard;
+  /** The customer's stamp card (enriched with program metadata) to render. */
+  card: CardWithProgram;
   /** Called when the customer taps the redeem button. */
   onRedeem?: () => void;
   /** Set to true while the redeem transaction is in flight. */
@@ -35,7 +35,7 @@ export function StampCardDisplay({
     <GlassCard as="article" padding="lg" className="flex flex-col gap-4">
       {/* Merchant identity row */}
       <div className="flex items-center gap-3">
-        <MerchantLogo src={card.merchantLogo} alt={card.merchantName} />
+        <MerchantLogo src={card.logoUrl} alt={card.merchantName} />
 
         <div className="flex flex-col min-w-0">
           <h3 className="font-semibold text-(--color-text-primary) truncate">

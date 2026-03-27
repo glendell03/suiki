@@ -52,12 +52,12 @@ export default function CardDetailPage({ params }: CardDetailPageProps) {
 // Date formatting
 // ---------------------------------------------------------------------------
 
-/** Format a unix-ms timestamp to a human-readable medium date (en-PH). */
-function formatDate(ms: number): string {
-  if (!ms) return "Never";
-  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium" }).format(
-    new Date(ms),
-  );
+/** Format an ISO date string (or null) to a human-readable medium date (en-PH). */
+function formatDate(iso: string | null): string {
+  if (!iso) return "Never";
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "Never";
+  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium" }).format(date);
 }
 
 // ---------------------------------------------------------------------------
@@ -82,7 +82,7 @@ function CardDetailView({ cardId }: { cardId: string }) {
   const account = useAccount();
   const { data: cards, isLoading, isError, error } = useMyCards();
 
-  const card = cards?.find((c) => String(c.objectId) === cardId) ?? null;
+  const card = cards?.find((c) => c.cardId === cardId) ?? null;
 
   // Loading state
   if (isLoading) {
@@ -150,7 +150,7 @@ function CardDetailView({ cardId }: { cardId: string }) {
         {/* Merchant identity -- centered, overlapping hero */}
         <div className="flex flex-col items-center gap-2">
           <MerchantAvatar
-            logoUrl={card.merchantLogo}
+            logoUrl={card.logoUrl}
             name={card.merchantName || "Merchant"}
             size={64}
           />
@@ -185,7 +185,7 @@ function CardDetailView({ cardId }: { cardId: string }) {
         />
 
         {/* Stamp History */}
-        <StampHistorySection lastStamped={card.lastStamped} />
+        <StampHistorySection lastStampedAt={card.lastStampedAt} />
 
       </div>
 
@@ -302,7 +302,7 @@ function RewardSection({
 // ---------------------------------------------------------------------------
 
 /** Shows the last stamped date or a "no stamps yet" message. */
-function StampHistorySection({ lastStamped }: { lastStamped: number }) {
+function StampHistorySection({ lastStampedAt }: { lastStampedAt: string | null }) {
   return (
     <div className="glass-card p-5">
       <p
@@ -312,8 +312,8 @@ function StampHistorySection({ lastStamped }: { lastStamped: number }) {
         Stamp History
       </p>
       <p className="text-[13px] text-(--color-text-secondary)">
-        {lastStamped > 0
-          ? `Last stamped: ${formatDate(lastStamped)}`
+        {lastStampedAt
+          ? `Last stamped: ${formatDate(lastStampedAt)}`
           : "No stamps yet"}
       </p>
     </div>

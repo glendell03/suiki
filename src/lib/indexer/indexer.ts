@@ -3,16 +3,7 @@ import { db } from '@/lib/db';
 import { indexerCursor } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { PACKAGE_ID, MODULE_NAME, EVENT_TYPES, SUI_NETWORK } from '@/lib/constants';
-import {
-  handleProgramCreated,
-  handleProgramUpdated,
-  handleProgramDeactivated,
-  handleProgramReactivated,
-  handleCardCreated,
-  handleStampIssued,
-  handleStampRedeemed,
-  handleStafferCapCreated,
-} from './handlers';
+import { dispatchEvent } from './handlers';
 
 /** Singleton cursor row ID — only one row ever exists. */
 const CURSOR_ROW_ID = 1;
@@ -83,40 +74,9 @@ export async function processTick(): Promise<{ processed: number; hasMore: boole
 
   for (const event of events) {
     const txDigest = event.id.txDigest;
-    const payload = event.parsedJson as Record<string, unknown>;
-    const timestampMs = event.timestampMs ? Number(event.timestampMs) : Date.now();
-    const eventDate = new Date(timestampMs);
 
     try {
-      switch (event.type) {
-        case EVENT_TYPES.programCreated:
-          await handleProgramCreated(txDigest, payload as never);
-          break;
-        case EVENT_TYPES.programUpdated:
-          await handleProgramUpdated(txDigest, payload as never);
-          break;
-        case EVENT_TYPES.programDeactivated:
-          await handleProgramDeactivated(txDigest, payload as never);
-          break;
-        case EVENT_TYPES.programReactivated:
-          await handleProgramReactivated(txDigest, payload as never);
-          break;
-        case EVENT_TYPES.cardCreated:
-          await handleCardCreated(txDigest, payload as never);
-          break;
-        case EVENT_TYPES.stampIssued:
-          await handleStampIssued(txDigest, payload as never);
-          break;
-        case EVENT_TYPES.stampRedeemed:
-          await handleStampRedeemed(txDigest, payload as never, eventDate);
-          break;
-        case EVENT_TYPES.stafferCapCreated:
-          await handleStafferCapCreated(txDigest, payload as never);
-          break;
-        default:
-          // Unknown event type from this package — skip silently.
-          break;
-      }
+      await dispatchEvent(event);
       processed++;
     } catch (err) {
       console.error(`[indexer] Error processing ${event.type} tx=${txDigest}:`, err);

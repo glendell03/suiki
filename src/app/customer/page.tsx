@@ -14,7 +14,7 @@ import { SectionHeader } from "@/components/section-header";
 import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 import { useMyCards } from "@/hooks/use-my-cards";
-import type { StampCard as StampCardType } from "@/types/sui";
+import type { CardWithProgram } from "@/types/db";
 
 export default function CustomerPage() {
   return (
@@ -47,12 +47,15 @@ const itemVariants = {
  * Sort cards by stamp progress (descending), with most-recently-stamped
  * as tiebreaker. Returns the featured card and remaining cards separately.
  */
-function splitFeaturedCard(cards: StampCardType[]) {
+function splitFeaturedCard(cards: CardWithProgram[]) {
   const sorted = [...cards].sort((a, b) => {
     const pA = a.currentStamps / Math.max(a.stampsRequired, 1);
     const pB = b.currentStamps / Math.max(b.stampsRequired, 1);
     if (pB !== pA) return pB - pA;
-    return b.lastStamped - a.lastStamped;
+    return (
+      new Date(b.lastStampedAt ?? 0).getTime() -
+      new Date(a.lastStampedAt ?? 0).getTime()
+    );
   });
 
   return {
@@ -151,16 +154,16 @@ function CustomerDashboard() {
           {/* Featured card */}
           {featured && (
             <StampCard
-              programId={String(featured.programId)}
+              programId={featured.programId}
               merchantName={featured.merchantName}
               programName="Loyalty Program"
-              logoUrl={featured.merchantLogo}
+              logoUrl={featured.logoUrl}
               stampCount={featured.currentStamps}
               totalStamps={featured.stampsRequired}
-              rewardDescription="Reward"
+              rewardDescription={featured.rewardDescription}
               variant="featured"
               onTap={() =>
-                router.push(`/customer/cards/${String(featured.objectId)}`)
+                router.push(`/customer/cards/${featured.cardId}`)
               }
             />
           )}
@@ -200,19 +203,19 @@ function CustomerDashboard() {
               className="flex flex-col gap-3"
             >
               {others.map((card) => (
-                <motion.div key={String(card.objectId)} variants={itemVariants}>
+                <motion.div key={card.cardId} variants={itemVariants}>
                   <StampCard
-                    programId={String(card.programId)}
+                    programId={card.programId}
                     merchantName={card.merchantName}
                     programName="Loyalty Program"
-                    logoUrl={card.merchantLogo}
+                    logoUrl={card.logoUrl}
                     stampCount={card.currentStamps}
                     totalStamps={card.stampsRequired}
-                    rewardDescription="Reward"
+                    rewardDescription={card.rewardDescription}
                     variant="compact"
                     onTap={() =>
                       router.push(
-                        `/customer/cards/${String(card.objectId)}`,
+                        `/customer/cards/${card.cardId}`,
                       )
                     }
                   />

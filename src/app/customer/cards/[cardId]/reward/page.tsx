@@ -63,7 +63,7 @@ function RewardClaimView({ cardId }: RewardClaimViewProps) {
   const account = useAccount();
   const { data: cards, isLoading, error } = useMyCards();
 
-  const card = cards?.find((c) => String(c.objectId) === cardId) ?? null;
+  const card = cards?.find((c) => c.cardId === cardId) ?? null;
   const walletAddress = account?.address ?? '';
 
   const isCardComplete = card !== null && card.currentStamps >= card.stampsRequired;

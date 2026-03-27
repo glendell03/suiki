@@ -14,7 +14,7 @@ import { StampCard } from "@/components/stamp-card";
 import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 import { useMyCards } from "@/hooks/use-my-cards";
-import type { StampCard as StampCardType } from "@/types/sui";
+import type { CardWithProgram as StampCardType } from "@/types/db";
 import { AlertCircle } from "lucide-react";
 
 /** Filter chip options for the cards list. */
@@ -182,21 +182,21 @@ function CardsContent() {
           >
             {filteredCards.map((card) => (
               <motion.div
-                key={String(card.objectId)}
+                key={card.cardId}
                 variants={itemVariants}
                 role="listitem"
               >
                 <StampCard
-                  programId={String(card.objectId)}
+                  programId={card.programId}
                   merchantName={card.merchantName}
                   programName={`${card.merchantName} Rewards`}
-                  logoUrl={card.merchantLogo}
+                  logoUrl={card.logoUrl}
                   stampCount={card.currentStamps}
                   totalStamps={card.stampsRequired}
-                  rewardDescription=""
+                  rewardDescription={card.rewardDescription}
                   variant="compact"
                   onTap={() =>
-                    router.push(`/customer/cards/${String(card.objectId)}`)
+                    router.push(`/customer/cards/${card.cardId}`)
                   }
                 />
               </motion.div>

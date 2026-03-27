@@ -1,12 +1,18 @@
-import type { SuiObjectId, SuiAddress } from './sui';
+/**
+ * DB-layer API response types.
+ *
+ * These are plain-string types returned from Postgres — not branded on-chain types.
+ * IDs are SUI object ID strings (0x-prefixed hex) but typed as `string` here
+ * because the branded SuiObjectId type is incompatible with DB-layer values.
+ */
 
 /**
  * A StampProgram enriched with Postgres metadata.
  * Returned by GET /api/programs/[programId].
  */
 export interface ProgramWithMetadata {
-  programId: SuiObjectId;
-  merchantAddress: SuiAddress;
+  programId: string;
+  merchantAddress: string;
   name: string;
   logoUrl: string;
   rewardDescription: string;
@@ -20,9 +26,9 @@ export interface ProgramWithMetadata {
  * Returned by GET /api/customer/[wallet]/cards.
  */
 export interface CardWithProgram {
-  cardId: SuiObjectId;
-  programId: SuiObjectId;
-  customerAddress: SuiAddress;
+  cardId: string;
+  programId: string;
+  customerAddress: string;
   currentStamps: number;
   stampsRequired: number;
   totalEarned: number;

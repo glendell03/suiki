@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { StampProgram, StampCard } from '../../types/sui';
+import { asSuiObjectId, asSuiAddress } from '../../types/sui';
 
 /**
  * Compile-time shape checks — these are type assertions, not runtime tests.
@@ -31,8 +32,8 @@ void _cardShape;
 describe('StampProgram type', () => {
   it('has required camelCase fields', () => {
     const program: StampProgram = {
-      objectId: '0xprog',
-      merchant: '0xmerchant',
+      objectId: asSuiObjectId('0xprog'),
+      merchant: asSuiAddress('0xmerchant'),
       name: 'Kape ni Juan',
       stampsRequired: 10,
       totalIssued: 42,
@@ -50,9 +51,9 @@ describe('StampProgram type', () => {
 describe('StampCard type', () => {
   it('has required camelCase fields', () => {
     const card: StampCard = {
-      objectId: '0xcard',
-      programId: '0xprog',
-      customer: '0xcustomer',
+      objectId: asSuiObjectId('0xcard'),
+      programId: asSuiObjectId('0xprog'),
+      customer: asSuiAddress('0xcustomer'),
       stampsRequired: 10,
       currentStamps: 3,
       totalEarned: 1,
