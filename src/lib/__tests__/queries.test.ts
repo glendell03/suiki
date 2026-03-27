@@ -9,10 +9,10 @@ const _programShape: Record<keyof StampProgram, unknown> = {
   objectId: '',
   merchant: '',
   name: '',
-  logoUrl: '',
   stampsRequired: 0,
-  rewardDescription: '',
   totalIssued: 0,
+  version: 0,
+  isActive: true,
 };
 void _programShape;
 
@@ -20,12 +20,11 @@ const _cardShape: Record<keyof StampCard, unknown> = {
   objectId: '',
   programId: '',
   customer: '',
-  merchantName: '',
-  merchantLogo: '',
   stampsRequired: 0,
   currentStamps: 0,
   totalEarned: 0,
   lastStamped: 0,
+  version: 0,
 };
 void _cardShape;
 
@@ -35,14 +34,16 @@ describe('StampProgram type', () => {
       objectId: '0xprog',
       merchant: '0xmerchant',
       name: 'Kape ni Juan',
-      logoUrl: 'https://example.com/logo.png',
       stampsRequired: 10,
-      rewardDescription: 'Free brewed coffee',
       totalIssued: 42,
+      version: 1,
+      isActive: true,
     };
     expect(program.name).toBe('Kape ni Juan');
     expect(program.stampsRequired).toBe(10);
     expect(program.totalIssued).toBe(42);
+    expect(program.version).toBe(1);
+    expect(program.isActive).toBe(true);
   });
 });
 
@@ -52,23 +53,20 @@ describe('StampCard type', () => {
       objectId: '0xcard',
       programId: '0xprog',
       customer: '0xcustomer',
-      merchantName: 'Kape ni Juan',
-      merchantLogo: 'https://example.com/logo.png',
       stampsRequired: 10,
       currentStamps: 3,
       totalEarned: 1,
       lastStamped: 1700000000000,
+      version: 0,
     };
-    expect(card.merchantName).toBe('Kape ni Juan');
     expect(card.currentStamps).toBe(3);
     expect(card.totalEarned).toBe(1);
+    expect(card.version).toBe(0);
   });
 
   it('snake_case fields do not appear on the type', () => {
     const card = {} as StampCard;
     // @ts-expect-error — snake_case fields must not exist on the parsed type
-    void card.merchant_name;
-    // @ts-expect-error
     void card.current_stamps;
     // @ts-expect-error
     void card.program_id;

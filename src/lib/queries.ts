@@ -61,8 +61,7 @@ function parseStampProgram(objectId: string, json: Record<string, unknown> | nul
   if (
     !fields.merchant ||
     !fields.name ||
-    !fields.stamps_required ||
-    !fields.reward_description
+    !fields.stamps_required
   ) {
     return null;
   }
@@ -71,10 +70,10 @@ function parseStampProgram(objectId: string, json: Record<string, unknown> | nul
     objectId: asSuiObjectId(objectId),
     merchant: asSuiAddress(fields.merchant),
     name: fields.name,
-    logoUrl: fields.logo_url ?? '',
     stampsRequired: Number(fields.stamps_required),
-    rewardDescription: fields.reward_description,
     totalIssued: Number(fields.total_issued ?? 0),
+    version: Number((fields as Record<string, unknown>)['version'] ?? 0),
+    isActive: Boolean((fields as Record<string, unknown>)['is_active'] ?? true),
   };
 }
 
@@ -95,12 +94,11 @@ function parseStampCard(objectId: string, json: Record<string, unknown> | null |
     objectId: asSuiObjectId(objectId),
     programId: asSuiObjectId(fields.program_id),
     customer: asSuiAddress(fields.customer),
-    merchantName: fields.merchant_name ?? '',
-    merchantLogo: fields.merchant_logo ?? '',
     stampsRequired: Number(fields.stamps_required),
     currentStamps: Number(fields.current_stamps ?? 0),
     totalEarned: Number(fields.total_earned ?? 0),
     lastStamped: Number(fields.last_stamped ?? 0),
+    version: Number((fields as Record<string, unknown>)['version'] ?? 0),
   };
 }
 
