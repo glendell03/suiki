@@ -16,7 +16,7 @@
  */
 
 import { Transaction } from '@mysten/sui/transactions';
-import { TARGETS, CLOCK_ID } from './constants';
+import { TARGETS, CLOCK_ID, PREMIUM_THEME_PRICE_MIST } from './constants';
 
 // ---------------------------------------------------------------------------
 // Transaction builders
@@ -24,25 +24,18 @@ import { TARGETS, CLOCK_ID } from './constants';
 
 /**
  * Builds a transaction that calls suiki::suiki::create_program.
- *
- * The caller (merchant) must sign this transaction. The new StampProgram
- * becomes a shared object accessible by any address.
- *
- * Move signature:
- *   public fun create_program(name, logo_url, stamps_required, reward_description, ctx)
+ * V3: logo_url and reward_description moved to Postgres — not on-chain.
  *
  * @param sender - Merchant wallet address (0x-prefixed).
  * @param name - Display name of the stamp program.
- * @param logoUrl - URL of the merchant's logo image.
  * @param stampsRequired - Number of stamps required before a customer can redeem.
- * @param rewardDescription - Human-readable reward description.
+ * @param themeId - Visual theme identifier for the stamp card.
  */
 export function buildCreateProgram(
   sender: string,
   name: string,
-  logoUrl: string,
   stampsRequired: number,
-  rewardDescription: string,
+  themeId: number,
 ): Transaction {
   const tx = new Transaction();
   tx.setSender(sender);
@@ -50,9 +43,8 @@ export function buildCreateProgram(
     target: TARGETS.createProgram,
     arguments: [
       tx.pure.string(name),
-      tx.pure.string(logoUrl),
       tx.pure.u64(stampsRequired),
-      tx.pure.string(rewardDescription),
+      tx.pure.u8(themeId),
     ],
   });
   return tx;
@@ -60,13 +52,6 @@ export function buildCreateProgram(
 
 /**
  * Builds a transaction that calls suiki::suiki::create_card_and_stamp.
- *
- * The caller must be the merchant (program.merchant == ctx.sender()).
- * Creates a new StampCard shared object with current_stamps = 1 and emits
- * both CardCreated and StampIssued events.
- *
- * Move signature:
- *   public fun create_card_and_stamp(program: &mut StampProgram, customer, clock, ctx)
  *
  * @param sender - Merchant wallet address (0x-prefixed).
  * @param programId - Object ID of the StampProgram shared object (mutable ref).
@@ -84,9 +69,6 @@ export function buildCreateCardAndStamp(
     arguments: [
       tx.object(programId),
       tx.pure.address(customerAddress),
-      // The SUI system clock object is always at 0x6.
-      // Passed as a shared object reference so the contract can call
-      // clock.timestamp_ms() to record when the stamp was issued.
       tx.object(CLOCK_ID),
     ],
   });
@@ -95,12 +77,6 @@ export function buildCreateCardAndStamp(
 
 /**
  * Builds a transaction that calls suiki::suiki::issue_stamp.
- *
- * The caller must be the merchant. Increments card.current_stamps by 1 and
- * updates card.last_stamped with the current clock timestamp.
- *
- * Move signature:
- *   public fun issue_stamp(program: &StampProgram, card: &mut StampCard, clock, ctx)
  *
  * @param sender - Merchant wallet address (0x-prefixed).
  * @param programId - Object ID of the StampProgram shared object (immutable ref).
@@ -125,15 +101,36 @@ export function buildIssueStamp(
 }
 
 /**
+ * Builds a transaction that calls suiki::suiki::issue_stamp_as_staffer.
+ * Requires the caller to hold the StafferCap for this program.
+ *
+ * @param sender - Staffer wallet address (0x-prefixed).
+ * @param programId - Object ID of the StampProgram shared object.
+ * @param cardId - Object ID of the customer's StampCard shared object.
+ * @param stafferCapId - Object ID of the caller's StafferCap.
+ */
+export function buildIssueStampAsStaffer(
+  sender: string,
+  programId: string,
+  cardId: string,
+  stafferCapId: string,
+): Transaction {
+  const tx = new Transaction();
+  tx.setSender(sender);
+  tx.moveCall({
+    target: TARGETS.issueStampAsStaffer,
+    arguments: [
+      tx.object(programId),
+      tx.object(cardId),
+      tx.object(stafferCapId),
+      tx.object(CLOCK_ID),
+    ],
+  });
+  return tx;
+}
+
+/**
  * Builds a transaction that calls suiki::suiki::redeem.
- *
- * The caller must be the customer (card.customer == ctx.sender()).
- * Requires card.current_stamps >= program.stamps_required.
- * Subtracts stamps_required from current_stamps (excess stamps carry forward)
- * and increments total_earned by 1 (counts completed redemption cycles).
- *
- * Move signature:
- *   public fun redeem(program: &StampProgram, card: &mut StampCard, ctx)
  *
  * @param sender - Customer wallet address (0x-prefixed).
  * @param programId - Object ID of the StampProgram shared object (immutable ref).
@@ -158,25 +155,17 @@ export function buildRedeem(
 
 /**
  * Builds a transaction that calls suiki::suiki::update_program.
- *
- * The caller must be the merchant. Updates name, logo_url, and reward_description.
- * Note: stamps_required cannot be changed after creation to protect existing cardholders.
- *
- * Move signature:
- *   public fun update_program(program: &mut StampProgram, name, logo_url, reward_description, ctx)
+ * V3: only updates the on-chain name. Use PUT /api/merchant/programs/[id] to update
+ * logo_url and reward_description in Postgres.
  *
  * @param sender - Merchant wallet address (0x-prefixed).
  * @param programId - Object ID of the StampProgram to update (mutable ref).
  * @param name - New display name.
- * @param logoUrl - New logo URL.
- * @param rewardDescription - New reward description.
  */
 export function buildUpdateProgram(
   sender: string,
   programId: string,
   name: string,
-  logoUrl: string,
-  rewardDescription: string,
 ): Transaction {
   const tx = new Transaction();
   tx.setSender(sender);
@@ -185,8 +174,163 @@ export function buildUpdateProgram(
     arguments: [
       tx.object(programId),
       tx.pure.string(name),
-      tx.pure.string(logoUrl),
-      tx.pure.string(rewardDescription),
+    ],
+  });
+  return tx;
+}
+
+/**
+ * Builds a transaction that calls suiki::suiki::set_theme.
+ *
+ * @param sender - Merchant wallet address (0x-prefixed).
+ * @param programId - Object ID of the StampProgram to update.
+ * @param themeId - New theme identifier.
+ */
+export function buildSetTheme(
+  sender: string,
+  programId: string,
+  themeId: number,
+): Transaction {
+  const tx = new Transaction();
+  tx.setSender(sender);
+  tx.moveCall({
+    target: TARGETS.setTheme,
+    arguments: [
+      tx.object(programId),
+      tx.pure.u8(themeId),
+    ],
+  });
+  return tx;
+}
+
+/**
+ * Builds a transaction that calls suiki::suiki::deactivate_program.
+ *
+ * @param sender - Merchant wallet address (0x-prefixed).
+ * @param programId - Object ID of the StampProgram to deactivate.
+ */
+export function buildDeactivateProgram(sender: string, programId: string): Transaction {
+  const tx = new Transaction();
+  tx.setSender(sender);
+  tx.moveCall({
+    target: TARGETS.deactivateProgram,
+    arguments: [tx.object(programId)],
+  });
+  return tx;
+}
+
+/**
+ * Builds a transaction that calls suiki::suiki::reactivate_program.
+ *
+ * @param sender - Merchant wallet address (0x-prefixed).
+ * @param programId - Object ID of the StampProgram to reactivate.
+ */
+export function buildReactivateProgram(sender: string, programId: string): Transaction {
+  const tx = new Transaction();
+  tx.setSender(sender);
+  tx.moveCall({
+    target: TARGETS.reactivateProgram,
+    arguments: [tx.object(programId)],
+  });
+  return tx;
+}
+
+/**
+ * Builds a transaction that calls suiki::suiki::issue_staffer_cap.
+ *
+ * @param sender - Merchant wallet address (0x-prefixed).
+ * @param programId - Object ID of the StampProgram.
+ * @param stafferAddress - Wallet address of the staffer to receive the cap.
+ */
+export function buildIssueStafferCap(
+  sender: string,
+  programId: string,
+  stafferAddress: string,
+): Transaction {
+  const tx = new Transaction();
+  tx.setSender(sender);
+  tx.moveCall({
+    target: TARGETS.issueStafferCap,
+    arguments: [
+      tx.object(programId),
+      tx.pure.address(stafferAddress),
+    ],
+  });
+  return tx;
+}
+
+/**
+ * Builds a transaction that calls suiki::suiki::create_and_transfer_merchant_profile.
+ *
+ * @param sender - Merchant wallet address (0x-prefixed).
+ */
+export function buildCreateMerchantProfile(sender: string): Transaction {
+  const tx = new Transaction();
+  tx.setSender(sender);
+  tx.moveCall({ target: TARGETS.createAndTransferMerchantProfile });
+  return tx;
+}
+
+/**
+ * Builds a PTB that creates a MerchantProfile and purchases a premium theme atomically.
+ *
+ * @param sender - Merchant wallet address (0x-prefixed).
+ * @param themeId - Premium theme identifier to purchase.
+ */
+export function buildCreateProfileAndPurchaseTheme(sender: string, themeId: number): Transaction {
+  const tx = new Transaction();
+  tx.setSender(sender);
+  const [profile] = tx.moveCall({ target: TARGETS.createMerchantProfile });
+  const [payment] = tx.splitCoins(tx.gas, [tx.pure.u64(PREMIUM_THEME_PRICE_MIST)]);
+  tx.moveCall({
+    target: TARGETS.purchaseTheme,
+    arguments: [profile, tx.pure.u8(themeId), payment],
+  });
+  tx.transferObjects([profile], tx.pure.address(sender));
+  return tx;
+}
+
+/**
+ * Builds a transaction that purchases a premium theme on an existing MerchantProfile.
+ *
+ * @param sender - Merchant wallet address (0x-prefixed).
+ * @param profileId - Object ID of the existing MerchantProfile.
+ * @param themeId - Premium theme identifier to purchase.
+ */
+export function buildPurchaseTheme(sender: string, profileId: string, themeId: number): Transaction {
+  const tx = new Transaction();
+  tx.setSender(sender);
+  const [payment] = tx.splitCoins(tx.gas, [tx.pure.u64(PREMIUM_THEME_PRICE_MIST)]);
+  tx.moveCall({
+    target: TARGETS.purchaseTheme,
+    arguments: [tx.object(profileId), tx.pure.u8(themeId), payment],
+  });
+  return tx;
+}
+
+/**
+ * Builds a transaction that sets a premium theme on a StampProgram.
+ * Requires the caller to own a MerchantProfile with the theme purchased.
+ *
+ * @param sender - Merchant wallet address (0x-prefixed).
+ * @param programId - Object ID of the StampProgram.
+ * @param profileId - Object ID of the MerchantProfile proving theme ownership.
+ * @param themeId - Premium theme identifier to apply.
+ */
+export function buildSetPremiumTheme(
+  sender: string,
+  programId: string,
+  profileId: string,
+  themeId: number,
+): Transaction {
+  const tx = new Transaction();
+  tx.setSender(sender);
+  tx.moveCall({
+    target: TARGETS.setPremiumTheme,
+    arguments: [
+      tx.object(programId),
+      tx.object(profileId),
+      tx.pure.u8(themeId),
     ],
   });
   return tx;
