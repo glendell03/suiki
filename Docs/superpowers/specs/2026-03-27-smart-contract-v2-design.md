@@ -1,7 +1,7 @@
 # Suiki Smart Contract V2 — Architecture & Extensibility Design
 
 **Date:** 2026-03-27
-**Status:** Draft — Awaiting Walrus permanent storage research finalization
+**Status:** Final Draft — Walrus research complete (2026-03-28)
 **Scope:** Move contract redesign for mainnet — metadata extensibility, security hardening, scalability, multi-location support
 **Author:** Brainstorming session (Claude + glendell)
 
@@ -235,103 +235,165 @@ Merchant-written notes on a customer card. **Encrypted with merchant's key befor
 
 ## 5. Walrus Storage Strategy
 
-### 5.1 Confirmed Facts (Verified: 2026-03-27 via docs.wal.app)
+### 5.1 Confirmed Facts (Research complete: 2026-03-28)
 
 | Fact | Status |
 |---|---|
-| Walrus mainnet is live | ✅ Confirmed |
-| Storage is epoch-based — no built-in "permanent" option | ✅ Confirmed |
-| `extend_blob` is callable from Move smart contracts | ✅ Confirmed |
-| WAL token is used for storage payment and node staking | ✅ Confirmed |
-| No publicly disclosed per-MB pricing | ⚠️ Check docs.wal.app for current rates |
+| Walrus mainnet is live (launched March 27, 2025) | ✅ Confirmed |
+| Storage is epoch-based — no true "permanent" option exists | ✅ Confirmed |
+| Max epochs per single booking: **~52 epochs ≈ 2 years** on mainnet | ✅ Confirmed |
+| `system::extend_blob` is callable from Move smart contracts | ✅ Confirmed |
+| WAL token used for payment (storage fees) and staking (node security) | ✅ Confirmed |
+| 1 WAL = 1,000,000,000 FROST; max supply 5B WAL | ✅ Confirmed |
+| **64 MB metadata floor per blob** — small files are wasteful individually | ✅ Confirmed |
+| Quilt batched uploads avoid the 64 MB floor — use for small JSON files | ✅ Confirmed |
+| SDK: `@mysten/walrus` package with `SuiGrpcClient` — matches our stack | ✅ Confirmed |
+| Upload relay reduces ~2,200 node requests → 1 HTTP call | ✅ Confirmed |
+| Expired blobs can be re-uploaded if you kept a local copy (same Blob ID) | ✅ Confirmed |
+| Used in production by Pudgy Penguins, TradePort, 120+ projects | ✅ Confirmed |
 
 ### 5.2 The Permanence Problem
 
-**There is no "pay once, store forever" option in Walrus today.** The WAL token staking model provides staking rewards to storage nodes and delegators, but blobs themselves are always epoch-bound and require renewal. This is a critical finding — any design that assumes Walrus permanence is incorrect.
+**There is no "pay once, store forever" option in Walrus.** Blobs are epoch-bound and require renewal. The WAL staking model pays node operators per epoch but does not create a protocol-level endowment for individual blobs.
 
 **The implication:** Walrus alone cannot be trusted for long-term loyalty data without an operational renewal system. Data that must survive indefinitely must be stored on-chain (dynamic fields) or on Arweave.
 
-### 5.3 What Walrus IS Good For (Even Without Permanence)
+### 5.3 The 64 MB Floor — Critical Cost Trap
 
-Walrus is excellent for content where **temporary unavailability is acceptable** — images, branding, rich text. If a merchant's logo disappears for a week while you renew, customers see a placeholder. The stamp record and business logic remain unaffected on-chain.
+Every individual blob has a **64 MB metadata floor** — even a 1 KB JSON file costs the same as a 64 MB file in storage fees. Storing one metadata JSON per merchant wastes 63.999 MB of paid storage per merchant.
 
-### 5.4 Option A — Auto-Renewal Backend (Recommended for Mainnet)
+**Fix: Quilt batched uploads.** Walrus Quilt groups multiple small files into one blob, amortizing the metadata floor across all files. For Suiki with 1,000 merchants, each storing a ~2 KB JSON metadata blob:
 
-The `extend_blob` Move function is callable from smart contracts AND from a backend. The architecture:
+```
+Individual uploads: 1,000 merchants × 64 MB floor = 64,000 MB billed
+Quilt batch upload: 1,000 × 2 KB = ~2 MB actual + 1 × 64 MB floor = ~66 MB billed
+
+Cost saving: ~99.9% reduction in storage cost
+```
+
+**Architecture implication:** The backend must batch merchant metadata updates into periodic Quilt uploads rather than uploading one blob per save action. This adds design complexity but is non-negotiable for cost efficiency at scale.
+
+### 5.4 What Walrus IS Good For (Even Without Permanence)
+
+Walrus is excellent for content where **temporary unavailability is acceptable** — images, branding, rich text. If a merchant's logo disappears for a week during renewal, customers see a placeholder. The stamp record and all business logic remain unaffected on-chain.
+
+### 5.5 Auto-Renewal Architecture (Recommended for Mainnet)
+
+The `system::extend_blob` Move function is callable from smart contracts AND from a TypeScript backend using `@mysten/walrus`. The full architecture:
 
 ```
 Supabase table:
-  walrus_blobs { blob_id, program_id, expires_epoch, type, last_renewed_at }
+  walrus_blobs { blob_id, sui_object_id, program_id, expires_epoch, type, last_renewed_at }
 
 Vercel Cron (weekly):
   1. Query blobs where expires_epoch < current_epoch + 4
-  2. For each: call Walrus extend_blob via TypeScript SDK
+  2. For each: call walrus SDK extend (uses sui_object_id, not blob_id)
   3. Update expires_epoch in Supabase
-  4. Alert if treasury WAL balance < 60-day runway
+  4. Alert Slack if treasury WAL balance < 60-day runway
 
 Treasury wallet:
   Holds WAL tokens for renewals
-  Top-up from protocol revenue (theme purchases, subscription fees)
+  Top-up from protocol revenue (theme purchases, Pro subscription fees)
 ```
 
-**Cost estimate:**
-- 1,000 active merchants × 3 blobs each = 3,000 blobs
-- Even at $0.01/epoch/blob = $30/week — trivially funded by premium theme sales
+**On-chain renewal option (bonus):** A Move function `merchant_renew_blob(program, payment: Coin<WAL>)` lets merchants self-renew their own blobs directly, removing platform dependency.
 
-**On-chain renewal option:** A Move function `renew_program_blob(program, payment: Coin<WAL>)` can let merchants self-renew their own blobs, removing the platform dependency for renewal.
+**Extend requires the Sui object ID** (not the Blob ID):
+```typescript
+// Extend a blob using @mysten/walrus SDK
+await client.walrus.extend({
+  blobObjectId: '0x1c086e...', // Sui object ID, NOT the content-addressed Blob ID
+  epochsExtended: 52,          // extend by ~2 more years
+  signer: treasuryKeypair,
+});
+```
 
-### 5.5 Option B — Arweave for Truly Permanent Content
+### 5.6 Arweave for Truly Permanent Content (Belt + Suspenders)
 
-Arweave is a separate blockchain with a pay-once endowment model. As long as the Arweave network exists, content is accessible forever. Industry standard for NFT metadata permanence (used by Magic Eden, Tensor, most serious NFT projects).
-
-**Use for:** Terms & conditions, legal text, anything where "this must be readable in 10 years" is a hard requirement.
+For terms & conditions and legal text — upload to Arweave (pay-once permanent) AND reference it inside the Walrus blob. Even if the Walrus blob is renewed many times, the Arweave reference is an immutable audit trail.
 
 ```json
 {
   "version": 1,
   "name": "Aling Rosa's Tapsihan",
-  "terms_and_conditions": "...",
+  "terms_and_conditions": "Valid Mon–Sat only. One reward per day.",
   "terms_arweave_id": "arweave://Qm...",
   "logo_blob_id": "<walrus_blob_id>"
 }
 ```
 
-Store the Arweave transaction ID inside the Walrus blob. Even if the Walrus blob is renewed, the Arweave reference is permanent and verifiable.
+**Arweave vs Walrus cost crossover:** Walrus is cheaper for < 3 years; Arweave wins at 3+ year horizon. For Suiki's legal text (must survive forever), Arweave is the right call.
 
-### 5.6 Recommended Storage Tiering for Suiki
+### 5.7 TypeScript SDK Integration (Matches Existing Stack)
 
-| Content | Storage | Durability | Rationale |
-|---|---|---|---|
-| Stamp counts, redemption records, access control | **Struct + Dynamic fields** | Permanent (Sui) | Must survive forever; checked in every tx |
-| Program name, reward description, category | **Dynamic fields** | Permanent (Sui) | Short strings; critical for Display render; worth on-chain gas |
-| Logo image, card visual assets | **Walrus + auto-renewal** | Long-term with ops | Large binary; brief unavailability acceptable |
-| Merchant bio, social links, multi-location data | **Walrus + auto-renewal** | Long-term with ops | Rich content; non-critical if briefly unavailable |
-| Terms & conditions (legal text) | **Walrus + Arweave** | Permanent (Arweave) | Legal requirement; must be immutable and permanent |
-| Customer card notes (encrypted) | **Walrus + auto-renewal** | Long-term with ops | Sensitive; encrypted; merchant controls access |
-| Behavioral analytics (visit frequency, timestamps) | **Supabase only** | Controlled | PDPA right to erasure; never put on-chain |
+`@mysten/walrus` extends `SuiGrpcClient` — this is already the client in `src/lib/sui-client.ts`. Zero new infrastructure.
 
-### 5.7 Revised Field Allocation: What Moves from Walrus → Dynamic Fields
+```typescript
+// src/lib/walrus-client.ts (new server-only file)
+import { SuiGrpcClient } from '@mysten/sui/grpc';
+import { walrus } from '@mysten/walrus';
+import { WalrusFile } from '@mysten/walrus';
 
-Given that Walrus is NOT permanent, these fields are too important to trust to Walrus alone:
+export const walrusClient = new SuiGrpcClient({
+  network: process.env.NEXT_PUBLIC_SUI_NETWORK,
+}).$extend(
+  walrus({
+    uploadRelay: {
+      host: 'https://upload-relay.mainnet.walrus.space',
+      sendTip: { max: 1_000 },
+    },
+  }),
+);
 
-| Field | Original Plan | Revised Plan | Reason |
-|---|---|---|---|
-| `name` | Walrus blob | **Dynamic field** | Shown in Display; NFT breaks if missing |
-| `reward_description` | Walrus blob | **Dynamic field** | Shown to customer; must always be available |
-| `category` | Walrus blob | **Dynamic field** | Used for on-chain discovery/indexing |
-| `logo_url` / `logo_blob_id` | Walrus blob | Walrus (acceptable) | Visual only; placeholder if unavailable |
-| `terms_and_conditions` | Walrus blob | Walrus + Arweave | Legal requirement; belt+suspenders |
-| `locations`, `bio`, `social` | Walrus blob | Walrus (acceptable) | Rich content; non-critical |
+// Upload merchant metadata (always use Quilt for small files)
+export async function uploadMerchantMetadata(
+  metadataFiles: Array<{ programId: string; json: object }>,
+): Promise<Map<string, string>> {
+  const files = metadataFiles.map(({ programId, json }) =>
+    WalrusFile.from({
+      contents: new TextEncoder().encode(JSON.stringify(json)),
+      identifier: `${programId}.json`,
+      tags: { 'content-type': 'application/json' },
+    }),
+  );
 
-**Updated minimal on-chain dynamic fields per program:**
+  const results = await walrusClient.walrus.writeFiles({
+    files,           // Quilt batches automatically when multiple files provided
+    epochs: 52,      // ~2 years on mainnet
+    deletable: false,
+    signer: sponsorKeypair,
+  });
+
+  return new Map(results.map((r, i) => [metadataFiles[i].programId, r.blobId]));
+}
 ```
-"name": String           ← was in struct, now dynamic field, always available
-"reward_description": String
-"category": String
-"metadata_blob_id": String   ← points to full Walrus JSON for rich content
-```
 
-This way, even if the Walrus blob is temporarily expired, the core Display fields (`name`, `reward_description`) still render correctly from dynamic fields.
+### 5.8 Recommended Storage Tiering for Suiki (Final)
+
+| Content | Storage | Durability | Notes |
+|---|---|---|---|
+| Stamp counts, access control | Struct | Permanent (Sui) | Core invariants |
+| Program name, reward description, category | Dynamic fields | Permanent (Sui) | Small strings; Display-critical |
+| Logo image, card visuals | Walrus Quilt + auto-renewal | Long-term with ops | Brief unavailability acceptable |
+| Merchant bio, social links, locations | Walrus Quilt + auto-renewal | Long-term with ops | Non-critical if briefly unavailable |
+| Terms & conditions | Walrus + Arweave | Permanent (Arweave) | Legal; must survive forever |
+| Card notes (encrypted, merchant-written) | Walrus + auto-renewal | Long-term with ops | Sensitive; encrypt before upload |
+| Behavioral analytics, visit timestamps | **Supabase only** | Controlled | PDPA; right to erasure required |
+
+### 5.9 Revised Field Allocation
+
+Fields moved from Walrus → Dynamic Fields after confirming no true permanence:
+
+| Field | Revised Plan | Reason |
+|---|---|---|
+| `name` | **Dynamic field** | Display-critical; NFT broken if Walrus blob expires |
+| `reward_description` | **Dynamic field** | Shown to customer; must always be available |
+| `category` | **Dynamic field** | Needed for on-chain discovery/indexing |
+| `logo_blob_id` | Walrus (acceptable) | Visual only; placeholder shown if unavailable |
+| `terms_and_conditions` | Walrus + Arweave | Legal requirement; Arweave provides permanence |
+| `locations`, `bio`, `social` | Walrus Quilt | Rich content; non-critical |
+
+This way, even if the Walrus blob temporarily expires, the core Display fields (`name`, `reward_description`) still render correctly from on-chain dynamic fields.
 
 ---
 
