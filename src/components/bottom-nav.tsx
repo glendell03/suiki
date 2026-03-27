@@ -8,7 +8,7 @@ import type { ComponentType } from "react";
 
 type NavTab = {
   href: string;
-  icon: ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
+  icon: ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties; "aria-hidden"?: boolean | "true" }>;
   label: string;
   ariaLabel: string;
   exactMatch?: boolean;
@@ -66,6 +66,7 @@ export function BottomNav() {
                 <Icon
                   size={20}
                   strokeWidth={2}
+                  aria-hidden={true}
                   style={{ color: "var(--color-text-on-brand)" }}
                 />
                 <span
@@ -98,6 +99,7 @@ export function BottomNav() {
               <Icon
                 size={20}
                 strokeWidth={isActive ? 2.2 : 1.8}
+                aria-hidden={true}
                 style={{
                   color,
                   transition: "color 150ms ease",

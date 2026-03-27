@@ -118,7 +118,7 @@ function CreateProgramCard() {
             background: "var(--color-brand-subtle)",
           }}
         >
-          <Plus size={24} style={{ color: "var(--color-brand)" }} />
+          <Plus size={24} aria-hidden={true} style={{ color: "var(--color-brand)" }} />
         </div>
 
         {/* Text */}

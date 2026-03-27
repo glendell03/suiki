@@ -113,22 +113,22 @@ export function MerchantCard({
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="shrink-0 text-(--color-text-secondary)"
           >
-            <ChevronDown size={20} />
+            <ChevronDown size={20} aria-hidden={true} />
           </motion.div>
         )}
       </motion.div>
 
-      {/* Expandable content -- Framer Motion spring height animation */}
+      {/* Expandable content -- transform-only animation (no layout thrash) */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
             id={expandId}
             key="expanded"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ opacity: 0, scaleY: 0.92 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            exit={{ opacity: 0, scaleY: 0.92 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            style={{ overflow: "hidden" }}
+            style={{ transformOrigin: "top", overflow: "hidden" }}
           >
             <div className="flex flex-col gap-3 px-4 pb-4">
               <StampGrid

@@ -115,6 +115,7 @@ export function WalletDropdown({ variant = "default" }: WalletDropdownProps) {
         <UserRound
           size={18}
           strokeWidth={2}
+          aria-hidden={true}
           style={{ color: isLight ? "white" : "var(--color-brand)" }}
         />
       </motion.button>
@@ -146,7 +147,7 @@ export function WalletDropdown({ variant = "default" }: WalletDropdownProps) {
                 borderRadius: "var(--radius-lg)",
               }}
             >
-              <Wallet size={16} style={{ color: "var(--color-brand)", flexShrink: 0 }} />
+              <Wallet size={16} aria-hidden={true} style={{ color: "var(--color-brand)", flexShrink: 0 }} />
               <div className="flex flex-col min-w-0">
                 <span
                   className="text-(--color-text-muted)"
@@ -178,9 +179,9 @@ export function WalletDropdown({ variant = "default" }: WalletDropdownProps) {
               </span>
               <span className="shrink-0 text-(--color-text-muted)">
                 {copied ? (
-                  <Check size={14} style={{ color: "var(--color-brand)" }} />
+                  <Check size={14} aria-hidden={true} style={{ color: "var(--color-brand)" }} />
                 ) : (
-                  <Copy size={14} />
+                  <Copy size={14} aria-hidden={true} />
                 )}
               </span>
             </button>
@@ -195,7 +196,7 @@ export function WalletDropdown({ variant = "default" }: WalletDropdownProps) {
               className="flex items-center gap-2.5 px-3 py-2.5 w-full text-left transition-colors"
               style={{ borderRadius: "var(--radius-lg)", color: "var(--color-error, #dc2626)", fontSize: 14 }}
             >
-              <LogOut size={15} strokeWidth={2} />
+              <LogOut size={15} strokeWidth={2} aria-hidden={true} />
               <span style={{ fontWeight: 500 }}>Disconnect wallet</span>
             </button>
           </motion.div>

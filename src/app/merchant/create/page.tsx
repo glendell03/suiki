@@ -148,7 +148,7 @@ function StepLogo({
       {/* URL error */}
       {showError && (
         <div className="flex items-center gap-2 text-[13px]" style={{ color: "var(--color-error)" }}>
-          <ImageOff size={14} />
+          <ImageOff size={14} aria-hidden={true} />
           <span>Couldn&apos;t load image from this URL.</span>
         </div>
       )}
@@ -233,7 +233,7 @@ function StepStampGoal({
           className="tap-target flex items-center justify-center rounded-full bg-(--color-surface) border border-(--color-border) disabled:opacity-30 transition-opacity"
           style={{ width: 48, height: 48 }}
         >
-          <Minus size={20} className="text-(--color-text-primary)" />
+          <Minus size={20} aria-hidden={true} className="text-(--color-text-primary)" />
         </button>
 
         <span
@@ -257,7 +257,7 @@ function StepStampGoal({
           className="tap-target flex items-center justify-center rounded-full bg-(--color-surface) border border-(--color-border) disabled:opacity-30 transition-opacity"
           style={{ width: 48, height: 48 }}
         >
-          <Plus size={20} className="text-(--color-text-primary)" />
+          <Plus size={20} aria-hidden={true} className="text-(--color-text-primary)" />
         </button>
       </div>
 

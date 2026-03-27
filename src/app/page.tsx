@@ -46,7 +46,7 @@ export default function Home() {
             href="/merchant"
             className="flex flex-col gap-3 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-5 shadow-(--shadow-card) active:scale-[0.97] transition-transform duration-(--duration-micro)"
           >
-            <Store size={24} className="text-(--color-brand)" />
+            <Store size={24} aria-hidden={true} className="text-(--color-brand-dark)" />
             <div className="flex flex-col gap-0.5">
               <span
                 className="text-[15px] font-bold text-(--color-text-primary)"
@@ -58,14 +58,14 @@ export default function Home() {
                 Manage programs
               </span>
             </div>
-            <ArrowRight size={16} className="text-(--color-text-muted) mt-auto" />
+            <ArrowRight size={16} aria-hidden={true} className="text-(--color-text-muted) mt-auto" />
           </Link>
 
           <Link
             href="/customer"
             className="flex flex-col gap-3 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-5 shadow-(--shadow-card) active:scale-[0.97] transition-transform duration-(--duration-micro)"
           >
-            <CreditCard size={24} className="text-(--color-loyalty)" />
+            <CreditCard size={24} aria-hidden={true} className="text-(--color-loyalty)" />
             <div className="flex flex-col gap-0.5">
               <span
                 className="text-[15px] font-bold text-(--color-text-primary)"
@@ -77,7 +77,7 @@ export default function Home() {
                 Earn &amp; redeem stamps
               </span>
             </div>
-            <ArrowRight size={16} className="text-(--color-text-muted) mt-auto" />
+            <ArrowRight size={16} aria-hidden={true} className="text-(--color-text-muted) mt-auto" />
           </Link>
         </nav>
 

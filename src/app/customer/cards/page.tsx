@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 import { useMyCards } from "@/hooks/use-my-cards";
 import type { StampCard as StampCardType } from "@/types/sui";
+import { AlertCircle } from "lucide-react";
 
 /** Filter chip options for the cards list. */
 const FILTER_OPTIONS = [
@@ -78,7 +79,7 @@ const backButton = (
     className="flex items-center justify-center w-10 h-10 tap-target rounded-full"
     style={{ color: "var(--color-text-primary)" }}
   >
-    <ChevronLeft size={20} strokeWidth={2} />
+    <ChevronLeft size={20} strokeWidth={2} aria-hidden={true} />
   </Link>
 );
 
@@ -96,7 +97,7 @@ export default function CardsPage() {
 function CardsContent() {
   const [filter, setFilter] = useState("all");
   const router = useRouter();
-  const { data: cards, isLoading } = useMyCards();
+  const { data: cards, isLoading, isError, error } = useMyCards();
 
   /** Sort by progress ratio descending, then filter by selected chip. */
   const filteredCards = useMemo(() => {
@@ -111,9 +112,9 @@ function CardsContent() {
     return filterCards(sorted, filter);
   }, [cards, filter]);
 
-  const hasNoCardsAtAll = !isLoading && (!cards || cards.length === 0);
+  const hasNoCardsAtAll = !isLoading && !isError && (!cards || cards.length === 0);
   const hasNoFilterResults =
-    !isLoading && cards && cards.length > 0 && filteredCards.length === 0;
+    !isLoading && !isError && cards && cards.length > 0 && filteredCards.length === 0;
 
   return (
     <div className="min-h-dvh bg-(--color-bg-base) pt-14">
@@ -138,6 +139,16 @@ function CardsContent() {
             <Skeleton variant="card" />
             <Skeleton variant="card" />
           </div>
+        )}
+
+        {/* Error state */}
+        {isError && (
+          <EmptyState
+            icon={AlertCircle}
+            title="Couldn't load cards"
+            description={error?.message ?? "Something went wrong. Please try again."}
+            action={{ label: "Retry", onClick: () => window.location.reload() }}
+          />
         )}
 
         {/* Empty state: no cards at all */}

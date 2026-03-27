@@ -121,7 +121,7 @@ export default function QrScannerComponent({ onScan, onError }: QrScannerProps) 
           style={{ width: 72, height: 72, background: 'var(--color-brand-subtle)' }}
           aria-hidden="true"
         >
-          <Camera size={32} style={{ color: 'var(--color-brand)' }} />
+          <Camera size={32} aria-hidden={true} style={{ color: 'var(--color-brand)' }} />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -152,7 +152,7 @@ export default function QrScannerComponent({ onScan, onError }: QrScannerProps) 
               Waiting for permission…
             </>
           ) : (
-            <><Camera size={16} /> Allow Camera</>
+            <><Camera size={16} aria-hidden={true} /> Allow Camera</>
           )}
         </button>
 

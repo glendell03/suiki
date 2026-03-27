@@ -45,7 +45,7 @@ export function SiteHeader() {
           aria-disabled="true"
           className="flex items-center justify-center rounded-full text-(--color-text-secondary) transition-colors hover:text-(--color-text-primary) disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <Bell size={20} />
+          <Bell size={20} aria-hidden={true} />
         </motion.button>
 
         <WalletDropdown />

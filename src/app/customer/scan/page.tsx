@@ -40,10 +40,11 @@ function ScanContent() {
         {/* Back button */}
         <Link
           href="/customer"
+          aria-label="Back to home"
           className="absolute top-4 left-4 tap-target flex items-center justify-center w-10 h-10 rounded-full bg-white/20"
           style={{ top: "max(16px, env(safe-area-inset-top))" }}
         >
-          <ChevronLeft size={20} style={{ color: "white" }} strokeWidth={2} />
+          <ChevronLeft size={20} aria-hidden={true} style={{ color: "white" }} strokeWidth={2} />
         </Link>
 
         {/* Decorative watermark */}

@@ -16,7 +16,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Store } from "lucide-react";
+import { Search, Store, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SearchBar } from "@/components/search-bar";
 import { MerchantAvatar } from "@/components/merchant-avatar";
@@ -46,7 +46,7 @@ async function fetchAllPrograms(): Promise<StampProgram[]> {
 // ---------------------------------------------------------------------------
 
 export default function MerchantSearchPage() {
-  const { data: programs, isLoading } = useQuery<StampProgram[], Error>({
+  const { data: programs, isLoading, isError, error } = useQuery<StampProgram[], Error>({
     queryKey: ["all-programs"],
     queryFn: fetchAllPrograms,
     staleTime: 60_000,
@@ -82,13 +82,23 @@ export default function MerchantSearchPage() {
         {/* Loading skeletons */}
         {isLoading && <LoadingSkeletons />}
 
+        {/* Error state */}
+        {isError && (
+          <EmptyState
+            icon={AlertCircle}
+            title="Couldn't load merchants"
+            description={error?.message ?? "Something went wrong. Please try again."}
+            action={{ label: "Retry", onClick: () => window.location.reload() }}
+          />
+        )}
+
         {/* Search results */}
-        {!isLoading && hasResults && (
+        {!isLoading && !isError && hasResults && (
           <MerchantList programs={filtered} />
         )}
 
         {/* Empty: no search results */}
-        {!isLoading && hasQuery && !hasResults && (
+        {!isLoading && !isError && hasQuery && !hasResults && (
           <EmptyState
             icon={Search}
             title="No merchants found"
@@ -97,7 +107,7 @@ export default function MerchantSearchPage() {
         )}
 
         {/* Empty: no programs at all */}
-        {!isLoading && !hasQuery && !hasResults && (
+        {!isLoading && !isError && !hasQuery && !hasResults && (
           <EmptyState
             icon={Store}
             title="No merchants yet"

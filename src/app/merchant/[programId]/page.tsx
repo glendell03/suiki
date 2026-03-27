@@ -588,7 +588,7 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
             className="w-full inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-75 tap-target disabled:opacity-40"
             style={{ background: "var(--color-brand)" }}
           >
-            <ScanLine size={18} />
+            <ScanLine size={18} aria-hidden={true} />
             Scan Customer QR
           </button>
         )}

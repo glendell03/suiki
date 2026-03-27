@@ -70,7 +70,7 @@ const backButton = (
     aria-label="Back to cards"
     className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 tap-target"
   >
-    <ChevronLeft size={20} style={{ color: "white" }} strokeWidth={2} />
+    <ChevronLeft size={20} style={{ color: "white" }} strokeWidth={2} aria-hidden={true} />
   </Link>
 );
 
@@ -80,9 +80,10 @@ const backButton = (
 
 function CardDetailView({ cardId }: { cardId: string }) {
   const account = useAccount();
-  const { data: cards, isLoading } = useMyCards();
+  const { data: cards, isLoading, isError, error } = useMyCards();
 
   const card = cards?.find((c) => String(c.objectId) === cardId) ?? null;
+
   // Loading state
   if (isLoading) {
     return (
@@ -90,6 +91,27 @@ function CardDetailView({ cardId }: { cardId: string }) {
         <PageHeader title="" leftAction={backButton} transparent />
         <div className="h-[120px] bg-(--color-brand) relative pt-safe" />
         <CardDetailSkeleton />
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="min-h-dvh bg-(--color-bg-base)">
+        <PageHeader title="" leftAction={backButton} transparent />
+        <div className="h-[120px] bg-(--color-brand) relative pt-safe" />
+        <div className="relative -mt-8 pb-nav px-4 flex flex-col gap-4 mx-auto w-full max-w-[430px]">
+          <div className="glass-card p-6 flex flex-col items-center gap-3 text-center mt-4">
+            <p className="text-[15px] font-semibold text-(--color-text-primary)">
+              Couldn&apos;t load card
+            </p>
+            <p className="text-[13px] text-(--color-text-secondary)">
+              {error?.message ?? "Something went wrong. Please try again."}
+            </p>
+          </div>
+        </div>
         <BottomNav />
       </div>
     );

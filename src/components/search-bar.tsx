@@ -99,7 +99,7 @@ export function SearchBar({
             color: "var(--color-text-muted)",
           }}
         >
-          <X size={16} />
+          <X size={16} aria-hidden={true} />
         </button>
       )}
     </form>
