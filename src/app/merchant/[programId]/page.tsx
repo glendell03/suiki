@@ -56,7 +56,7 @@ interface ConfirmData {
   customerAddress: string;
   /** Null while the card lookup is in flight, or when no card exists. */
   card: StampCard | null;
-  /** True while findCardForProgram is still loading. */
+  /** True while the DB card lookup is in flight. */
   cardLoading: boolean;
 }
 
