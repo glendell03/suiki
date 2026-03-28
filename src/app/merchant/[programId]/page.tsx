@@ -486,6 +486,11 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
 
       const { card } = await res.json() as { card: StampCard | null };
       setConfirmData({ customerAddress, card, cardLoading: false });
+    } catch (err) {
+      // Collapse the confirm panel so the error banner (which only renders when
+      // confirmData is null) becomes visible to the merchant.
+      setConfirmData(null);
+      setScanError(err instanceof Error ? err.message : 'Card lookup failed');
     } finally {
       isHandlingScanRef.current = false;
     }
