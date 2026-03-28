@@ -36,14 +36,14 @@ export function extractStampCount(fields: Record<string, unknown>): number | nul
 // ---------------------------------------------------------------------------
 
 /**
- * Subscribes to StampIssued Move events for a specific stamp card and triggers
+ * Polls for StampIssued Move events for a specific stamp card and triggers
  * a one-frame animation flag when a new stamp is confirmed on-chain.
  *
- * Primary path: Sui WebSocket subscription (instant, ~0ms lag after tx confirm).
- * Fallback path: 3-second TanStack Query polling (activates only if WS fails).
+ * Uses queryEvents polling (3s interval) — the @mysten/sui v2 SDK does not
+ * support WebSocket subscriptions; polling is the supported event detection path.
  *
  * Animation handoff:
- *   1. Event arrives → mark animationRequested, invalidate ['cards'] query.
+ *   1. Poll detects new event for this card → mark animationRequested, invalidate ['cards'].
  *   2. currentStamps prop increases (refetch completed) → setPendingAnimation(true).
  *   3. One rAF later → setPendingAnimation(false). Framer Motion finishes independently.
  *
@@ -57,7 +57,6 @@ export function useStampEvents(
   walletAddress: string | undefined,
 ): { pendingAnimation: boolean } {
   const [pendingAnimation, setPendingAnimation] = useState(false);
-  const [wsFailed, setWsFailed] = useState(false);
 
   // Tracks the stamp count we last animated — avoids spurious animations on mount.
   const lastKnownStampsRef = useRef(currentStamps);
@@ -92,80 +91,38 @@ export function useStampEvents(
   }, [pendingAnimation]);
 
   // ---------------------------------------------------------------------------
-  // Primary path: WebSocket subscription
+  // Event polling — queryEvents every 3 seconds
   // ---------------------------------------------------------------------------
 
-  useEffect(() => {
-    if (!cardId) return;
-
-    let cancelled = false;
-    let unsubscribe: (() => void) | undefined;
-
-    async function subscribe() {
-      try {
-        unsubscribe = await suiBrowserClient.subscribeEvent({
-          // Filter by package; narrow to StampIssued + this cardId in the handler.
-          filter: { Package: PACKAGE_ID },
-          onMessage(event) {
-            if (event.type !== EVENT_TYPES.stampIssued) return;
-
-            const fields = event.parsedJson as StampIssuedFields;
-            if (fields.card_id !== cardId) return;
-
-            const newCount = Number(fields.new_count);
-            if (newCount <= lastKnownStampsRef.current) return;
-
-            // Mark animation as requested and kick off a cache invalidation.
-            // The animation fires once currentStamps prop increases (see effect above).
-            animationRequestedRef.current = true;
-            void queryClient.invalidateQueries({
-              queryKey: ['cards', walletAddress],
-            });
-          },
-        });
-
-        if (cancelled) unsubscribe?.();
-      } catch {
-        // WebSocket unavailable — fall through to polling.
-        if (!cancelled) setWsFailed(true);
-      }
-    }
-
-    void subscribe();
-
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-    };
-  }, [cardId, queryClient, walletAddress]);
-
-  // ---------------------------------------------------------------------------
-  // Fallback path: polling (enabled only when WS fails)
-  // ---------------------------------------------------------------------------
-
-  const { data: polledStamps } = useQuery({
+  const { data: latestEventCount } = useQuery({
     queryKey: ['card-stamp-poll', cardId],
     queryFn: async () => {
-      const obj = await suiBrowserClient.getObject({
-        id: cardId!,
-        options: { showContent: true },
+      const result = await suiBrowserClient.queryEvents({
+        query: { MoveEventType: EVENT_TYPES.stampIssued },
+        limit: 50,
+        order: 'descending',
       });
-      if (obj.data?.content?.dataType !== 'moveObject') return null;
-      const fields = obj.data.content.fields as Record<string, unknown>;
-      return extractStampCount(fields);
+
+      for (const event of result.data) {
+        const fields = event.parsedJson as StampIssuedFields | undefined;
+        if (!fields || fields.card_id !== cardId) continue;
+        const count = Number(fields.new_count);
+        if (!isNaN(count)) return count;
+      }
+      return null;
     },
     refetchInterval: 3000,
-    enabled: wsFailed && !!cardId,
+    enabled: !!cardId,
   });
 
-  // Mirror the WebSocket path: mark animation requested, invalidate the query.
+  // When polling detects a higher stamp count, request animation + invalidate cache.
   useEffect(() => {
-    if (polledStamps == null) return;
-    if (polledStamps <= lastKnownStampsRef.current) return;
+    if (latestEventCount == null) return;
+    if (latestEventCount <= lastKnownStampsRef.current) return;
 
     animationRequestedRef.current = true;
     void queryClient.invalidateQueries({ queryKey: ['cards', walletAddress] });
-  }, [polledStamps, queryClient, walletAddress]);
+  }, [latestEventCount, queryClient, walletAddress]);
 
   return { pendingAnimation };
 }
