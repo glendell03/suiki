@@ -17,7 +17,6 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { useAccount } from "@/hooks/use-account";
 
-import { motion } from "framer-motion";
 import { WalletGuard } from "@/components/wallet-guard";
 import { PageHeader } from "@/components/page-header";
 import { BottomNav } from "@/components/bottom-nav";
@@ -27,7 +26,6 @@ import { Badge } from "@/components/badge";
 import { useMyCards } from "@/hooks/use-my-cards";
 import { useStampEvents } from "@/hooks/use-stamp-events";
 import { getTheme } from "@/lib/stamp-themes";
-import { BeautifulQR } from "@/components/beautiful-qr";
 import { encodeCustomerCardQR } from "@/lib/qr-utils";
 
 // ---------------------------------------------------------------------------
@@ -49,18 +47,6 @@ export default function CardDetailPage({ params }: CardDetailPageProps) {
       <CardDetailView cardId={cardId} />
     </WalletGuard>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Date formatting
-// ---------------------------------------------------------------------------
-
-/** Format an ISO date string (or null) to a human-readable medium date (en-PH). */
-function formatDate(iso: string | null): string {
-  if (!iso) return "Never";
-  const date = new Date(iso);
-  if (isNaN(date.getTime())) return "Never";
-  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium" }).format(date);
 }
 
 // ---------------------------------------------------------------------------
@@ -173,7 +159,7 @@ function CardDetailView({ cardId }: { cardId: string }) {
           </Badge>
         </div>
 
-        {/* Stamp card */}
+        {/* Stamp card — Apple Wallet style with QR + last stamp in footer */}
         <StampCard
           themeId={card.themeId}
           merchantName={card.merchantName || "Unknown Merchant"}
@@ -182,49 +168,11 @@ function CardDetailView({ cardId }: { cardId: string }) {
           totalStamps={card.stampsRequired}
           logoUrl={card.logoUrl}
           animateNewStamp={pendingAnimation}
+          lastStampedAt={card.lastStampedAt}
+          {...(account
+            ? { qrValue: encodeCustomerCardQR(cardId, account.address) }
+            : {})}
         />
-
-        {/* Last stamped date */}
-        {card.lastStampedAt && (
-          <div
-            className="rounded-(--radius-xl) px-4 py-3 flex items-center justify-between"
-            style={{
-              background: theme.bgColor,
-              border: `1.5px solid ${theme.inkColor}22`,
-            }}
-          >
-            <p className="text-[12px] uppercase tracking-wide font-medium" style={{ color: theme.inkColor, opacity: 0.45 }}>
-              Last stamp
-            </p>
-            <p className="text-[13px] font-semibold" style={{ color: theme.inkColor }}>
-              {formatDate(card.lastStampedAt)}
-            </p>
-          </div>
-        )}
-
-        {/* QR code panel — Apple Wallet style, merchant scans this to stamp */}
-        {account && (
-          <div
-            className="flex flex-col items-center gap-3 py-5 px-4"
-            style={{
-              background: "var(--color-surface)",
-              borderRadius: "var(--radius-2xl)",
-              boxShadow: "var(--shadow-card)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            <BeautifulQR
-              value={encodeCustomerCardQR(cardId, account.address)}
-              size={180}
-              label="Stamp card QR code"
-              foregroundColor="#111111"
-              backgroundColor="#ffffff"
-            />
-            <p className="text-[12px] text-(--color-text-muted)">
-              Show this to the merchant to earn a stamp
-            </p>
-          </div>
-        )}
       </div>
 
       <BottomNav />

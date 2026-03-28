@@ -111,7 +111,7 @@ export function BeautifulQR({
         aria-label={`QR code: ${label ?? value}`}
         style={{ width: size, height: size }}
         className={[
-          "overflow-hidden rounded-xl",
+          "overflow-hidden rounded-xl [&>svg]:w-full [&>svg]:h-full [&>svg]:block",
           isReady ? "block" : "hidden",
         ].join(" ")}
       />

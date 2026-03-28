@@ -1,174 +1,230 @@
 "use client";
 
-import React from "react";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { StampSlot, ThemedStampGrid } from "./stamp-slot";
 import { MerchantAvatar } from "./merchant-avatar";
-import { StampGrid } from "./stamp-grid";
-import { ProgressBar } from "./progress-bar";
-import { motion } from "framer-motion";
+import { BeautifulQR } from "./beautiful-qr";
+import { getTheme } from "@/lib/stamp-themes";
 
-/** Props for the StampCard component. */
-interface StampCardProps {
-  /** Unique program ID — used as the navigation target. */
-  programId: string;
-  /** Merchant display name. */
+function formatCardDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-PH", { dateStyle: "medium" }).format(date);
+}
+
+export interface StampCardProps {
+  /** Theme ID (0–10). Controls the card's color palette and stamp style. */
+  themeId: number;
+  /** Merchant name shown in the card header. */
   merchantName: string;
-  /** Loyalty program name (e.g. "Coffee Rewards"). */
-  programName: string;
-  /** Merchant logo URL — falls back to initials in MerchantAvatar. */
-  logoUrl?: string;
-  /** Customer's current stamp count. */
-  stampCount: number;
-  /** Total stamps needed for a reward. */
-  totalStamps: number;
-  /** Description of the reward (e.g. "Free coffee"). */
+  /** Reward description shown below the merchant name. */
   rewardDescription: string;
+  /** Number of stamps already earned. */
+  stampCount: number;
+  /** Total stamps required to complete the card. */
+  totalStamps: number;
+  /** Optional merchant logo URL. */
+  logoUrl?: string;
   /**
-   * Visual variant:
-   * - `compact` — list tile (default)
-   * - `featured` — home screen hero card, larger with StampGrid
+   * Called when the entire card is tapped.
+   * When provided the card becomes a tappable nav target.
    */
-  variant?: "compact" | "featured";
-  /** Tap handler — typically navigates to card detail. */
   onTap?: () => void;
+  /**
+   * When true the most recently earned stamp plays a spring bounce entry.
+   * @default false
+   */
+  animateNewStamp?: boolean;
+  /**
+   * Encoded QR value for the Apple Wallet-style footer.
+   * When provided a QR code and last-stamp date are shown at the bottom of the card.
+   */
+  qrValue?: string;
+  /**
+   * ISO date of the last stamp, shown in the card footer next to the QR code.
+   * Only used when `qrValue` is provided.
+   */
+  lastStampedAt?: string | null;
 }
 
 /**
- * Stamp card component rendered in two sizes:
+ * StampCard — the single unified loyalty card component.
  *
- * **compact** — for the Cards list and Nearby Programs list.
- * Merchant avatar (48px), name, progress bar, stamp count label.
+ * Matches the exact look and feel of the stamp-showcase VariantCard:
+ * themed background, header with merchant identity + stamp preview,
+ * stamp grid with spring animations, animated completion banner,
+ * and a card-thud animation when a new stamp is earned.
  *
- * **featured** — for the Customer Home hero slot.
- * Larger padding, 56px avatar, stamp grid row + progress bar.
- * Only the card with highest % progress should be shown as featured.
- *
- * @example
- * <StampCard
- *   programId="0x123"
- *   merchantName="Coffee Bean"
- *   programName="Loyalty Program"
- *   stampCount={7}
- *   totalStamps={10}
- *   rewardDescription="Free coffee"
- *   variant="featured"
- *   onTap={() => router.push(`/customer/cards/${programId}`)}
- * />
+ * Used on every page that displays a loyalty card.
  */
 export function StampCard({
+  themeId,
   merchantName,
-  programName,
-  logoUrl,
+  rewardDescription,
   stampCount,
   totalStamps,
-  rewardDescription,
-  variant = "compact",
+  logoUrl,
   onTap,
+  animateNewStamp = false,
+  qrValue,
+  lastStampedAt,
 }: StampCardProps) {
-  const clampedCount = Math.min(Math.max(0, stampCount), totalStamps);
-  const progress = totalStamps > 0 ? clampedCount / totalStamps : 0;
-  const isRewardReady = clampedCount >= totalStamps;
-  const remaining = totalStamps - clampedCount;
+  const theme = getTheme(themeId);
+  const clamped = Math.min(Math.max(0, stampCount), totalStamps);
+  const isComplete = clamped >= totalStamps;
+  const remaining = totalStamps - clamped;
 
-  const isFeatured = variant === "featured";
-  const avatarSize = isFeatured ? 56 : 48;
-  const padding = isFeatured ? 20 : 16;
-  const barHeight = isFeatured ? 6 : 4;
+  // Card thud (y bounce) triggers when a new stamp is added
+  const [thudKey, setThudKey] = useState(0);
+  const prevCountRef = useRef(stampCount);
+  useEffect(() => {
+    if (stampCount > prevCountRef.current) {
+      setThudKey((k) => k + 1);
+    }
+    prevCountRef.current = stampCount;
+  }, [stampCount]);
 
   return (
     <motion.div
-      {...(onTap ? { whileTap: { scale: 0.98 } } : {})}
-      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      animate={thudKey > 0 ? { y: [0, -4, 2, -1, 0] } : {}}
+      transition={{ duration: 0.38, ease: "easeOut" }}
+      whileTap={onTap ? { scale: 0.98 } : undefined}
       onClick={onTap}
-      {...(onTap ? { role: "button" as const, tabIndex: 0 } : {})}
-      {...(onTap
-        ? {
-            onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
+      role={onTap ? "button" : undefined}
+      tabIndex={onTap ? 0 : undefined}
+      onKeyDown={
+        onTap
+          ? (e: React.KeyboardEvent) => {
               if (e.key === "Enter" || e.key === " ") onTap();
-            },
-          }
-        : {})}
+            }
+          : undefined
+      }
       className={[
-        "w-full bg-(--color-surface) border border-(--color-border)",
-        "rounded-(--radius-xl) flex flex-col gap-3",
+        "w-full rounded-(--radius-xl) overflow-hidden",
         onTap ? "tap-target cursor-pointer" : "",
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ padding, boxShadow: isFeatured ? "var(--shadow-sheet)" : "none" }}
+      style={{
+        background: theme.bgColor,
+        border: `1.5px solid ${theme.inkColor}22`,
+        boxShadow: `0 2px 12px ${theme.fillColor}18`,
+      }}
     >
-      {/* Header row */}
-      <div className="flex items-center gap-3">
+      {/* ── Header ─────────────────────────────────────────── */}
+      <div
+        className="px-4 py-3 flex items-center gap-3"
+        style={{ borderBottom: `1px solid ${theme.inkColor}18` }}
+      >
         <MerchantAvatar
           {...(logoUrl ? { logoUrl } : {})}
           name={merchantName}
-          size={avatarSize}
+          size={36}
         />
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-(--color-text-primary)">
+          <p
+            className="text-[14px] font-bold truncate leading-snug"
+            style={{ color: theme.inkColor, fontFamily: "var(--font-display)" }}
+          >
             {merchantName}
           </p>
-          <p className="truncate text-[13px] text-(--color-text-secondary)">
-            {programName}
+          <p
+            className="text-[11px] mt-0.5 truncate"
+            style={{ color: theme.inkColor, opacity: 0.65 }}
+          >
+            {rewardDescription}
           </p>
-          {!isFeatured && (
-            <p className="text-[13px] font-semibold text-(--color-text-muted) tabular-nums">
-              {clampedCount} / {totalStamps} stamps
-            </p>
-          )}
         </div>
 
-        {/* Reward ready badge — compact only */}
-        {!isFeatured && isRewardReady && (
-          <span
-            className="shrink-0 rounded-full text-[11px] font-semibold px-2.5 py-0.5"
-            style={{
-              background: "var(--color-loyalty)",
-              color: "white",
-            }}
-          >
-            ★ Ready
-          </span>
-        )}
+        {/* Stamp preview — always shows the earned/filled state */}
+        <div className="shrink-0" style={{ opacity: 0.9 }}>
+          <StampSlot earned size={40} themeId={themeId} />
+        </div>
       </div>
 
-      {/* StampGrid — featured only */}
-      {isFeatured && (
-        <StampGrid earned={clampedCount} total={totalStamps} size="sm" />
-      )}
-
-      {/* Progress row */}
-      <div className="flex flex-col gap-1">
-        <ProgressBar
-          value={progress}
-          height={barHeight}
-          showMilestone={isRewardReady}
+      {/* ── Stamp grid ─────────────────────────────────────── */}
+      <div className="px-4 py-4">
+        <ThemedStampGrid
+          earned={clamped}
+          total={totalStamps}
+          themeId={themeId}
+          animateNewStamp={animateNewStamp}
         />
 
-        <div className="flex items-center justify-between">
-          {isRewardReady ? (
-            <p
-              className="text-[12px] font-semibold"
-              style={{ color: "var(--color-loyalty-dark)" }}
+        {/* Completion celebration banner */}
+        <AnimatePresence>
+          {isComplete && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-3 text-center py-2 rounded-full text-[12px] font-semibold"
+              style={{ background: theme.fillColor, color: theme.textColor }}
             >
-              ★ Reward ready — {rewardDescription}
-            </p>
-          ) : (
-            <p className="text-[12px] text-(--color-text-muted)">
-              {remaining} more to reward
-            </p>
+              🎉 Reward ready!
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          {isFeatured && (
-            <p
-              className="text-[12px] font-semibold tabular-nums"
-              style={{ color: "var(--color-loyalty-dark)" }}
-            >
-              {clampedCount}/{totalStamps}
-            </p>
-          )}
-        </div>
+        {/* Progress count */}
+        <p
+          className="mt-3 text-[12px]"
+          style={{ color: theme.inkColor, opacity: 0.55 }}
+        >
+          {clamped}/{totalStamps} stamps
+          {!isComplete && ` · ${remaining} more to reward`}
+        </p>
       </div>
+
+      {/* ── Apple Wallet footer — QR + last stamp ──────────── */}
+      {qrValue && (
+        <>
+          <div style={{ height: 1, background: `${theme.inkColor}18` }} />
+          <div className="px-4 py-3 flex items-center justify-between gap-4">
+            {/* Last stamp metadata */}
+            <div className="flex flex-col gap-0.5">
+              <p
+                className="text-[10px] uppercase tracking-widest font-medium"
+                style={{ color: theme.inkColor, opacity: 0.45 }}
+              >
+                Last stamp
+              </p>
+              <p
+                className="text-[13px] font-semibold"
+                style={{ color: theme.inkColor }}
+              >
+                {formatCardDate(lastStampedAt)}
+              </p>
+              <p
+                className="text-[10px] mt-1"
+                style={{ color: theme.inkColor, opacity: 0.4 }}
+              >
+                Show QR to earn a stamp
+              </p>
+            </div>
+
+            {/* QR code — white tile for high contrast scanning */}
+            <div
+              className="rounded-xl overflow-hidden shrink-0"
+              style={{
+                background: "#ffffff",
+                padding: 8,
+                boxShadow: `0 1px 6px ${theme.inkColor}20`,
+              }}
+            >
+              <BeautifulQR
+                value={qrValue}
+                size={88}
+                foregroundColor="#111111"
+                backgroundColor="#ffffff"
+              />
+            </div>
+          </div>
+        </>
+      )}
     </motion.div>
   );
 }
