@@ -76,6 +76,7 @@ test.describe("Merchant Create-Program Wizard", () => {
     // Fill name and advance.
     const input = page.getByPlaceholder(/coffee bean loyalty stamps/i);
     await input.fill("My Coffee Shop");
+    await expect(nextButton(page)).toBeEnabled();
     await nextButton(page).click();
 
     // Step 2 heading should be visible.
@@ -91,6 +92,7 @@ test.describe("Merchant Create-Program Wizard", () => {
 
     const nameInput = page.getByPlaceholder(/coffee bean loyalty stamps/i);
     await nameInput.fill("My Coffee Shop");
+    await expect(nextButton(page)).toBeEnabled();
     await nextButton(page).click();
 
     // Step 2: fill a valid URL and wait for canProceed (isValidUrl && imgState !== 'loading').
@@ -106,19 +108,17 @@ test.describe("Merchant Create-Program Wizard", () => {
       page.getByText(/how many stamps to earn a reward/i)
     ).toBeVisible({ timeout: 8_000 });
 
-    // Read the current count (default 10).
-    const counter = page.locator("span.tabular-nums");
-    const initialText = await counter.innerText();
-    const initial = parseInt(initialText, 10);
+    // Default stamp count is 10.
+    await expect(page.getByText("10", { exact: true })).toBeVisible();
 
-    // Increment by 1.
+    // Increment by 1 — counter should show 11.
     await page.getByRole("button", { name: /increase stamps/i }).click();
-    await expect(counter).toHaveText(String(initial + 1));
+    await expect(page.getByText("11", { exact: true })).toBeVisible();
 
-    // Decrement twice — net result should be initial − 1.
+    // Decrement twice — net result should be 9.
     await page.getByRole("button", { name: /decrease stamps/i }).click();
     await page.getByRole("button", { name: /decrease stamps/i }).click();
-    await expect(counter).toHaveText(String(initial - 1));
+    await expect(page.getByText("9", { exact: true })).toBeVisible();
   });
 
   // ── Test 6 ──────────────────────────────────────────────────────────────
@@ -133,6 +133,7 @@ test.describe("Merchant Create-Program Wizard", () => {
 
     const nameInput = page.getByPlaceholder(/coffee bean loyalty stamps/i);
     await nameInput.fill(PROGRAM_NAME);
+    await expect(nextButton(page)).toBeEnabled();
     await nextButton(page).click();
 
     // ── Step 2: Logo URL ──
