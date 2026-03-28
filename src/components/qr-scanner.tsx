@@ -42,6 +42,11 @@ export default function QrScannerComponent({ active, onScan, onError }: QrScanne
   const onScanRef = useRef(onScan);
   useEffect(() => { onScanRef.current = onScan; }, [onScan]);
 
+  // Stable ref for onError — prevents the active effect from re-running when
+  // the parent re-renders with a new inline onError function.
+  const onErrorRef = useRef(onError);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+
   // ── Check permission once on mount ───────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -121,13 +126,13 @@ export default function QrScannerComponent({ active, onScan, onError }: QrScanne
           const error = err instanceof Error ? err : new Error(String(err));
           setErrorMsg(error.message);
           setPermState('error');
-          onError?.(error);
+          onErrorRef.current?.(error);
         }
       });
     } else {
       scanner.stop();
     }
-  }, [active, onError]);
+  }, [active, permState]);
 
   // ── Permission denied ─────────────────────────────────────────────────────
   if (permState === 'denied') {
