@@ -1,8 +1,8 @@
 /**
  * Unit tests for QR payload encoding/decoding utilities.
  *
- * Tests the three new functions added to src/lib/qr-utils.ts:
- *   - encodeCustomerCardQR
+ * Tests the functions in src/lib/qr-utils.ts:
+ *   - encodeCustomerCardQR (walletAddress only — cardId removed to keep QR scannable)
  *   - encodeRewardClaimQR
  *   - decodeQRPayload
  *
@@ -21,8 +21,8 @@ import {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const CARD_ID = '0xcard001aabbccddeeff';
 const WALLET_ADDRESS = '0xwallet001aabbccddeeff';
+const CARD_ID = '0xcard001aabbccddeeff';
 const REWARD_ID = '0xprogram001aabbccddeeff';
 
 // ---------------------------------------------------------------------------
@@ -31,29 +31,35 @@ const REWARD_ID = '0xprogram001aabbccddeeff';
 
 describe('encodeCustomerCardQR', () => {
   it('returns a string starting with the v1: version prefix', () => {
-    const result = encodeCustomerCardQR(CARD_ID, WALLET_ADDRESS);
+    const result = encodeCustomerCardQR(WALLET_ADDRESS);
     expect(result.startsWith('v1:')).toBe(true);
   });
 
-  it('encodes cardId and walletAddress into the payload', () => {
-    const encoded = encodeCustomerCardQR(CARD_ID, WALLET_ADDRESS);
+  it('encodes walletAddress and type into the payload', () => {
+    const encoded = encodeCustomerCardQR(WALLET_ADDRESS);
     const base64Part = encoded.slice('v1:'.length);
     const decoded = JSON.parse(atob(base64Part)) as Record<string, unknown>;
 
     expect(decoded['type']).toBe('card_scan');
-    expect(decoded['cardId']).toBe(CARD_ID);
     expect(decoded['walletAddress']).toBe(WALLET_ADDRESS);
   });
 
+  it('does not include cardId in the payload (keeps QR density low)', () => {
+    const encoded = encodeCustomerCardQR(WALLET_ADDRESS);
+    const base64Part = encoded.slice('v1:'.length);
+    const decoded = JSON.parse(atob(base64Part)) as Record<string, unknown>;
+    expect(decoded['cardId']).toBeUndefined();
+  });
+
   it('produces a stable output for the same inputs', () => {
-    const first = encodeCustomerCardQR(CARD_ID, WALLET_ADDRESS);
-    const second = encodeCustomerCardQR(CARD_ID, WALLET_ADDRESS);
+    const first = encodeCustomerCardQR(WALLET_ADDRESS);
+    const second = encodeCustomerCardQR(WALLET_ADDRESS);
     expect(first).toBe(second);
   });
 
-  it('produces different outputs for different cardIds', () => {
-    const a = encodeCustomerCardQR('0xcard_a', WALLET_ADDRESS);
-    const b = encodeCustomerCardQR('0xcard_b', WALLET_ADDRESS);
+  it('produces different outputs for different walletAddresses', () => {
+    const a = encodeCustomerCardQR('0xwallet_a');
+    const b = encodeCustomerCardQR('0xwallet_b');
     expect(a).not.toBe(b);
   });
 });
@@ -79,8 +85,8 @@ describe('encodeRewardClaimQR', () => {
     expect(decoded['rewardId']).toBe(REWARD_ID);
   });
 
-  it('differs from the card_scan encoding for the same cardId', () => {
-    const cardScan = encodeCustomerCardQR(CARD_ID, WALLET_ADDRESS);
+  it('differs from the card_scan encoding for the same wallet', () => {
+    const cardScan = encodeCustomerCardQR(WALLET_ADDRESS);
     const rewardClaim = encodeRewardClaimQR(CARD_ID, WALLET_ADDRESS, REWARD_ID);
     expect(cardScan).not.toBe(rewardClaim);
   });
@@ -92,11 +98,10 @@ describe('encodeRewardClaimQR', () => {
 
 describe('decodeQRPayload — card_scan', () => {
   it('decodes a card_scan payload produced by encodeCustomerCardQR', () => {
-    const encoded = encodeCustomerCardQR(CARD_ID, WALLET_ADDRESS);
+    const encoded = encodeCustomerCardQR(WALLET_ADDRESS);
     const result = decodeQRPayload(encoded);
 
     expect(result.type).toBe('card_scan');
-    expect(result.cardId).toBe(CARD_ID);
     expect(result.walletAddress).toBe(WALLET_ADDRESS);
     expect(result.rewardId).toBeUndefined();
   });
@@ -132,7 +137,7 @@ describe('decodeQRPayload — unknown/error cases', () => {
   });
 
   it('returns type "unknown" for a plain JSON string (no prefix)', () => {
-    const json = JSON.stringify({ type: 'card_scan', cardId: CARD_ID, walletAddress: WALLET_ADDRESS });
+    const json = JSON.stringify({ type: 'card_scan', walletAddress: WALLET_ADDRESS });
     expect(decodeQRPayload(json).type).toBe('unknown');
   });
 
@@ -145,14 +150,8 @@ describe('decodeQRPayload — unknown/error cases', () => {
     expect(decodeQRPayload(payload).type).toBe('unknown');
   });
 
-  it('returns type "unknown" for a payload missing cardId', () => {
-    const data = { type: 'card_scan', walletAddress: WALLET_ADDRESS };
-    const payload = 'v1:' + btoa(JSON.stringify(data));
-    expect(decodeQRPayload(payload).type).toBe('unknown');
-  });
-
   it('returns type "unknown" for a payload missing walletAddress', () => {
-    const data = { type: 'card_scan', cardId: CARD_ID };
+    const data = { type: 'card_scan' };
     const payload = 'v1:' + btoa(JSON.stringify(data));
     expect(decodeQRPayload(payload).type).toBe('unknown');
   });
@@ -170,21 +169,8 @@ describe('decodeQRPayload — unknown/error cases', () => {
   });
 
   it('returns type "unknown" when the decoded content is a JSON array', () => {
-    const payload = 'v1:' + btoa(JSON.stringify(['card_scan', CARD_ID]));
+    const payload = 'v1:' + btoa(JSON.stringify(['card_scan', WALLET_ADDRESS]));
     expect(decodeQRPayload(payload).type).toBe('unknown');
-  });
-
-  it('coerces field values to strings to prevent object injection', () => {
-    // cardId and walletAddress are objects in the raw JSON, but String() coercion
-    // must convert them to "[object Object]" rather than throwing.
-    const data = { type: 'card_scan', cardId: {}, walletAddress: {} };
-    const payload = 'v1:' + btoa(JSON.stringify(data));
-
-    // {} serialises to {} which is truthy but String({}) = "[object Object]"
-    const result = decodeQRPayload(payload);
-    expect(result.type).toBe('card_scan');
-    expect(typeof result.cardId).toBe('string');
-    expect(typeof result.walletAddress).toBe('string');
   });
 });
 
@@ -193,14 +179,12 @@ describe('decodeQRPayload — unknown/error cases', () => {
 // ---------------------------------------------------------------------------
 
 describe('round-trip encode → decode integrity', () => {
-  it('round-trips card_scan data without loss', () => {
-    const original = { cardId: CARD_ID, walletAddress: WALLET_ADDRESS };
-    const encoded = encodeCustomerCardQR(original.cardId, original.walletAddress);
+  it('round-trips card_scan walletAddress without loss', () => {
+    const encoded = encodeCustomerCardQR(WALLET_ADDRESS);
     const decoded = decodeQRPayload(encoded);
 
     expect(decoded.type).toBe('card_scan');
-    expect(decoded.cardId).toBe(original.cardId);
-    expect(decoded.walletAddress).toBe(original.walletAddress);
+    expect(decoded.walletAddress).toBe(WALLET_ADDRESS);
   });
 
   it('round-trips reward_claim data without loss', () => {

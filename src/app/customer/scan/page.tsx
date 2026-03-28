@@ -31,7 +31,7 @@ export default function ScanPage() {
 /** Inner content rendered after wallet is connected. */
 function ScanContent() {
   const account = useAccount();
-  const qrValue = account ? encodeCustomerCardQR("default", account.address) : "";
+  const qrValue = account ? encodeCustomerCardQR(account.address) : "";
 
   return (
     <div className="min-h-dvh flex flex-col bg-(--color-bg-base)">

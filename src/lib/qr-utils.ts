@@ -22,7 +22,9 @@ import type { MerchantQRPayload, CustomerQRPayload, QRPayload, SuiObjectId, SuiA
 
 interface CardScanPayloadData {
   type: 'card_scan';
-  cardId: string;
+  // cardId intentionally omitted — adds 66 chars and the merchant scanner
+  // never uses it (it calls findCardForProgram(walletAddress, programId)).
+  // Keeping the payload small avoids a high-density QR that scanners struggle with.
   walletAddress: string;
 }
 
@@ -115,16 +117,20 @@ const QR_VERSION_PREFIX = 'v1:' as const;
  * Encode a customer card scan event as a compact QR payload.
  *
  * Used by the customer's card detail page. The merchant scanner decodes
- * this payload to identify which card to stamp.
+ * this payload to identify who to stamp (via walletAddress + programId).
  *
- * Encoding: `v1:` + btoa(JSON.stringify({ type, cardId, walletAddress }))
+ * Encoding: `v1:` + btoa(JSON.stringify({ type, walletAddress }))
  *
- * @param cardId - The on-chain StampCard object ID.
+ * NOTE: cardId is intentionally not encoded — the merchant scanner derives
+ * the card via findCardForProgram(walletAddress, programId). Omitting it
+ * keeps the payload ~100 bytes shorter, dropping from QR Version 16
+ * (81×81, barely scannable) to Version 10 (57×57, easily scannable).
+ *
  * @param walletAddress - The customer's wallet address (0x-prefixed).
  * @returns A compact base64-encoded string suitable for QR display.
  */
-export function encodeCustomerCardQR(cardId: string, walletAddress: string): string {
-  const data: CardScanPayloadData = { type: 'card_scan', cardId, walletAddress };
+export function encodeCustomerCardQR(walletAddress: string): string {
+  const data: CardScanPayloadData = { type: 'card_scan', walletAddress };
   return QR_VERSION_PREFIX + btoa(JSON.stringify(data));
 }
 
@@ -179,14 +185,12 @@ export function decodeQRPayload(payload: string): DecodedQRPayload {
   const obj = parsed as Record<string, unknown>;
 
   if (obj['type'] === 'card_scan') {
-    const cardId = obj['cardId'];
     const walletAddress = obj['walletAddress'];
 
-    if (!cardId || !walletAddress) return { type: 'unknown' };
+    if (!walletAddress) return { type: 'unknown' };
 
     return {
       type: 'card_scan',
-      cardId: String(cardId),
       walletAddress: String(walletAddress),
     };
   }

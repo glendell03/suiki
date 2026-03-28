@@ -170,7 +170,7 @@ function CardDetailView({ cardId }: { cardId: string }) {
           animateNewStamp={pendingAnimation}
           lastStampedAt={card.lastStampedAt}
           {...(account
-            ? { qrValue: encodeCustomerCardQR(cardId, account.address) }
+            ? { qrValue: encodeCustomerCardQR(account.address) }
             : {})}
         />
       </div>
