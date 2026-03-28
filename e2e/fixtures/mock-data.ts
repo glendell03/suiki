@@ -9,22 +9,96 @@
 export const MOCK_ADDRESS =
   "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
 
-/** Inject a fake connected account so WalletGuard passes without a real wallet. */
+/**
+ * Inject a fake connected account so WalletGuard passes without a real wallet.
+ *
+ * Strategy:
+ *  1. Set the dapp-kit-core localStorage key so autoConnectWallet will try to
+ *     reconnect.  The format is: `walletName:address:intents:` (intents empty).
+ *  2. Register a minimal mock wallet via the wallet-standard event mechanism so
+ *     the auto-connect lookup finds an existing account and skips the silent
+ *     re-connect RPC call.
+ */
 export async function injectWallet(page: import("@playwright/test").Page) {
   await page.addInitScript((address: string) => {
-    // dapp-kit-react reads from localStorage for persisted wallet state
+    const WALLET_NAME = "E2E Mock Wallet";
+
+    // ── 1. Prime the auto-connect storage key ─────────────────────────────
+    // dapp-kit-core DEFAULT_STORAGE_KEY = "mysten-dapp-kit:selected-wallet-and-address"
+    // Value format: `${walletUniqueIdentifier}:${address}:${intents}:`
+    // walletUniqueIdentifier = wallet.id ?? wallet.name  (we use name)
     localStorage.setItem(
-      "dapp-kit:wallet-connection-info",
-      JSON.stringify({
-        walletName: "Mock Wallet",
-        connectionStatus: "connected",
-        accounts: [{ address, publicKey: null, chains: ["sui:testnet"] }],
-        currentWallet: { name: "Mock Wallet" },
-        currentAccount: { address, publicKey: null, chains: ["sui:testnet"] },
-      })
+      "mysten-dapp-kit:selected-wallet-and-address",
+      `${WALLET_NAME}:${address}::`
     );
-    // Also set window.__suikiMockAccount so custom hooks can read it
-    (window as Record<string, unknown>).__suikiMockAccount = { address };
+
+    // ── 2. Register a mock Wallet Standard wallet ──────────────────────────
+    // The wallet-standard `getWallets()` call dispatches "wallet-standard:app-ready"
+    // and listens for "wallet-standard:register-wallet".  We fire the register
+    // event so our mock is available when syncRegisteredWallets runs.
+    const mockAccount = {
+      address,
+      publicKey: new Uint8Array(32),
+      chains: ["sui:testnet"],
+      features: ["sui:signTransaction", "sui:signPersonalMessage"],
+      label: undefined,
+      icon: undefined,
+    };
+
+    const mockWallet = {
+      id: WALLET_NAME,
+      name: WALLET_NAME,
+      version: "1.0.0",
+      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>",
+      chains: ["sui:testnet"],
+      accounts: [mockAccount],
+      features: {
+        "standard:connect": {
+          version: "1.0.0",
+          connect: async () => ({ accounts: [mockAccount] }),
+        },
+        "standard:disconnect": {
+          version: "1.0.0",
+          disconnect: async () => {},
+        },
+        "standard:events": {
+          version: "1.0.0",
+          on: () => () => {},
+        },
+        "sui:signTransaction": {
+          version: "2.0.0",
+          signTransaction: async () => ({ bytes: "", signature: "" }),
+        },
+        "sui:signPersonalMessage": {
+          version: "1.1.0",
+          signPersonalMessage: async () => ({ bytes: "", signature: "" }),
+        },
+      },
+    };
+
+    // Register via the wallet-standard event API used by @wallet-standard/app
+    try {
+      window.dispatchEvent(
+        new CustomEvent("wallet-standard:register-wallet", {
+          detail: (api: { register: (w: unknown) => void }) => {
+            api.register(mockWallet);
+          },
+        })
+      );
+    } catch {
+      // Fallback: also try the app-ready listener path
+    }
+
+    // Also listen for future app-ready dispatches (if getWallets hasn't been
+    // called yet when this script runs).
+    window.addEventListener("wallet-standard:app-ready", (event) => {
+      try {
+        const e = event as CustomEvent<{ register: (w: unknown) => void }>;
+        e.detail.register(mockWallet);
+      } catch {
+        // ignore
+      }
+    });
   }, MOCK_ADDRESS);
 }
 
