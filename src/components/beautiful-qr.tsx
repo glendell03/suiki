@@ -15,6 +15,16 @@ interface BeautifulQRProps {
   foregroundColor?: string;
   /** QR background color. Raw hex is OK here -- this is QR rendering data, not a design token. */
   backgroundColor?: string;
+  /**
+   * Module corner radius 0–1. 0 = sharp (best for scanning), 1 = fully rounded.
+   * Defaults to 0 for scan-safe output.
+   */
+  radius?: number;
+  /**
+   * QR error correction level. Higher = more robust but denser.
+   * "Q" (25%) recommended for display use. Defaults to "Q".
+   */
+  errorCorrectionLevel?: "L" | "M" | "Q" | "H";
   className?: string;
 }
 
@@ -45,6 +55,8 @@ export function BeautifulQR({
   label,
   foregroundColor: fgColor,
   backgroundColor: bgColor,
+  radius = 0,
+  errorCorrectionLevel = "Q",
   className = "",
 }: BeautifulQRProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -65,9 +77,9 @@ export function BeautifulQR({
       type: "svg",
       // typeNumber 0 lets the library pick the smallest valid type automatically
       typeNumber: 0,
-      errorCorrectionLevel: "M",
+      errorCorrectionLevel,
       mode: "Byte",
-      radius: 0.6,
+      radius,
       padding: 0,
       foregroundColor: fgColor ?? "#111111",
       backgroundColor: bgColor ?? "#ffffff",

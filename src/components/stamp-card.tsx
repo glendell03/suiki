@@ -179,12 +179,13 @@ export function StampCard({
         </p>
       </div>
 
-      {/* ── Apple Wallet footer — QR + last stamp ──────────── */}
+      {/* ── Apple Wallet footer — last stamp metadata + QR ─── */}
       {qrValue && (
         <>
           <div style={{ height: 1, background: `${theme.inkColor}18` }} />
-          <div className="px-4 py-3 flex items-center justify-between gap-4">
-            {/* Last stamp metadata */}
+
+          {/* Metadata row */}
+          <div className="px-4 pt-3 pb-1 flex items-center justify-between">
             <div className="flex flex-col gap-0.5">
               <p
                 className="text-[10px] uppercase tracking-widest font-medium"
@@ -198,30 +199,40 @@ export function StampCard({
               >
                 {formatCardDate(lastStampedAt)}
               </p>
-              <p
-                className="text-[10px] mt-1"
-                style={{ color: theme.inkColor, opacity: 0.4 }}
-              >
-                Show QR to earn a stamp
-              </p>
             </div>
+            <p
+              className="text-[10px] uppercase tracking-widest font-medium"
+              style={{ color: theme.inkColor, opacity: 0.45 }}
+            >
+              Loyalty Card
+            </p>
+          </div>
 
-            {/* QR code — white tile for high contrast scanning */}
+          {/* QR code — centered, white tile, large enough to scan reliably */}
+          <div className="px-4 pb-4 pt-2 flex flex-col items-center gap-2">
             <div
-              className="rounded-xl overflow-hidden shrink-0"
+              className="rounded-2xl overflow-hidden"
               style={{
                 background: "#ffffff",
-                padding: 8,
-                boxShadow: `0 1px 6px ${theme.inkColor}20`,
+                padding: 12,
+                boxShadow: `0 2px 10px ${theme.inkColor}18`,
               }}
             >
               <BeautifulQR
                 value={qrValue}
-                size={88}
+                size={200}
                 foregroundColor="#111111"
                 backgroundColor="#ffffff"
+                radius={0}
+                errorCorrectionLevel="Q"
               />
             </div>
+            <p
+              className="text-[11px] text-center"
+              style={{ color: theme.inkColor, opacity: 0.45 }}
+            >
+              Show this to the merchant to earn a stamp
+            </p>
           </div>
         </>
       )}
