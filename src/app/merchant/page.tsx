@@ -159,14 +159,14 @@ function ProgramTile({
   program,
 }: {
   program: {
-    objectId: string;
+    programId: string;
     name: string;
     logoUrl: string;
-    totalIssued: number;
+    stampsRequired: number;
   };
 }) {
   return (
-    <Link href={`/merchant/${program.objectId}`} className="block">
+    <Link href={`/merchant/${program.programId}`} className="block">
       <div
         className="tap-target flex items-center gap-3 bg-(--color-surface) p-4 transition-transform active:scale-[0.98]"
         style={{
@@ -191,8 +191,8 @@ function ProgramTile({
             className="text-(--color-text-secondary) mt-0.5"
             style={{ fontSize: 13 }}
           >
-            {program.totalIssued} stamp{program.totalIssued !== 1 ? "s" : ""}{" "}
-            issued
+            {program.stampsRequired} stamp{program.stampsRequired !== 1 ? "s" : ""}{" "}
+            required
           </p>
         </div>
 
@@ -256,7 +256,7 @@ function DashboardContent() {
               aria-label="Your programs"
             >
               {programs.map((program) => (
-                <motion.div key={program.objectId} variants={itemVariants} role="listitem">
+                <motion.div key={program.programId} variants={itemVariants} role="listitem">
                   <ProgramTile program={program} />
                 </motion.div>
               ))}

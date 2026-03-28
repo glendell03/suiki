@@ -70,7 +70,6 @@ interface ProgramInfoCardProps {
   logoUrl: string;
   stampsRequired: number;
   rewardDescription: string;
-  totalIssued: number;
 }
 
 /** Displays the key attributes of a StampProgram inside a card. */
@@ -79,7 +78,6 @@ function ProgramInfoCard({
   logoUrl,
   stampsRequired,
   rewardDescription,
-  totalIssued,
 }: ProgramInfoCardProps) {
   return (
     <div
@@ -93,7 +91,7 @@ function ProgramInfoCard({
     >
       {/* Header */}
       <div className="flex items-center gap-3">
-        <MerchantAvatar logoUrl={logoUrl} name={name} size={52} />
+        <MerchantAvatar logoUrl={logoUrl} name={name} size={48} />
         <div className="min-w-0 flex-1">
           <h2
             className="truncate text-[17px] font-bold text-(--color-text-primary)"
@@ -102,7 +100,7 @@ function ProgramInfoCard({
             {name}
           </h2>
           <p className="mt-0.5 text-[13px] text-(--color-text-muted)">
-            {totalIssued} stamp{totalIssued !== 1 ? "s" : ""} issued total
+            {stampsRequired} stamp{stampsRequired !== 1 ? "s" : ""} required
           </p>
         </div>
       </div>
@@ -560,7 +558,6 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
           logoUrl={program.logoUrl}
           stampsRequired={program.stampsRequired}
           rewardDescription={program.rewardDescription}
-          totalIssued={program.totalIssued}
         />
 
         {/* Daily rate-limit status */}

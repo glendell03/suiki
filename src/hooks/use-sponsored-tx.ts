@@ -26,8 +26,9 @@ export type TxPhase =
 
 interface UseSponsoredTxResult {
   /** Execute a transaction. When NEXT_PUBLIC_ENABLE_SPONSOR_GAS is true, the
-   *  gas station pays the fee; otherwise the connected wallet pays. */
-  executeSponsoredTx: (tx: Transaction) => Promise<void>;
+   *  gas station pays the fee; otherwise the connected wallet pays.
+   *  Returns the confirmed transaction digest on success, or undefined on failure. */
+  executeSponsoredTx: (tx: Transaction) => Promise<string | undefined>;
   /** True while the transaction is being signed, sponsored, or waited on. */
   isPending: boolean;
   /** Granular phase for step-specific status copy. */
@@ -75,7 +76,7 @@ export function useSponsoredTx(): UseSponsoredTxResult {
     async (tx: Transaction) => {
       if (!account) {
         setError(new Error('No wallet connected. Please connect your wallet first.'));
-        return;
+        return undefined;
       }
 
       setIsPending(true);
@@ -110,7 +111,7 @@ export function useSponsoredTx(): UseSponsoredTxResult {
           setDigest(confirmedDigest);
           await queryClient.invalidateQueries({ queryKey: ['programs', account.address] });
           await queryClient.invalidateQueries({ queryKey: ['cards', account.address] });
-          return;
+          return confirmedDigest;
         }
 
         // --- Sponsored path -----------------------------------------------
@@ -180,9 +181,12 @@ export function useSponsoredTx(): UseSponsoredTxResult {
         // Invalidate wallet-specific caches so UI reflects the new on-chain state.
         await queryClient.invalidateQueries({ queryKey: ['programs', account.address] });
         await queryClient.invalidateQueries({ queryKey: ['cards', account.address] });
+
+        return confirmedDigest;
       } catch (err) {
         setPhase('idle');
         setError(err instanceof Error ? err : new Error(String(err)));
+        return undefined;
       } finally {
         setIsPending(false);
       }

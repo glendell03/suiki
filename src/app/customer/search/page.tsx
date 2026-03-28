@@ -24,7 +24,7 @@ import { Badge } from "@/components/badge";
 import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/skeleton";
 import { BottomNav } from "@/components/bottom-nav";
-import type { StampProgram } from "@/types/sui";
+import type { ProgramWithMetadata } from "@/types/db";
 
 // ---------------------------------------------------------------------------
 // Data fetching
@@ -37,7 +37,7 @@ import type { StampProgram } from "@/types/sui";
  * a global program index (e.g. via a ProgramCreated event scan without
  * sender filter). For now returns an empty array as placeholder.
  */
-async function fetchAllPrograms(): Promise<StampProgram[]> {
+async function fetchAllPrograms(): Promise<ProgramWithMetadata[]> {
   return [];
 }
 
@@ -46,7 +46,7 @@ async function fetchAllPrograms(): Promise<StampProgram[]> {
 // ---------------------------------------------------------------------------
 
 export default function MerchantSearchPage() {
-  const { data: programs, isLoading, isError, error } = useQuery<StampProgram[], Error>({
+  const { data: programs, isLoading, isError, error } = useQuery<ProgramWithMetadata[], Error>({
     queryKey: ["all-programs"],
     queryFn: fetchAllPrograms,
     staleTime: 60_000,
@@ -148,7 +148,7 @@ const itemVariants = {
 // ---------------------------------------------------------------------------
 
 /** Renders the filtered list of merchant program tiles with stagger entrance. */
-function MerchantList({ programs }: { programs: StampProgram[] }) {
+function MerchantList({ programs }: { programs: ProgramWithMetadata[] }) {
   return (
     <motion.ul
       variants={containerVariants}
@@ -159,7 +159,7 @@ function MerchantList({ programs }: { programs: StampProgram[] }) {
       aria-label="Merchant programs"
     >
       {programs.map((program) => (
-        <motion.li key={String(program.objectId)} variants={itemVariants} role="listitem">
+        <motion.li key={program.programId} variants={itemVariants} role="listitem">
           <MerchantRow program={program} />
         </motion.li>
       ))}
@@ -168,9 +168,9 @@ function MerchantList({ programs }: { programs: StampProgram[] }) {
 }
 
 /** Single merchant row tile linking to the program detail page. */
-function MerchantRow({ program }: { program: StampProgram }) {
+function MerchantRow({ program }: { program: ProgramWithMetadata }) {
   return (
-    <Link href={`/merchant/${String(program.objectId)}`}>
+    <Link href={`/merchant/${program.programId}`}>
       <div className="flex items-center gap-3 bg-(--color-surface) border border-(--color-border) rounded-(--radius-xl) p-4 tap-target active:scale-[0.98] transition-transform">
         <MerchantAvatar logoUrl={program.logoUrl} name={program.name} size={40} />
         <div className="flex-1 min-w-0">
@@ -178,7 +178,7 @@ function MerchantRow({ program }: { program: StampProgram }) {
             {program.name}
           </p>
           <p className="text-[13px] text-(--color-text-secondary)">
-            {program.totalIssued} stamp{program.totalIssued !== 1 ? "s" : ""} issued
+            {program.stampsRequired} stamp{program.stampsRequired !== 1 ? "s" : ""} required
           </p>
         </div>
         <Badge variant="active">Active</Badge>

@@ -69,10 +69,10 @@ export interface StampProgram {
   objectId: SuiObjectId;
   merchant: SuiAddress;
   name: string;
-  logoUrl: string;
   stampsRequired: number;
-  rewardDescription: string;
   totalIssued: number;
+  version: number;
+  isActive: boolean;
 }
 
 /**
@@ -83,12 +83,11 @@ export interface StampCard {
   objectId: SuiObjectId;
   programId: SuiObjectId;
   customer: SuiAddress;
-  merchantName: string;
-  merchantLogo: string;
   stampsRequired: number;
   currentStamps: number;
   totalEarned: number;
   lastStamped: number;
+  version: number;
 }
 
 // ---------------------------------------------------------------------------
