@@ -6,6 +6,7 @@ import {
   boolean,
   smallint,
   timestamp,
+  index,
 } from 'drizzle-orm/pg-core';
 
 /**
@@ -38,7 +39,10 @@ export const cards = pgTable('cards', {
   currentStamps: integer('current_stamps').default(0).notNull(),
   totalEarned: integer('total_earned').default(0).notNull(),
   lastStampedAt: timestamp('last_stamped_at'),
-});
+}, (table) => ({
+  customerProgramIdx: index('cards_customer_program_idx')
+    .on(table.customerAddress, table.programId),
+}));
 
 /**
  * Singleton cursor row for the event indexer.
