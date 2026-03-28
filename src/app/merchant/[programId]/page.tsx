@@ -602,8 +602,9 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
           </button>
         )}
 
-        {/* Inline QR scanner -- not a modal, renders in flow */}
-        {scanMode && (
+        {/* Inline QR scanner — always mounted so the WASM worker stays warm.
+            display:none hides it without unmounting; active prop drives start/stop. */}
+        <div style={{ display: scanMode ? 'block' : 'none' }}>
           <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[13px] font-medium text-(--color-text-secondary)">
@@ -618,9 +619,12 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
                 Cancel
               </button>
             </div>
-            <QrScanner onScan={(raw: string) => void handleScan(raw)} />
+            <QrScanner
+              active={scanMode}
+              onScan={(raw: string) => void handleScan(raw)}
+            />
           </div>
-        )}
+        </div>
 
         {/* Stamp issuance confirmation panel */}
         {confirmData && !scanMode && (
