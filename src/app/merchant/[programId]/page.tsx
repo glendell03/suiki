@@ -9,7 +9,6 @@ import { WalletGuard } from "@/components/wallet-guard";
 import { PageHeader } from "@/components/page-header";
 import { MerchantAvatar } from "@/components/merchant-avatar";
 import { useSponsoredTx } from "@/hooks/use-sponsored-tx";
-import { findCardForProgram } from "@/lib/queries";
 import { useProgram } from "@/hooks/use-program";
 import {
   buildCreateCardAndStamp,
@@ -477,7 +476,15 @@ function ProgramDetailContent({ programId }: ProgramDetailContentProps) {
       // Show confirm panel immediately while card lookup runs in background.
       setConfirmData({ customerAddress, card: null, cardLoading: true });
 
-      const card = await findCardForProgram(customerAddress, programId);
+      const res = await fetch(
+        `/api/cards/lookup?customer=${encodeURIComponent(customerAddress)}&program=${encodeURIComponent(programId)}`,
+      );
+
+      if (!res.ok) {
+        throw new Error(`Card lookup failed (${res.status})`);
+      }
+
+      const { card } = await res.json() as { card: StampCard | null };
       setConfirmData({ customerAddress, card, cardLoading: false });
     } finally {
       isHandlingScanRef.current = false;
