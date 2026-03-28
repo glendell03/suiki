@@ -14,7 +14,7 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { ChevronLeft, Trophy } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useAccount } from "@/hooks/use-account";
 
 import { motion } from "framer-motion";
@@ -22,10 +22,13 @@ import { WalletGuard } from "@/components/wallet-guard";
 import { PageHeader } from "@/components/page-header";
 import { BottomNav } from "@/components/bottom-nav";
 import { MerchantAvatar } from "@/components/merchant-avatar";
-import { ThemedStampGrid } from "@/components/stamp-slot";
-import { ProgressBar } from "@/components/progress-bar";
+import { StampCard } from "@/components/stamp-card";
 import { Badge } from "@/components/badge";
 import { useMyCards } from "@/hooks/use-my-cards";
+import { useStampEvents } from "@/hooks/use-stamp-events";
+import { getTheme } from "@/lib/stamp-themes";
+import { BeautifulQR } from "@/components/beautiful-qr";
+import { encodeCustomerCardQR } from "@/lib/qr-utils";
 
 // ---------------------------------------------------------------------------
 // Page entry -- unwrap params via React.use()
@@ -84,6 +87,13 @@ function CardDetailView({ cardId }: { cardId: string }) {
 
   const card = cards?.find((c) => c.cardId === cardId) ?? null;
 
+  // Real-time stamp animation — no-op when card is null (still loading/missing)
+  const { pendingAnimation } = useStampEvents(
+    card?.cardId,
+    card?.currentStamps ?? 0,
+    account?.address,
+  );
+
   // Loading state
   if (isLoading) {
     return (
@@ -130,20 +140,15 @@ function CardDetailView({ cardId }: { cardId: string }) {
   }
 
   const isRewardReady = card.currentStamps >= card.stampsRequired;
-  const progressRatio = card.stampsRequired > 0
-    ? card.currentStamps / card.stampsRequired
-    : 0;
-  const stampsRemaining = Math.max(
-    0,
-    card.stampsRequired - card.currentStamps,
-  );
+  const theme = getTheme(card.themeId);
+
   return (
     <div className="min-h-dvh bg-(--color-bg-base)">
       {/* Transparent header overlapping the hero */}
       <PageHeader title="" leftAction={backButton} transparent />
 
-      {/* Hero band -- solid brand color */}
-      <div className="h-[120px] bg-(--color-brand) relative pt-safe" />
+      {/* Hero band — themed fill color */}
+      <div className="h-[120px] relative pt-safe" style={{ background: theme.fillColor }} />
 
       {/* Content overlapping the hero via negative margin */}
       <div className="relative -mt-8 pb-nav px-4 flex flex-col gap-4 mx-auto w-full max-w-[430px]">
@@ -168,157 +173,61 @@ function CardDetailView({ cardId }: { cardId: string }) {
           </Badge>
         </div>
 
-        {/* Your Progress card */}
-        <ProgressSection
-          currentStamps={card.currentStamps}
-          stampsRequired={card.stampsRequired}
-          progressRatio={progressRatio}
-          stampsRemaining={stampsRemaining}
-          isRewardReady={isRewardReady}
+        {/* Stamp card */}
+        <StampCard
           themeId={card.themeId}
+          merchantName={card.merchantName || "Unknown Merchant"}
+          rewardDescription={card.rewardDescription || "Loyalty reward"}
+          stampCount={card.currentStamps}
+          totalStamps={card.stampsRequired}
+          logoUrl={card.logoUrl}
+          animateNewStamp={pendingAnimation}
         />
 
-        {/* Your Reward card */}
-        <RewardSection
-          isRewardReady={isRewardReady}
-          stampsRequired={card.stampsRequired}
-          cardId={cardId}
-        />
+        {/* Last stamped date */}
+        {card.lastStampedAt && (
+          <div
+            className="rounded-(--radius-xl) px-4 py-3 flex items-center justify-between"
+            style={{
+              background: theme.bgColor,
+              border: `1.5px solid ${theme.inkColor}22`,
+            }}
+          >
+            <p className="text-[12px] uppercase tracking-wide font-medium" style={{ color: theme.inkColor, opacity: 0.45 }}>
+              Last stamp
+            </p>
+            <p className="text-[13px] font-semibold" style={{ color: theme.inkColor }}>
+              {formatDate(card.lastStampedAt)}
+            </p>
+          </div>
+        )}
 
-        {/* Stamp History */}
-        <StampHistorySection lastStampedAt={card.lastStampedAt} />
-
+        {/* QR code panel — Apple Wallet style, merchant scans this to stamp */}
+        {account && (
+          <div
+            className="flex flex-col items-center gap-3 py-5 px-4"
+            style={{
+              background: "var(--color-surface)",
+              borderRadius: "var(--radius-2xl)",
+              boxShadow: "var(--shadow-card)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <BeautifulQR
+              value={encodeCustomerCardQR(cardId, account.address)}
+              size={180}
+              label="Stamp card QR code"
+              foregroundColor="#111111"
+              backgroundColor="#ffffff"
+            />
+            <p className="text-[12px] text-(--color-text-muted)">
+              Show this to the merchant to earn a stamp
+            </p>
+          </div>
+        )}
       </div>
 
       <BottomNav />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Progress section
-// ---------------------------------------------------------------------------
-
-interface ProgressSectionProps {
-  currentStamps: number;
-  stampsRequired: number;
-  progressRatio: number;
-  stampsRemaining: number;
-  isRewardReady: boolean;
-  themeId: number;
-}
-
-/** White surface card showing stamp grid, progress bar, and label. */
-function ProgressSection({
-  currentStamps,
-  stampsRequired,
-  progressRatio,
-  stampsRemaining,
-  isRewardReady,
-  themeId,
-}: ProgressSectionProps) {
-  return (
-    <div className="glass-card p-5 flex flex-col gap-4">
-      <p
-        className="text-[15px] font-semibold text-(--color-text-primary)"
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        {currentStamps} / {stampsRequired} stamps collected
-      </p>
-
-      <ThemedStampGrid earned={currentStamps} total={stampsRequired} themeId={themeId} />
-
-      <ProgressBar
-        value={progressRatio}
-        height={6}
-        showMilestone
-      />
-
-      <p className="text-[13px] text-(--color-text-secondary)">
-        {isRewardReady
-          ? "Reward ready!"
-          : `${stampsRemaining} more stamp${stampsRemaining !== 1 ? "s" : ""} to earn your reward`}
-      </p>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Reward section
-// ---------------------------------------------------------------------------
-
-interface RewardSectionProps {
-  isRewardReady: boolean;
-  stampsRequired: number;
-  cardId: string;
-}
-
-/** Card with loyalty-subtle background showing the reward info and optional CTA. */
-function RewardSection({
-  isRewardReady,
-  stampsRequired,
-  cardId,
-}: RewardSectionProps) {
-  return (
-    <div
-      className="rounded-(--radius-xl) p-5 flex flex-col gap-3"
-      style={{ background: "var(--color-loyalty-subtle)" }}
-    >
-      <div className="flex items-center gap-3">
-        <Trophy
-          size={24}
-          style={{ color: "var(--color-loyalty-dark)" }}
-          aria-hidden="true"
-        />
-        <p
-          className="text-[15px] font-semibold text-(--color-text-primary)"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Complete your card
-        </p>
-      </div>
-
-      <p className="text-[13px] text-(--color-text-secondary)">
-        Collect {stampsRequired} stamps to unlock
-      </p>
-
-      {isRewardReady && (
-        <Link
-          href={`/customer/cards/${cardId}/reward`}
-          className={[
-            "w-full inline-flex items-center justify-center rounded-full px-4 py-3",
-            "text-[15px] font-semibold text-white",
-            "transition-opacity hover:opacity-90 active:opacity-75",
-            "tap-target",
-          ].join(" ")}
-          style={{ background: "var(--color-loyalty)" }}
-        >
-          Redeem Now
-        </Link>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Stamp history section
-// ---------------------------------------------------------------------------
-
-/** Shows the last stamped date or a "no stamps yet" message. */
-function StampHistorySection({ lastStampedAt }: { lastStampedAt: string | null }) {
-  return (
-    <div className="glass-card p-5">
-      <p
-        className="text-[15px] font-semibold text-(--color-text-primary) mb-2"
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        Stamp History
-      </p>
-      <p className="text-[13px] text-(--color-text-secondary)">
-        {lastStampedAt
-          ? `Last stamped: ${formatDate(lastStampedAt)}`
-          : "No stamps yet"}
-      </p>
     </div>
   );
 }
@@ -342,15 +251,6 @@ function CardDetailSkeleton() {
       </div>
 
       {/* Progress card placeholder */}
-      <div className={`rounded-(--radius-xl) h-48 ${pulse}`} />
-
-      {/* Reward card placeholder */}
-      <div className={`rounded-(--radius-xl) h-28 ${pulse}`} />
-
-      {/* History placeholder */}
-      <div className={`rounded-(--radius-xl) h-16 ${pulse}`} />
-
-      {/* QR placeholder */}
       <div className={`rounded-(--radius-xl) h-64 ${pulse}`} />
     </div>
   );
