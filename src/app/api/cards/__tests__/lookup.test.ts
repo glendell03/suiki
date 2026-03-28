@@ -137,4 +137,12 @@ describe('GET /api/cards/lookup', () => {
     const body = await res.json() as { card: Record<string, unknown> };
     expect(body.card['lastStamped']).toBe(0);
   });
+
+  it('returns 500 when the database throws', async () => {
+    mockLimit.mockRejectedValueOnce(new Error('connection timeout'));
+    const res = await GET(makeRequest({ customer: VALID_CUSTOMER, program: VALID_PROGRAM }));
+    expect(res.status).toBe(500);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBeTruthy();
+  });
 });

@@ -37,25 +37,39 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const rows = await db
-    .select({
-      objectId:      cards.cardId,
-      programId:     cards.programId,
-      customer:      cards.customerAddress,
-      currentStamps: cards.currentStamps,
-      stampsRequired: programs.stampsRequired,
-      totalEarned:   cards.totalEarned,
-      lastStampedAt: cards.lastStampedAt,
-    })
-    .from(cards)
-    .innerJoin(programs, eq(cards.programId, programs.programId))
-    .where(
-      and(
-        eq(cards.customerAddress, customer),
-        eq(cards.programId, program),
-      ),
-    )
-    .limit(1);
+  let rows: Array<{
+    objectId: string;
+    programId: string;
+    customer: string;
+    currentStamps: number;
+    stampsRequired: number;
+    totalEarned: number;
+    lastStampedAt: Date | null;
+  }>;
+
+  try {
+    rows = await db
+      .select({
+        objectId:       cards.cardId,
+        programId:      cards.programId,
+        customer:       cards.customerAddress,
+        currentStamps:  cards.currentStamps,
+        stampsRequired: programs.stampsRequired,
+        totalEarned:    cards.totalEarned,
+        lastStampedAt:  cards.lastStampedAt,
+      })
+      .from(cards)
+      .innerJoin(programs, eq(cards.programId, programs.programId))
+      .where(
+        and(
+          eq(cards.customerAddress, customer),
+          eq(cards.programId, program),
+        ),
+      )
+      .limit(1);
+  } catch {
+    return NextResponse.json({ error: 'Card lookup failed' }, { status: 500 });
+  }
 
   if (rows.length === 0) {
     return NextResponse.json({ card: null });
