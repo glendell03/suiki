@@ -22,7 +22,7 @@ import { WalletGuard } from "@/components/wallet-guard";
 import { PageHeader } from "@/components/page-header";
 import { BottomNav } from "@/components/bottom-nav";
 import { MerchantAvatar } from "@/components/merchant-avatar";
-import { StampGrid } from "@/components/stamp-grid";
+import { ThemedStampGrid } from "@/components/stamp-slot";
 import { ProgressBar } from "@/components/progress-bar";
 import { Badge } from "@/components/badge";
 import { useMyCards } from "@/hooks/use-my-cards";
@@ -175,6 +175,7 @@ function CardDetailView({ cardId }: { cardId: string }) {
           progressRatio={progressRatio}
           stampsRemaining={stampsRemaining}
           isRewardReady={isRewardReady}
+          themeId={card.themeId}
         />
 
         {/* Your Reward card */}
@@ -204,6 +205,7 @@ interface ProgressSectionProps {
   progressRatio: number;
   stampsRemaining: number;
   isRewardReady: boolean;
+  themeId: number;
 }
 
 /** White surface card showing stamp grid, progress bar, and label. */
@@ -213,6 +215,7 @@ function ProgressSection({
   progressRatio,
   stampsRemaining,
   isRewardReady,
+  themeId,
 }: ProgressSectionProps) {
   return (
     <div className="glass-card p-5 flex flex-col gap-4">
@@ -223,7 +226,7 @@ function ProgressSection({
         {currentStamps} / {stampsRequired} stamps collected
       </p>
 
-      <StampGrid earned={currentStamps} total={stampsRequired} size="lg" />
+      <ThemedStampGrid earned={currentStamps} total={stampsRequired} themeId={themeId} />
 
       <ProgressBar
         value={progressRatio}

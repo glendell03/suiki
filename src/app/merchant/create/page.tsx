@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Loader2, Minus, Plus, ImageOff } from "lucide-react";
 import { StampCard } from "@/components/stamp-card";
+import { ThemePicker } from "@/components/theme-picker";
 import { useCurrentClient } from "@mysten/dapp-kit-react";
 import { useAccount } from "@/hooks/use-account";
 import { AnimatePresence, motion } from "framer-motion";
@@ -15,7 +16,7 @@ import { useSponsoredTx } from "@/hooks/use-sponsored-tx";
 import { buildCreateProgram } from "@/lib/transactions";
 
 /** Labels shown in PageHeader for each step. */
-const STEP_LABELS = ["Program Name", "Logo", "Stamp Goal", "Reward", "Review"] as const;
+const STEP_LABELS = ["Program Name", "Logo", "Stamp Goal", "Reward", "Theme", "Review"] as const;
 
 /** Shared input class string used across text-input steps. */
 const INPUT_CLASS = [
@@ -325,7 +326,42 @@ function StepReward({
 }
 
 /**
- * Step 4 -- Review and submit.
+ * Step 5 -- Stamp card theme picker.
+ */
+function StepTheme({
+  value,
+  onChange,
+  onNext,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h2
+          className="text-(--color-text-primary)"
+          style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 22 }}
+        >
+          Pick a stamp style
+        </h2>
+        <p className="text-[13px] text-(--color-text-muted)">
+          Choose how your stamps look. Premium styles can be unlocked later.
+        </p>
+      </div>
+
+      <ThemePicker value={value} onChange={onChange} />
+
+      <div className="mt-8">
+        <NextButton disabled={false} onClick={onNext} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Step 6 -- Review and submit.
  */
 function StepReview({
   form,
@@ -333,7 +369,7 @@ function StepReview({
   error,
   onSubmit,
 }: {
-  form: { name: string; logoUrl: string; stampsRequired: number; rewardDescription: string };
+  form: { name: string; logoUrl: string; stampsRequired: number; rewardDescription: string; themeId: number };
   isSubmitting: boolean;
   error: string | null;
   onSubmit: () => void;
@@ -519,6 +555,7 @@ function CreateProgramForm() {
     logoUrl: "",
     stampsRequired: 10,
     rewardDescription: "",
+    themeId: 0,
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -549,6 +586,7 @@ function CreateProgramForm() {
       const tx = buildCreateProgram({
         name: form.name,
         stampsRequired: form.stampsRequired,
+        themeId: form.themeId,
       });
       const digest = await executeSponsoredTx(tx);
       if (!digest) throw new Error("Transaction did not return a digest");
@@ -599,7 +637,7 @@ function CreateProgramForm() {
       <div className="mx-auto w-full max-w-[430px] flex flex-col px-5 gap-6 pt-[calc(56px+env(safe-area-inset-top)+2rem)] pb-12">
         {/* Step indicator */}
         <div className="flex justify-center">
-          <StepIndicator steps={5} current={step} />
+          <StepIndicator steps={6} current={step} />
         </div>
 
         {/* Step content with animated transitions */}
@@ -651,6 +689,14 @@ function CreateProgramForm() {
             )}
 
             {step === 5 && (
+              <StepTheme
+                value={form.themeId}
+                onChange={(themeId) => setForm((f) => ({ ...f, themeId }))}
+                onNext={() => setStep(6)}
+              />
+            )}
+
+            {step === 6 && (
               <StepReview
                 form={form}
                 isSubmitting={isSubmitting}
