@@ -75,7 +75,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ card: null });
   }
 
-  const r = rows[0];
+  const [r] = rows;
   const card: StampCard = {
     objectId:      r.objectId as SuiObjectId,
     programId:     r.programId as SuiObjectId,
