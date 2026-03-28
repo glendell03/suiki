@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { QRCodeStyling } from "beautiful-qr-code";
 
 /** Props for the BeautifulQR component. */
 interface BeautifulQRProps {
@@ -16,11 +15,6 @@ interface BeautifulQRProps {
   /** QR background color. Raw hex is OK here -- this is QR rendering data, not a design token. */
   backgroundColor?: string;
   /**
-   * Module corner radius 0–1. 0 = sharp (best for scanning), 1 = fully rounded.
-   * Defaults to 0 for scan-safe output.
-   */
-  radius?: number;
-  /**
    * QR error correction level. Higher = more robust but denser.
    * "Q" (25%) recommended for display use. Defaults to "Q".
    */
@@ -28,23 +22,11 @@ interface BeautifulQRProps {
   className?: string;
 }
 
-/** Removes all child nodes from a DOM element without using innerHTML. */
-function clearElement(el: HTMLElement): void {
-  while (el.firstChild) {
-    el.removeChild(el.firstChild);
-  }
-}
-
 /**
- * Renders a styled SVG QR code using the `beautiful-qr-code` package.
+ * Renders a styled canvas QR code using the `qr-code-styling` package.
  *
- * The package exposes a class-based imperative API that appends an SVG into a
- * DOM container. We use a ref + useEffect here intentionally — this is a
- * legitimate DOM-mutation side effect (not data fetching), which is the
- * correct use of useEffect in React 19.
- *
- * Colors: black dots (#111111) on white (#ffffff). Falls back to a skeleton
- * placeholder while the SVG is rendering.
+ * Uses rounded dots + extra-rounded corner squares for a modern look.
+ * Dynamically imports the library to avoid SSR issues.
  *
  * @example
  * <BeautifulQR value="0xabc123" label="Scan to earn stamps" size={220} />
@@ -53,9 +35,8 @@ export function BeautifulQR({
   value,
   size = 220,
   label,
-  foregroundColor: fgColor,
-  backgroundColor: bgColor,
-  radius = 0,
+  foregroundColor = "#000000",
+  backgroundColor = "#ffffff",
   errorCorrectionLevel = "Q",
   className = "",
 }: BeautifulQRProps) {
@@ -67,29 +48,50 @@ export function BeautifulQR({
     const container = containerRef.current;
     if (!container || !value) return;
 
-    // Clear previous render when value or size changes
-    clearElement(container);
     setIsReady(false);
     setError(null);
 
-    const qr = new QRCodeStyling({
-      data: value,
-      type: "svg",
-      // typeNumber 0 lets the library pick the smallest valid type automatically
-      typeNumber: 0,
-      errorCorrectionLevel,
-      mode: "Byte",
-      radius,
-      padding: 0,
-      foregroundColor: fgColor ?? "#111111",
-      backgroundColor: bgColor ?? "#ffffff",
-      hasLogo: false,
-    });
+    import("qr-code-styling")
+      .then(({ default: QRCodeStyling }) => {
+        // Clear previous render
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
 
-    qr.append(container)
-      .then(() => setIsReady(true))
+        const qr = new QRCodeStyling({
+          width: size,
+          height: size,
+          type: "svg",
+          data: value,
+          margin: 0,
+          qrOptions: {
+            typeNumber: 0,
+            mode: "Byte",
+            errorCorrectionLevel,
+          },
+          dotsOptions: {
+            type: "dots",
+            color: foregroundColor,
+            roundSize: true,
+          },
+          backgroundOptions: {
+            color: backgroundColor,
+          },
+          cornersSquareOptions: {
+            type: "extra-rounded",
+            color: foregroundColor,
+          },
+          cornersDotOptions: {
+            type: "dot",
+            color: foregroundColor,
+          },
+        });
+
+        qr.append(container);
+        setIsReady(true);
+      })
       .catch(() => setError("QR code could not be generated."));
-  }, [value, size, fgColor, bgColor]);
+  }, [value, size, foregroundColor, backgroundColor, errorCorrectionLevel]);
 
   return (
     <div
@@ -97,7 +99,7 @@ export function BeautifulQR({
         .filter(Boolean)
         .join(" ")}
     >
-      {/* Skeleton shown while the SVG is being generated */}
+      {/* Skeleton shown while the canvas is being generated */}
       {!isReady && !error && (
         <div
           aria-hidden="true"
@@ -116,7 +118,7 @@ export function BeautifulQR({
         </div>
       )}
 
-      {/* Container where QRCodeStyling appends the SVG element */}
+      {/* Container where qr-code-styling appends the canvas element */}
       <div
         ref={containerRef}
         role="img"

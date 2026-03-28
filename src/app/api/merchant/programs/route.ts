@@ -2,7 +2,7 @@
  * Merchant programs API — GET + POST /api/merchant/programs
  *
  * GET  ?merchant=0x...  — list all programs owned by a merchant wallet.
- * POST { programId, merchantAddress, name, logoUrl, rewardDescription, stampsRequired }
+ * POST { programId, merchantAddress, name, logoUrl?, rewardDescription, stampsRequired, themeId? }
  *      — create or upsert off-chain program metadata after the on-chain
  *        create_program transaction succeeds.
  */
@@ -41,13 +41,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     logoUrl,
     rewardDescription,
     stampsRequired,
+    themeId,
   } = body;
 
+  // logoUrl is optional — user may skip the logo step.
   if (
     !programId ||
     !merchantAddress ||
     !name ||
-    !logoUrl ||
     !rewardDescription ||
     !stampsRequired
   ) {
@@ -63,17 +64,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       programId,
       merchantAddress,
       name,
-      logoUrl,
+      logoUrl: logoUrl ?? '',
       rewardDescription,
       stampsRequired: Number(stampsRequired),
+      themeId: Number(themeId ?? 0),
     })
     .onConflictDoUpdate({
       target: programs.programId,
       set: {
         name,
-        logoUrl,
+        logoUrl: logoUrl ?? '',
         rewardDescription,
         stampsRequired: Number(stampsRequired),
+        themeId: Number(themeId ?? 0),
       },
     })
     .returning();

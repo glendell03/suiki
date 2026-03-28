@@ -208,25 +208,15 @@ export function StampCard({
             </p>
           </div>
 
-          {/* QR code — centered, white tile, large enough to scan reliably */}
+          {/* QR code — centered, large enough to scan reliably */}
           <div className="px-4 pb-4 pt-2 flex flex-col items-center gap-2">
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{
-                background: "#ffffff",
-                padding: 12,
-                boxShadow: `0 2px 10px ${theme.inkColor}18`,
-              }}
-            >
-              <BeautifulQR
-                value={qrValue}
-                size={200}
-                foregroundColor="#111111"
-                backgroundColor="#ffffff"
-                radius={0}
-                errorCorrectionLevel="Q"
-              />
-            </div>
+            <BeautifulQR
+              value={qrValue}
+              size={260}
+              foregroundColor="#111111"
+              backgroundColor="transparent"
+              errorCorrectionLevel="Q"
+            />
             <p
               className="text-[11px] text-center"
               style={{ color: theme.inkColor, opacity: 0.45 }}

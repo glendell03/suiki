@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Loader2, Minus, Plus, ImageOff } from "lucide-react";
+import { ArrowLeft, ChevronLeft, Loader2, Minus, Plus, ImageOff } from "lucide-react";
 import { StampCard } from "@/components/stamp-card";
 import { ThemePicker } from "@/components/theme-picker";
 import { useCurrentClient } from "@mysten/dapp-kit-react";
@@ -41,10 +41,12 @@ function StepName({
   value,
   onChange,
   onNext,
+  onBack,
 }: {
   value: string;
   onChange: (v: string) => void;
   onNext: () => void;
+  onBack: () => void;
 }) {
   const valid = value.trim().length >= 2;
 
@@ -79,7 +81,7 @@ function StepName({
       </p>
 
       <div className="mt-8">
-        <NextButton disabled={!valid} onClick={onNext} />
+        <StepActions disabled={!valid} onNext={onNext} onBack={onBack} />
       </div>
     </div>
   );
@@ -92,11 +94,13 @@ function StepLogo({
   value,
   onChange,
   onNext,
+  onBack,
   programName,
 }: {
   value: string;
   onChange: (v: string) => void;
   onNext: () => void;
+  onBack: () => void;
   programName: string;
 }) {
   // 'idle' | 'loading' | 'ok' | 'error'
@@ -170,20 +174,18 @@ function StepLogo({
             Preview
           </p>
           <StampCard
-            programId="preview"
+            themeId={0}
             merchantName={programName || "Your Program"}
-            programName="Loyalty Program"
-            logoUrl={value}
+            rewardDescription="Your reward"
             stampCount={3}
             totalStamps={10}
-            rewardDescription="Your reward"
-            variant="featured"
+            logoUrl={value}
           />
         </div>
       )}
 
       <div className="mt-4">
-        <NextButton disabled={!canProceed} onClick={onNext} />
+        <StepActions disabled={!canProceed} onNext={onNext} onBack={onBack} />
       </div>
     </div>
   );
@@ -196,10 +198,12 @@ function StepStampGoal({
   value,
   onChange,
   onNext,
+  onBack,
 }: {
   value: number;
   onChange: (v: number) => void;
   onNext: () => void;
+  onBack: () => void;
 }) {
   const MIN = 2;
   const MAX = 50;
@@ -268,7 +272,7 @@ function StepStampGoal({
       </p>
 
       <div className="mt-8">
-        <NextButton disabled={false} onClick={onNext} />
+        <StepActions disabled={false} onNext={onNext} onBack={onBack} />
       </div>
     </div>
   );
@@ -281,10 +285,12 @@ function StepReward({
   value,
   onChange,
   onNext,
+  onBack,
 }: {
   value: string;
   onChange: (v: string) => void;
   onNext: () => void;
+  onBack: () => void;
 }) {
   const valid = value.trim().length >= 5;
 
@@ -319,26 +325,36 @@ function StepReward({
       </p>
 
       <div className="mt-8">
-        <NextButton disabled={!valid} onClick={onNext} />
+        <StepActions disabled={!valid} onNext={onNext} onBack={onBack} />
       </div>
     </div>
   );
 }
 
 /**
- * Step 5 -- Stamp card theme picker.
+ * Step 5 -- Stamp card theme picker with live card preview.
  */
 function StepTheme({
   value,
   onChange,
   onNext,
+  onBack,
+  previewName,
+  previewLogoUrl,
+  previewStampsRequired,
+  previewReward,
 }: {
   value: number;
   onChange: (v: number) => void;
   onNext: () => void;
+  onBack: () => void;
+  previewName: string;
+  previewLogoUrl: string;
+  previewStampsRequired: number;
+  previewReward: string;
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <h2
           className="text-(--color-text-primary)"
@@ -351,11 +367,19 @@ function StepTheme({
         </p>
       </div>
 
+      {/* Live themed stamp card preview */}
+      <StampCard
+        themeId={value}
+        merchantName={previewName || "Your Program"}
+        rewardDescription={previewReward || "Loyalty Reward"}
+        stampCount={Math.max(1, Math.floor(previewStampsRequired / 2))}
+        totalStamps={previewStampsRequired}
+        {...(previewLogoUrl ? { logoUrl: previewLogoUrl } : {})}
+      />
+
       <ThemePicker value={value} onChange={onChange} />
 
-      <div className="mt-8">
-        <NextButton disabled={false} onClick={onNext} />
-      </div>
+      <StepActions disabled={false} onNext={onNext} onBack={onBack} />
     </div>
   );
 }
@@ -387,16 +411,14 @@ function StepReview({
         Review your program
       </h2>
 
-      {/* Live StampCard preview */}
+      {/* Themed card preview */}
       <StampCard
-        programId="preview"
-        merchantName={form.name}
-        programName="Loyalty Program"
-        logoUrl={form.logoUrl || ""}
+        themeId={form.themeId}
+        merchantName={form.name || "Your Program"}
+        rewardDescription={form.rewardDescription || "Loyalty Reward"}
         stampCount={0}
         totalStamps={form.stampsRequired}
-        rewardDescription={form.rewardDescription}
-        variant="featured"
+        {...(form.logoUrl ? { logoUrl: form.logoUrl } : {})}
       />
 
       {/* Error */}
@@ -437,31 +459,45 @@ function StepReview({
 }
 
 /**
- * Reusable "Next" button used at the bottom of steps 1-3.
+ * Reusable step action row: back icon button + full-width Next button.
  */
-function NextButton({
+function StepActions({
   disabled,
-  onClick,
+  onNext,
+  onBack,
 }: {
   disabled: boolean;
-  onClick: () => void;
+  onNext: () => void;
+  onBack: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="tap-target w-full text-white font-semibold disabled:opacity-30 transition-opacity"
-      style={{
-        background: "var(--color-brand)",
-        borderRadius: "var(--radius-full)",
-        padding: "14px 0",
-        fontSize: 17,
-        fontFamily: "var(--font-display)",
-      }}
-    >
-      Next &rarr;
-    </button>
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label="Go back"
+        className="tap-target flex items-center justify-center flex-shrink-0 border border-(--color-border) bg-(--color-surface) transition-colors hover:bg-(--color-border)"
+        style={{ width: 52, height: 52, borderRadius: "var(--radius-full)" }}
+      >
+        <ArrowLeft size={20} className="text-(--color-text-primary)" />
+      </button>
+
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={disabled}
+        className="tap-target flex-1 text-white font-semibold disabled:opacity-30 transition-opacity"
+        style={{
+          background: "var(--color-brand)",
+          borderRadius: "var(--radius-full)",
+          padding: "14px 0",
+          fontSize: 17,
+          fontFamily: "var(--font-display)",
+        }}
+      >
+        Next &rarr;
+      </button>
+    </div>
   );
 }
 
@@ -480,12 +516,20 @@ async function extractCreatedProgramId(
   client: ReturnType<typeof useCurrentClient>,
   digest: string,
 ): Promise<string> {
+  // useSponsoredTx already calls waitForTransaction before returning the digest,
+  // so the tx is guaranteed to be indexed by the time we reach here.
   const result = await client.core.getTransaction({
     digest,
     include: { effects: true, objectTypes: true },
   });
 
-  const tx = result.Transaction ?? result.FailedTransaction;
+  // Discriminated union: only process successful transactions.
+  if (result.$kind === 'FailedTransaction') {
+    const reason = result.FailedTransaction?.status?.error?.message ?? 'unknown';
+    throw new Error(`Transaction failed on-chain: ${reason}`);
+  }
+
+  const tx = result.Transaction;
   if (!tx?.effects || !tx.objectTypes) {
     throw new Error("Could not read transaction effects");
   }
@@ -513,6 +557,7 @@ interface ProgramMetadataPayload {
   logoUrl: string;
   rewardDescription: string;
   stampsRequired: number;
+  themeId: number;
 }
 
 /**
@@ -602,6 +647,7 @@ function CreateProgramForm() {
         logoUrl: form.logoUrl,
         rewardDescription: form.rewardDescription,
         stampsRequired: form.stampsRequired,
+        themeId: form.themeId,
       });
 
       router.push("/merchant");
@@ -656,6 +702,7 @@ function CreateProgramForm() {
                 value={form.name}
                 onChange={(name) => setForm((f) => ({ ...f, name }))}
                 onNext={() => setStep(2)}
+                onBack={handleBack}
               />
             )}
 
@@ -664,6 +711,7 @@ function CreateProgramForm() {
                 value={form.logoUrl}
                 onChange={(logoUrl) => setForm((f) => ({ ...f, logoUrl }))}
                 onNext={() => setStep(3)}
+                onBack={handleBack}
                 programName={form.name}
               />
             )}
@@ -675,6 +723,7 @@ function CreateProgramForm() {
                   setForm((f) => ({ ...f, stampsRequired }))
                 }
                 onNext={() => setStep(4)}
+                onBack={handleBack}
               />
             )}
 
@@ -685,6 +734,7 @@ function CreateProgramForm() {
                   setForm((f) => ({ ...f, rewardDescription }))
                 }
                 onNext={() => setStep(5)}
+                onBack={handleBack}
               />
             )}
 
@@ -693,6 +743,11 @@ function CreateProgramForm() {
                 value={form.themeId}
                 onChange={(themeId) => setForm((f) => ({ ...f, themeId }))}
                 onNext={() => setStep(6)}
+                onBack={handleBack}
+                previewName={form.name}
+                previewLogoUrl={form.logoUrl}
+                previewStampsRequired={form.stampsRequired}
+                previewReward={form.rewardDescription}
               />
             )}
 

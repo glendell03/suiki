@@ -20,8 +20,7 @@ const dAppKit = createDAppKit({
   defaultNetwork: "testnet",
   createClient: (network) =>
     new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
-  // Unsafe burner wallet is available in development for screenshot/demo purposes only.
-  enableBurnerWallet: process.env.NODE_ENV === "development",
+  enableBurnerWallet: false,
 });
 
 // TypeScript module augmentation so useDAppKit() is fully typed

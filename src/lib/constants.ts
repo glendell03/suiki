@@ -32,11 +32,10 @@ export const TARGETS = {
   issueStamp: `${PACKAGE_ID}::${MODULE_NAME}::issue_stamp`,
   redeem: `${PACKAGE_ID}::${MODULE_NAME}::redeem`,
   updateProgram: `${PACKAGE_ID}::${MODULE_NAME}::update_program`,
-  // SEC-10: these two were missing from TARGETS but present in the sponsor API allowlist.
+  // SEC-10: these were missing from TARGETS but present in the sponsor API allowlist.
   // Always define targets here so PACKAGE_ID changes propagate automatically.
-  syncCardMetadata: `${PACKAGE_ID}::${MODULE_NAME}::sync_card_metadata`,
+  syncCardStampsRequired: `${PACKAGE_ID}::${MODULE_NAME}::sync_card_stamps_required`,
   transferMerchant: `${PACKAGE_ID}::${MODULE_NAME}::transfer_merchant`,
-  createStafferCap: `${PACKAGE_ID}::${MODULE_NAME}::create_staffer_cap`,
   issueStampAsStaffer: `${PACKAGE_ID}::${MODULE_NAME}::issue_stamp_as_staffer`,
   deactivateProgram: `${PACKAGE_ID}::${MODULE_NAME}::deactivate_program`,
   reactivateProgram: `${PACKAGE_ID}::${MODULE_NAME}::reactivate_program`,

@@ -1,30 +1,30 @@
 /**
  * QR code payload parsing and encoding utilities for Suiki.
  *
- * Merchant QR codes encode a MerchantQRPayload (type: 'merchant').
- * Customer QR codes encode a CustomerQRPayload (type: 'customer').
- * Card scan QR codes encode a card_scan payload (used by card detail page).
- * Reward claim QR codes encode a reward_claim payload (used by reward claim page).
+ * ## Encoding formats
  *
- * All payload shapes are defined in src/types/sui.ts as the QRPayload union.
+ * ### v2 (current) — binary, compact
+ *   `v2:` + base64url(bytes)
  *
- * Encoding format for compact QR payloads:
+ *   card_scan   : [0x00] + wallet(32 bytes)              = 33 bytes → 47 chars total
+ *   reward_claim: [0x01] + cardId(32) + wallet(32) + rewardId(32) = 97 bytes → 133 chars total
+ *
+ *   vs v1 JSON which was ~143 chars / ~360 chars respectively.
+ *   QR version drops from v10→v3 (card_scan) and v22→v9 (reward_claim).
+ *
+ * ### v1 (legacy) — JSON base64
  *   `v1:` + btoa(JSON.stringify(data))
- *
- * This version prefix allows future encoding changes while remaining backwards compatible.
+ *   Decoder retained for backwards compatibility.
  */
 
 import type { MerchantQRPayload, CustomerQRPayload, QRPayload, SuiObjectId, SuiAddress } from '@/types/sui';
 
 // ---------------------------------------------------------------------------
-// Internal encoded payload shapes
+// Internal encoded payload shapes (v1 legacy)
 // ---------------------------------------------------------------------------
 
 interface CardScanPayloadData {
   type: 'card_scan';
-  // cardId intentionally omitted — adds 66 chars and the merchant scanner
-  // never uses it (it calls findCardForProgram(walletAddress, programId)).
-  // Keeping the payload small avoids a high-density QR that scanners struggle with.
   walletAddress: string;
 }
 
@@ -35,8 +35,6 @@ interface RewardClaimPayloadData {
   rewardId: string;
 }
 
-type EncodedPayloadData = CardScanPayloadData | RewardClaimPayloadData;
-
 /** Decoded QR payload result for merchant-scanner consumption. */
 export interface DecodedQRPayload {
   type: 'card_scan' | 'reward_claim' | 'unknown';
@@ -45,20 +43,60 @@ export interface DecodedQRPayload {
   rewardId?: string;
 }
 
+// ---------------------------------------------------------------------------
+// v2 binary encoding constants
+// ---------------------------------------------------------------------------
+
+const V2_TYPE_CARD_SCAN = 0;
+const V2_TYPE_REWARD_CLAIM = 1;
+const SUI_ADDR_BYTES = 32;
+
+// ---------------------------------------------------------------------------
+// v2 binary helpers
+// ---------------------------------------------------------------------------
+
+/** Convert a 0x-prefixed 64-hex-char Sui address to a 32-byte Uint8Array. */
+function hexAddressToBytes(hex: string): Uint8Array {
+  const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+  if (clean.length !== 64) {
+    throw new Error(`Invalid Sui address length: expected 64 hex chars, got ${clean.length}`);
+  }
+  const bytes = new Uint8Array(SUI_ADDR_BYTES);
+  for (let i = 0; i < SUI_ADDR_BYTES; i++) {
+    bytes[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+/** Convert a 32-byte Uint8Array to a 0x-prefixed lowercase hex address. */
+function bytesToHexAddress(bytes: Uint8Array): string {
+  return '0x' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Encode bytes as URL-safe base64 without padding. */
+function bytesToBase64url(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** Decode a URL-safe base64 string (with or without padding) to bytes. */
+function base64urlToBytes(s: string): Uint8Array {
+  const standard = s.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = standard + '='.repeat((4 - (standard.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+// ---------------------------------------------------------------------------
+// Public QR payload parsing (legacy merchant JSON format)
+// ---------------------------------------------------------------------------
+
 /**
  * Parse a raw QR code string into a typed QRPayload.
- *
- * Returns null when:
- * - The string is not valid JSON
- * - The parsed value is not an object
- * - The `type` field is not 'merchant' or 'customer'
- * - Required fields for the given type are missing or empty
- *
- * All field values are coerced to strings via String() to prevent
- * prototype-pollution or object-injection attacks.
- *
- * @param raw - The raw string scanned from a QR code.
- * @returns A typed QRPayload or null on parse failure.
+ * Used by the merchant scanner to read merchant QR codes (JSON format).
  */
 export function parseQRPayload(raw: string): QRPayload | null {
   if (!raw) return null;
@@ -79,11 +117,7 @@ export function parseQRPayload(raw: string): QRPayload | null {
   if (obj['type'] === 'merchant') {
     const programId = obj['programId'];
     const merchantAddress = obj['merchantAddress'];
-
     if (!programId || !merchantAddress) return null;
-
-    // String() coercion guards against object-injection where a field value
-    // is itself an object rather than a primitive string.
     const payload: MerchantQRPayload = {
       type: 'merchant',
       programId: String(programId) as SuiObjectId,
@@ -94,9 +128,7 @@ export function parseQRPayload(raw: string): QRPayload | null {
 
   if (obj['type'] === 'customer') {
     const customerAddress = obj['customerAddress'];
-
     if (!customerAddress) return null;
-
     const payload: CustomerQRPayload = {
       type: 'customer',
       customerAddress: String(customerAddress) as SuiAddress,
@@ -108,69 +140,97 @@ export function parseQRPayload(raw: string): QRPayload | null {
 }
 
 // ---------------------------------------------------------------------------
-// Compact base64 QR encoding — for customer-facing QR codes
+// v2 compact binary QR encoding — customer-facing QR codes
 // ---------------------------------------------------------------------------
 
-const QR_VERSION_PREFIX = 'v1:' as const;
-
 /**
- * Encode a customer card scan event as a compact QR payload.
+ * Encode a customer card scan payload using compact v2 binary format.
  *
- * Used by the customer's card detail page. The merchant scanner decodes
- * this payload to identify who to stamp (via walletAddress + programId).
+ * Format: `v2:` + base64url([0x00] + wallet_bytes(32))
+ * Total length: 47 chars — drops from QR version 10 to version 3.
  *
- * Encoding: `v1:` + btoa(JSON.stringify({ type, walletAddress }))
- *
- * NOTE: cardId is intentionally not encoded — the merchant scanner derives
- * the card via findCardForProgram(walletAddress, programId). Omitting it
- * keeps the payload ~100 bytes shorter, dropping from QR Version 16
- * (81×81, barely scannable) to Version 10 (57×57, easily scannable).
- *
- * @param walletAddress - The customer's wallet address (0x-prefixed).
- * @returns A compact base64-encoded string suitable for QR display.
+ * @param walletAddress - 0x-prefixed 32-byte Sui address (64 hex chars).
  */
 export function encodeCustomerCardQR(walletAddress: string): string {
-  const data: CardScanPayloadData = { type: 'card_scan', walletAddress };
-  return QR_VERSION_PREFIX + btoa(JSON.stringify(data));
+  const walletBytes = hexAddressToBytes(walletAddress);
+  const buf = new Uint8Array(1 + SUI_ADDR_BYTES);
+  buf[0] = V2_TYPE_CARD_SCAN;
+  buf.set(walletBytes, 1);
+  return 'v2:' + bytesToBase64url(buf);
 }
 
 /**
- * Encode a reward claim event as a compact QR payload.
+ * Encode a reward claim payload using compact v2 binary format.
  *
- * Used by the reward claim page — the merchant scans this to confirm
- * the reward redemption on-chain.
+ * Format: `v2:` + base64url([0x01] + cardId(32) + wallet(32) + rewardId(32))
+ * Total length: 133 chars — drops from QR version 22 to version 9.
  *
- * Encoding: `v1:` + btoa(JSON.stringify({ type, cardId, walletAddress, rewardId }))
- *
- * @param cardId - The on-chain StampCard object ID.
- * @param walletAddress - The customer's wallet address (0x-prefixed).
- * @param rewardId - The reward identifier (e.g. programId used as reward reference).
- * @returns A compact base64-encoded string suitable for QR display.
+ * @param cardId        - On-chain StampCard object ID.
+ * @param walletAddress - Customer's 0x-prefixed Sui address.
+ * @param rewardId      - Reward identifier (program ID).
  */
 export function encodeRewardClaimQR(cardId: string, walletAddress: string, rewardId: string): string {
-  const data: RewardClaimPayloadData = { type: 'reward_claim', cardId, walletAddress, rewardId };
-  return QR_VERSION_PREFIX + btoa(JSON.stringify(data));
+  const cardBytes = hexAddressToBytes(cardId);
+  const walletBytes = hexAddressToBytes(walletAddress);
+  const rewardBytes = hexAddressToBytes(rewardId);
+  const buf = new Uint8Array(1 + SUI_ADDR_BYTES * 3);
+  buf[0] = V2_TYPE_REWARD_CLAIM;
+  buf.set(cardBytes, 1);
+  buf.set(walletBytes, 1 + SUI_ADDR_BYTES);
+  buf.set(rewardBytes, 1 + SUI_ADDR_BYTES * 2);
+  return 'v2:' + bytesToBase64url(buf);
 }
+
+// ---------------------------------------------------------------------------
+// Decoder — handles both v2 (binary) and v1 (JSON legacy)
+// ---------------------------------------------------------------------------
 
 /**
  * Decode a compact QR payload back to its original data.
  *
- * Handles the v1 prefix format produced by encodeCustomerCardQR and
- * encodeRewardClaimQR. Returns type 'unknown' for unrecognised or
- * malformed inputs without throwing.
+ * Supports:
+ * - v2: binary format (current)
+ * - v1: JSON base64 format (legacy backwards-compat)
  *
- * Used by the merchant scanner to determine what action to take.
- *
- * @param payload - The raw string from a scanned QR code.
- * @returns A DecodedQRPayload with at minimum a `type` field.
+ * Returns `{ type: 'unknown' }` for unrecognised or malformed inputs.
  */
 export function decodeQRPayload(payload: string): DecodedQRPayload {
-  if (!payload || !payload.startsWith(QR_VERSION_PREFIX)) {
+  if (!payload) return { type: 'unknown' };
+
+  if (payload.startsWith('v2:')) return decodeV2(payload.slice(3));
+  if (payload.startsWith('v1:')) return decodeV1(payload.slice(3));
+
+  return { type: 'unknown' };
+}
+
+function decodeV2(encoded: string): DecodedQRPayload {
+  try {
+    const bytes = base64urlToBytes(encoded);
+    const msgType = bytes[0];
+
+    if (msgType === V2_TYPE_CARD_SCAN && bytes.length === 1 + SUI_ADDR_BYTES) {
+      return {
+        type: 'card_scan',
+        walletAddress: bytesToHexAddress(bytes.slice(1, 1 + SUI_ADDR_BYTES)),
+      };
+    }
+
+    if (msgType === V2_TYPE_REWARD_CLAIM && bytes.length === 1 + SUI_ADDR_BYTES * 3) {
+      return {
+        type: 'reward_claim',
+        cardId: bytesToHexAddress(bytes.slice(1, 1 + SUI_ADDR_BYTES)),
+        walletAddress: bytesToHexAddress(bytes.slice(1 + SUI_ADDR_BYTES, 1 + SUI_ADDR_BYTES * 2)),
+        rewardId: bytesToHexAddress(bytes.slice(1 + SUI_ADDR_BYTES * 2, 1 + SUI_ADDR_BYTES * 3)),
+      };
+    }
+
+    return { type: 'unknown' };
+  } catch {
     return { type: 'unknown' };
   }
+}
 
-  const encoded = payload.slice(QR_VERSION_PREFIX.length);
-
+function decodeV1(encoded: string): DecodedQRPayload {
   let parsed: unknown;
   try {
     parsed = JSON.parse(atob(encoded));
@@ -186,22 +246,15 @@ export function decodeQRPayload(payload: string): DecodedQRPayload {
 
   if (obj['type'] === 'card_scan') {
     const walletAddress = obj['walletAddress'];
-
     if (!walletAddress) return { type: 'unknown' };
-
-    return {
-      type: 'card_scan',
-      walletAddress: String(walletAddress),
-    };
+    return { type: 'card_scan', walletAddress: String(walletAddress) };
   }
 
   if (obj['type'] === 'reward_claim') {
     const cardId = obj['cardId'];
     const walletAddress = obj['walletAddress'];
     const rewardId = obj['rewardId'];
-
     if (!cardId || !walletAddress || !rewardId) return { type: 'unknown' };
-
     return {
       type: 'reward_claim',
       cardId: String(cardId),

@@ -194,12 +194,12 @@ function CongratulationsScreen({
           Ask the merchant to scan this QR to confirm your reward
         </p>
 
-        <div className="flex justify-center rounded-2xl bg-white p-5">
+        <div className="flex justify-center">
           <BeautifulQR
             value={qrValue}
-            size={240}
+            size={300}
             foregroundColor="#111111"
-            backgroundColor="#ffffff"
+            backgroundColor="transparent"
           />
         </div>
 

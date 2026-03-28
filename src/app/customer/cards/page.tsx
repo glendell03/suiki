@@ -187,17 +187,13 @@ function CardsContent() {
                 role="listitem"
               >
                 <StampCard
-                  programId={card.programId}
+                  themeId={card.themeId}
                   merchantName={card.merchantName}
-                  programName={`${card.merchantName} Rewards`}
-                  logoUrl={card.logoUrl}
+                  rewardDescription={card.rewardDescription}
                   stampCount={card.currentStamps}
                   totalStamps={card.stampsRequired}
-                  rewardDescription={card.rewardDescription}
-                  variant="compact"
-                  onTap={() =>
-                    router.push(`/customer/cards/${card.cardId}`)
-                  }
+                  logoUrl={card.logoUrl}
+                  onTap={() => router.push(`/customer/cards/${card.cardId}`)}
                 />
               </motion.div>
             ))}

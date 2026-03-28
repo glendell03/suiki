@@ -41,6 +41,11 @@ export { default as WalletDropdownDefault } from "./wallet-dropdown";
 export { FeatureGrid } from "./feature-grid";
 export { default as FeatureGridDefault } from "./feature-grid";
 
+export { StampSlot, ThemedStampGrid } from "./stamp-slot";
+export type { StampSlotProps } from "./stamp-slot";
+
+export { ThemePicker } from "./theme-picker";
+
 // Re-export updated button with new variants
 export { Button } from "./ui/button";
 export type { ButtonVariant } from "./ui/button";

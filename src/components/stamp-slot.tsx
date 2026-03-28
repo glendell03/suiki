@@ -9,7 +9,7 @@
  */
 
 import { useId } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { getTheme } from "@/lib/stamp-themes";
 
 // ---------------------------------------------------------------------------
@@ -700,6 +700,7 @@ export function ThemedStampGrid({
 }: ThemedStampGridProps) {
   const clamped = Math.min(Math.max(0, earned), total);
   const newIdx = clamped - 1;
+  const theme = getTheme(themeId);
 
   return (
     <div
@@ -714,30 +715,57 @@ export function ThemedStampGrid({
         const label = `Stamp ${i + 1}: ${isEarned ? "earned" : "empty"}`;
         const shadow = isEarned
           ? "drop-shadow(0 2px 6px rgba(0,0,0,0.18))"
-          : "drop-shadow(0 1px 2px rgba(0,0,0,0.05))";
-
-        // role="listitem" must be a direct child of role="list".
-        // When animating, use motion.div directly as the listitem so the
-        // accessibility tree relationship is preserved.
-        if (isNew) {
-          return (
-            <motion.div
-              key={i}
-              role="listitem"
-              aria-label={label}
-              initial={{ scale: 0.3, opacity: 0, rotate: -20 }}
-              animate={{ scale: 1, opacity: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 14 }}
-              style={{ filter: shadow }}
-            >
-              <StampSlot earned={isEarned} size={56} themeId={themeId} />
-            </motion.div>
-          );
-        }
+          : undefined;
 
         return (
-          <div key={i} role="listitem" aria-label={label} style={{ filter: shadow }}>
-            <StampSlot earned={isEarned} size={56} themeId={themeId} />
+          // Stable wrapper — same key, same element type always. React never
+          // remounts it, so inner motion.div animations are never interrupted.
+          <div
+            key={i}
+            role="listitem"
+            aria-label={label}
+            className="relative flex-shrink-0"
+            style={{ width: 56, height: 56 }}
+          >
+            {/* Unearned: dashed ghost ring */}
+            {!isEarned && (
+              <div
+                className="absolute inset-0 rounded-full border-2 border-dashed"
+                style={{ borderColor: "#d1d5db" }}
+              />
+            )}
+
+            {/* Earned: stamp with spring-in entry (mirrors showcase AnimatePresence) */}
+            <AnimatePresence initial={false}>
+              {isEarned && (
+                <motion.div
+                  key="stamp"
+                  className="absolute inset-0"
+                  initial={{ scale: 0, rotate: -20, opacity: 0 }}
+                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 380, damping: 14 }}
+                  style={{ filter: shadow }}
+                >
+                  <StampSlot earned size={56} themeId={themeId} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Ripple: expand-fade burst on new stamp (mirrors showcase) */}
+            <AnimatePresence>
+              {isNew && (
+                <motion.div
+                  key="ripple"
+                  className="absolute inset-0 rounded-full pointer-events-none"
+                  initial={{ scale: 0.4, opacity: 0.7 }}
+                  animate={{ scale: 2.8, opacity: 0 }}
+                  exit={{}}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  style={{ background: theme.fillColor }}
+                />
+              )}
+            </AnimatePresence>
           </div>
         );
       })}

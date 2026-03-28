@@ -1,3 +1,4 @@
+
 # Suiki V3 — Data Architecture & Smart Contract Redesign
 
 **Date:** 2026-03-28
@@ -76,10 +77,9 @@ const EThemeAlreadyOwned: u64 = 8;
 const EThemeNotOwned: u64 = 9;
 const ENotProfileOwner: u64 = 10;
 const EInsufficientPayment: u64 = 11;
-const EInvalidDbId: u64 = 12;
-const EProgramInactive: u64 = 13;
-const ENotStaffer: u64 = 14;
-const EWrongVersion: u64 = 15;
+const EProgramInactive: u64 = 12;
+const ENotStaffer: u64 = 13;
+const EWrongVersion: u64 = 14;
 ```
 
 ### 3.3 Object Structs
@@ -141,13 +141,16 @@ public struct StafferCap has key, store {
 ### 3.4 Events
 
 ```move
-public struct ProgramCreated has copy, drop { program_id: ID, merchant: address, name: String }
+public struct ProgramCreated has copy, drop { program_id: ID, merchant: address, name: String, stamps_required: u64 }
+// ↑ stamps_required included so indexer can bootstrap DB row without an extra RPC call
+
 public struct ProgramUpdated has copy, drop { program_id: ID, name: String }
 public struct ProgramActivated has copy, drop { program_id: ID }
 public struct ProgramDeactivated has copy, drop { program_id: ID }
 public struct CardCreated has copy, drop { card_id: ID, program_id: ID, customer: address }
 public struct StampIssued has copy, drop { card_id: ID, program_id: ID, customer: address, new_count: u64, staffer: address }
-public struct StampRedeemed has copy, drop { card_id: ID, program_id: ID, customer: address, redemption_count: u64 }
+public struct StampRedeemed has copy, drop { card_id: ID, program_id: ID, customer: address, redemption_count: u64, remaining_stamps: u64 }
+// ↑ remaining_stamps = carry-forward computed on-chain; indexer sets DB directly — no recalculation from stale state
 public struct ThemeChanged has copy, drop { program_id: ID, merchant: address, old_theme_id: u8, new_theme_id: u8 }
 public struct ProfileCreated has copy, drop { profile_id: ID, merchant: address }
 public struct ThemePurchased has copy, drop { profile_id: ID, merchant: address, theme_id: u8 }
@@ -203,7 +206,7 @@ Note: `revoke_staffer_cap` requires the merchant to hold the cap. For emergency 
 
 #### MerchantProfile
 ```
-create_and_transfer_merchant_profile(db_id, ctx)  → owned profile
+create_and_transfer_merchant_profile(ctx)         → owned profile
 purchase_theme(profile, theme_id, payment, ctx)
 ```
 
@@ -542,10 +545,12 @@ Since this is a full rebuild (not deployed to mainnet yet), migration means:
 
 ## 11. Open Questions (Deferred to Implementation)
 
-| # | Question | Decision |
-|---|---|---|
-| 1 | Indexer deployment: Vercel Cron vs. dedicated process? | Use Vercel Cron + `api/indexer/tick` for simplicity in V3; migrate to dedicated process at scale |
-| 2 | `db_id` format: UUID string or raw 16-byte vector? | 32-byte vector (UUID v4 bytes, no hyphens) — more gas-efficient than string |
-| 3 | Should `redeem` require merchant witness? | No — customer self-redeems; merchant fulfills reward out-of-band. Simplicity wins. |
-| 4 | `sync_card_stamps_required` — who calls it? | Merchant calls it after updating program. We surface a "Sync cards" button in merchant dashboard. |
-| 5 | Staffer revocation without cap custody | Merchant deactivates program → issues new cap to correct staffers → reactivates. Acceptable V3 UX. |
+| #   | Question                                                                                                                                                                                                   | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Indexer deployment: Vercel Cron vs. dedicated process?                                                                                                                                                     | **Resolved: Vercel Cron** (`api/indexer/tick`, secured by `CRON_SECRET`). pgboss requires a long-running Node.js worker — incompatible with Vercel serverless. pg_cron is Postgres-native but can only run SQL, not fetch Sui RPCs. Vercel Cron is sufficient for V3. Migrate to Trigger.dev or a dedicated Railway/Render worker if tick frequency or reliability needs increase.                                                                                                                                                                                             |
+| 2   | `db_id` field on-chain?                                                                                                                                                                                    | **Resolved: N/A** — Principle 6 governs this. Sui object UID is the universal cross-system key. No `db_id` field exists on any on-chain struct. Postgres rows store `sui_object_id TEXT` pointing to the Sui object. The chain event emits the object ID at creation; the indexer uses it as the Postgres FK.                                                                                                                                                                                                                                                                 |
+| 3   | Should `redeem` require merchant witness?                                                                                                                                                                  | **Resolved: No** — customer self-redeems; merchant fulfills reward out-of-band. Simplicity wins.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 4   | `sync_card_stamps_required` — who calls it?                                                                                                                                                                | **Resolved:** Merchant calls it after updating program. Surface a "Sync cards" button in merchant dashboard.                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 5   | Staffer revocation without cap custody                                                                                                                                                                     | **Resolved:** Merchant deactivates program → issues new cap to correct staffers → reactivates. `StafferCap` is a bearer token (`has key, store`) — any holder can stamp, by design (multi-device POS). The `staffer` field is metadata for indexer tracking only.                                                                                                                                                                                                                                                                                                             |
+| 6   | Drizzle schema: pg native types + constraints?                                                                                                                                                             | **Resolved:** Schema uses `varchar(n)` with length bounds (wallet/object IDs = 66, names = 64/128), `smallint` for stamp counts and theme IDs, `integer` for total_issued/total_earned. `merchant_profiles.sui_object_id` is nullable (stub profiles before ProfileCreated event). `sui_events` uses composite unique `(tx_digest, event_seq)`. CHECK constraints added via raw migration: `current_stamps >= 0`, `stamps_required > 0`.                                                                                                                                       |
+| 7   | Neon / Postgres security — RLS? Can merchants query other merchants' data?                                                                                                                                 | **Resolved:** Neon supports standard Postgres RLS, but with a single `DATABASE_URL` service account (all queries run as the same role), RLS provides no isolation benefit. **The correct V3 security model:** `DATABASE_URL` is a server-side env var (never `NEXT_PUBLIC_*`). Every API route authenticates the caller's wallet address from the session before querying the DB. Merchants only see programs where `merchant_profile.wallet_address = session.wallet`. Customers only see cards where `stamp_cards.customer_wallet = session.wallet`. The DB is never directly reachable from the browser. **Optional V4:** Add Postgres RLS with separate roles for defense-in-depth. |

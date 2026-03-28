@@ -99,10 +99,10 @@ function ScanContent() {
               >
                 <BeautifulQR
                   value={qrValue}
-                  size={256}
+                  size={300}
                   label="Your wallet QR code"
                   foregroundColor="#111111"
-                  backgroundColor="#ffffff"
+                  backgroundColor="transparent"
                 />
               </motion.div>
             </Suspense>

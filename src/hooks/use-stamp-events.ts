@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { suiBrowserClient } from '@/lib/sui-client-browser';
 import { EVENT_TYPES, PACKAGE_ID } from '@/lib/constants';
+import type { CardWithProgram } from '@/types/db';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,11 +84,13 @@ export function useStampEvents(
     setPendingAnimation(true);
   }, [currentStamps]);
 
-  // Reset the animation flag after one rAF — Framer Motion completes independently.
+  // Keep the animation flag alive long enough for the spring + ripple to complete.
+  // The stamp spring (stiffness 380, damping 14) settles in ~400ms; the ripple
+  // expand is 500ms. 650ms gives both time to finish before the flag clears.
   useEffect(() => {
     if (!pendingAnimation) return;
-    const id = requestAnimationFrame(() => setPendingAnimation(false));
-    return () => cancelAnimationFrame(id);
+    const id = setTimeout(() => setPendingAnimation(false), 650);
+    return () => clearTimeout(id);
   }, [pendingAnimation]);
 
   // ---------------------------------------------------------------------------
@@ -115,14 +118,29 @@ export function useStampEvents(
     enabled: !!cardId,
   });
 
-  // When polling detects a higher stamp count, request animation + invalidate cache.
+  // When polling detects a higher stamp count:
+  //   1. Optimistically patch the cache so the animation fires immediately.
+  //   2. Trigger /api/indexer/sync so the DB is updated now (not at cron time).
+  //   3. Invalidate the query so the refetch picks up the real DB value.
   useEffect(() => {
     if (latestEventCount == null) return;
     if (latestEventCount <= lastKnownStampsRef.current) return;
 
     animationRequestedRef.current = true;
-    void queryClient.invalidateQueries({ queryKey: ['cards', walletAddress] });
-  }, [latestEventCount, queryClient, walletAddress]);
+
+    // Immediate visual update — no DB round-trip required for the animation.
+    queryClient.setQueryData<CardWithProgram[]>(['cards', walletAddress], (prev) => {
+      if (!prev || !cardId) return prev;
+      return prev.map((c) =>
+        c.cardId === cardId ? { ...c, currentStamps: latestEventCount } : c,
+      );
+    });
+
+    // Push the event into Postgres right now, then refetch from the real DB.
+    void fetch('/api/indexer/sync', { method: 'POST' }).then(() =>
+      queryClient.invalidateQueries({ queryKey: ['cards', walletAddress] }),
+    );
+  }, [latestEventCount, queryClient, walletAddress, cardId]);
 
   return { pendingAnimation };
 }

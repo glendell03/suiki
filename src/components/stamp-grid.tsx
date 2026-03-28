@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { motion } from "framer-motion";
+import { getTheme } from "@/lib/stamp-themes";
 
 /** Props for the StampGrid component. */
 interface StampGridProps {
@@ -17,6 +18,8 @@ interface StampGridProps {
    * @default false
    */
   animateNewStamp?: boolean;
+  /** Optional theme ID — overrides the default loyalty color with theme's fillColor. */
+  themeId?: number;
   className?: string;
 }
 
@@ -42,12 +45,14 @@ export function StampGrid({
   total,
   size = "md",
   animateNewStamp = false,
+  themeId,
   className = "",
 }: StampGridProps) {
   const { px, gap, checkSize } = SIZE_MAP[size];
   const clampedEarned = Math.min(Math.max(0, earned), total);
   // The "new" stamp is the most recently earned (last filled slot)
   const newStampIndex = clampedEarned - 1;
+  const earnedColor = themeId !== undefined ? getTheme(themeId).fillColor : "var(--color-loyalty)";
 
   return (
     <div
@@ -66,7 +71,7 @@ export function StampGrid({
             style={{
               width: px,
               height: px,
-              background: isEarned ? "var(--color-loyalty)" : "transparent",
+              background: isEarned ? earnedColor : "transparent",
               border: isEarned ? "none" : "1.5px solid var(--color-border)",
             }}
           >
