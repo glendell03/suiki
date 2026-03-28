@@ -75,12 +75,22 @@ function useStampEvents(
 
 **Primary path — Sui WebSocket subscription:**
 
-Uses a client-side `SuiClient` (JSON-RPC, not the server-side gRPC singleton) to subscribe to Move events:
+Uses a client-side `SuiClient` (JSON-RPC, not the server-side gRPC singleton) to subscribe to Move events. Filter by package — then match `card_id` in the handler (the SDK's `SuiEventFilter` does not support compound field filters in all versions):
 
-```
-Event filter:
-  MoveEventType: `${PACKAGE_ID}::suiki::StampIssued`
-  MoveEventField: { path: '/card_id', value: cardId }
+```typescript
+const unsubscribe = await suiBrowserClient.subscribeEvent({
+  filter: { Package: PACKAGE_ID },
+  onMessage(event) {
+    if (event.type !== `${PACKAGE_ID}::suiki::StampIssued`) return;
+    const fields = event.parsedJson as { card_id: string; new_count: string };
+    if (fields.card_id !== cardId) return;
+    const newCount = Number(fields.new_count);
+    if (newCount > lastKnownStampsRef.current) {
+      lastKnownStampsRef.current = newCount;
+      setPendingAnimation(true);
+    }
+  },
+});
 ```
 
 The `StampIssued` event struct (already on-chain):
@@ -88,11 +98,23 @@ The `StampIssued` event struct (already on-chain):
 { card_id: ID, program_id: ID, customer: address, new_count: u64, staffer: address }
 ```
 
-When an event arrives with `new_count > currentStamps`, set `pendingAnimation = true` for one render cycle (reset after the animation frame via `useEffect`).
+When `new_count > currentStamps`, set `pendingAnimation = true` for one render cycle (reset after the animation frame via `useEffect`).
 
 **Fallback path — polling:**
 
-If the WebSocket connection errors or closes unexpectedly, the hook switches to polling mode: passes `refetchInterval: 3000` to the existing card data query. When the fetched `currentStamps` exceeds the last-known value, the same animation trigger fires. The hook attempts WebSocket reconnection after 5 seconds.
+If the WebSocket connection errors or closes unexpectedly, the hook switches to polling mode using an **internal isolated query** (not `useMyCards`, to avoid polling all cards):
+
+```typescript
+useQuery({
+  queryKey: ['card-stamp-poll', cardId],
+  queryFn: () => suiBrowserClient.getObject({ id: cardId, options: { showContent: true } }),
+  refetchInterval: 3000,
+  enabled: wsFailedRef.current && !!cardId,
+  select: (data) => extractStampCount(data), // parse current_stamps from object content
+});
+```
+
+When the polled `currentStamps` exceeds `lastKnownStampsRef.current`, the same animation trigger fires. The hook attempts WebSocket reconnection after 5 seconds.
 
 **Cleanup:** Unsubscribes from the WebSocket on unmount. Clears polling interval on unmount.
 
@@ -148,7 +170,7 @@ No changes needed to `ThemedStampGrid` or `StampSlot`.
 
 ## Edge Cases
 
-- **Card not yet created** (first stamp creates the card): `cardId` may be `"default"` initially. The hook should be a no-op when `cardId` is undefined or `"default"`.
+- **No card yet**: The card detail page (`/customer/cards/[cardId]`) is only reachable when a card object exists; `cardId` will always be a valid Sui object ID at this route. The hook is a no-op when `cardId` is `undefined` (e.g. during SSR or before hydration).
 - **Multiple tabs open**: Each tab maintains its own WebSocket subscription — this is fine; animation fires on all open tabs.
 - **Stamp count already ahead** (page loaded after stamp was issued): The hook initialises `lastKnownStamps` from `currentStamps` on mount, so no spurious animation fires on initial load.
 - **Reward redemption** reduces stamp count — hook must not fire animation when count decreases.
